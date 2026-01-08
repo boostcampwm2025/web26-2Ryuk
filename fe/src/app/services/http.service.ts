@@ -3,7 +3,16 @@ import IS from '@/utils/is';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export class HttpService {
-  private static readonly BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  private static getBaseUrl(): string {
+    // 서버 사이드 렌더링에서는 상대 경로 사용
+    if (IS.undefined(window)) return '';
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl || apiUrl.trim() === '') return '';
+
+    // NEXT_PUBLIC_API_URL이 설정되어 있으면 그대로 사용
+    return apiUrl;
+  }
 
   private static async request<T>(
     url: string,
@@ -22,7 +31,9 @@ export class HttpService {
 
     if (!IS.nil(body)) requestInit.body = JSON.stringify(body);
 
-    const response = await fetch(this.BASE_URL + url, requestInit);
+    const baseUrl = this.getBaseUrl();
+    const fullUrl = baseUrl ? baseUrl + url : url;
+    const response = await fetch(fullUrl, requestInit);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const contentType = response.headers.get('content-type');

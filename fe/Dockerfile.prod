@@ -19,7 +19,8 @@ RUN pnpm install --frozen-lockfile --prod=false --ignore-scripts --filter fe...
 COPY fe ./fe
 
 # Build application
-ARG NEXT_PUBLIC_API_URL=http://localhost
+# 빌드 시점에 NEXT_PUBLIC_API_URL 설정
+ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 WORKDIR /app/fe
@@ -50,10 +51,9 @@ COPY --from=base /app/fe/package.json ./fe/package.json
 # Set environment variables
 ARG NODE_ENV=production
 ARG VERSION=latest
-ARG NEXT_PUBLIC_API_URL=http://localhost
 ENV NODE_ENV=${NODE_ENV}
 ENV VERSION=${VERSION}
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# NEXT_PUBLIC_* 변수는 빌드 시점에만 사용되므로 런타임 설정 불필요
 
 # Expose port (Next.js default port is 3000)
 EXPOSE 3000

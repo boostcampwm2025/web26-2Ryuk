@@ -113,6 +113,7 @@ jobs:
           docker build \
             --build-arg NODE_ENV=production \
             --build-arg VERSION=$VERSION \
+            --build-arg NEXT_PUBLIC_API_URL= \
             --cache-from=type=registry,ref=$DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:latest \
             --cache-to=type=inline \
             -t $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:$VERSION \
