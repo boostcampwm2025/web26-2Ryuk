@@ -9,22 +9,33 @@
   background: var(--primary-1);
 }
 
-.roomCardTop {
+.top {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.roomCardHeader {
+.header {
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
+  height: 32px;
 }
 
-.roomCardTitle {
+.titleContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleContainer svg {
+  color: var(--primary-6);
+}
+
+.title {
   font: var(--title-2);
   color: var(--neutral-9);
   margin: 0;
@@ -35,13 +46,29 @@
   white-space: nowrap;
 }
 
-.roomCardTags {
+.tagsAndIcons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.roomCardFooter {
+.icons {
+  display: flex;
+  gap: 4px;
+}
+
+.icons svg {
+  color: var(--neutral-5);
+}
+
+.footer {
   display: flex;
   justify-content: space-between;
   align-items: center;

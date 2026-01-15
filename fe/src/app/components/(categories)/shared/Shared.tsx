@@ -544,7 +544,7 @@ export default function SharedComponents() {
 
       <section id="text-field" className={styles.section}>
         <h2 className={styles.sectionTitle}>Textfield</h2>
-        <div className={styles.textFieldRow}>
+        <div className={styles.textfieldRow}>
           <div className={styles.showcaseBlock}>
             <h3 className={styles.blockTitle}>Primary</h3>
             <div className={styles.buttonColumn}>

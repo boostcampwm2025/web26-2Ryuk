@@ -1,0 +1,22 @@
+.floatingWidget {
+  position: fixed;
+  left: var(--widget-x, 0);
+  top: var(--widget-y, 0);
+  z-index: 1000;
+  user-select: none;
+  cursor: default;
+  transition: none;
+}
+
+.floatingWidget.dragging {
+  cursor: grabbing;
+  transition: none;
+}
+
+.floatingWidget.transitioning {
+  transition: all .3s ease-out;
+}
+
+.floatingWidget * {
+  user-select: text;
+}

@@ -17,7 +17,7 @@ export interface GlobalChatMessageResponseDto {
 export interface LocalChatMessageResponseDto {
   event: 'chat:room:new-message';
   data: {
-    roomId: string;
+    room_id: string;
     message: string;
     sender: {
       role: string;

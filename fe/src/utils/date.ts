@@ -1,3 +1,5 @@
+'use client';
+
 import IS from './is';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';

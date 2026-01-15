@@ -18,21 +18,19 @@ export default function MessageForm({
 }: MessageFormProps) {
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (!message.trim() || disabled) return;
     onSubmit?.(message.trim());
     setMessage('');
   };
 
-  const handleSendClick = () => {
-    if (!message.trim() || disabled) return;
-    onSubmit?.(message.trim());
-    setMessage('');
+  const handleFormSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    handleSubmit();
   };
 
   return (
-    <form className={styles.messageForm} onSubmit={handleSubmit}>
+    <form className={styles.messageForm} onSubmit={handleFormSubmit}>
       <div className={styles.inputWrapper}>
         <PrimaryTextfield
           placeholder={placeholder}
@@ -45,8 +43,8 @@ export default function MessageForm({
       <PrimaryIconButton
         name="send"
         size="medium"
-        onClick={handleSendClick}
         disabled={disabled || !message.trim()}
+        onClick={handleSubmit}
       />
     </form>
   );

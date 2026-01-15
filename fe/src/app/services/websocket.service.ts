@@ -3,6 +3,8 @@ import { io, Socket } from 'socket.io-client';
 
 export class WebSocketService {
   private static socket: Socket | null = null;
+  private static connectPromise: Promise<void> | null = null;
+  private static connectResolvers: Set<() => void> = new Set();
 
   /**
    * WebSocket 연결
@@ -23,10 +25,10 @@ export class WebSocketService {
     const connectionOptions: any = {
       transports: ['websocket'],
       reconnection: true,
-      reconnectionDelay: 100, // 재연결 지연 시간을 100ms로 단축
-      reconnectionDelayMax: 1000, // 최대 재연결 지연 시간
-      reconnectionAttempts: 10, // 재연결 시도 횟수 증가
-      timeout: 5000, // 연결 타임아웃 5초
+      reconnectionDelay: 100,
+      reconnectionDelayMax: 1000,
+      reconnectionAttempts: 10,
+      timeout: 5000,
     };
 
     // Mock 인증: query.userId 또는 auth.token 사용
@@ -38,13 +40,31 @@ export class WebSocketService {
 
     this.socket = io(url, connectionOptions);
 
+    // 연결 완료 Promise 생성
+    const socket = this.socket;
+    this.connectPromise = new Promise<void>((resolve) => {
+      if (socket.connected) {
+        resolve();
+        return;
+      }
+
+      const connectHandler = () => {
+        socket.off('connect', connectHandler);
+        this.connectResolvers.forEach((resolver) => resolver());
+        this.connectResolvers.clear();
+        resolve();
+      };
+
+      socket.on('connect', connectHandler);
+    });
+
     // 이벤트 리스너 설정
     this.socket.on('connect', () => {
-      console.log('WebSocket connected:', this.socket?.id);
+      // 연결 완료
     });
 
     this.socket.on('disconnect', (reason: any) => {
-      console.log('WebSocket disconnected:', reason);
+      this.connectPromise = null;
     });
 
     this.socket.on('connect_error', (error: any) => {
@@ -54,7 +74,9 @@ export class WebSocketService {
 
     // 모든 이벤트를 onMessage로 전달
     if (onMessage) {
-      this.socket.onAny((event: string, ...args: any[]) => onMessage({ event, data: args }));
+      this.socket.onAny((event: string, ...args: any[]) => {
+        onMessage({ event, data: args });
+      });
     }
   }
 
@@ -72,6 +94,31 @@ export class WebSocketService {
     if (!this.socket) return;
     this.socket.disconnect();
     this.socket = null;
+    this.connectPromise = null;
+    this.connectResolvers.clear();
+  }
+
+  /**
+   * WebSocket 연결 완료 보장
+   * 이미 연결되어 있으면 즉시 resolve, 아니면 연결 완료까지 대기
+   * @param timeout 타임아웃 (ms), 기본값 10초
+   */
+  static async ensureConnected(timeout: number = 10000): Promise<void> {
+    // 이미 연결되어 있으면 즉시 반환
+    if (this.socket?.connected) return;
+
+    // 연결 중이면 기존 Promise 대기
+    if (this.connectPromise) {
+      return Promise.race([
+        this.connectPromise,
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('WebSocket connection timeout')), timeout),
+        ),
+      ]);
+    }
+
+    // 연결이 시작되지 않았으면 에러
+    throw new Error('WebSocket is not connecting. Call connect() first.');
   }
 
   /**
@@ -118,25 +165,43 @@ export class WebSocketService {
 
   /**
    * 특정 이벤트 리스너 등록
+   * Chrome에서 이벤트 리스너가 제대로 등록되지 않는 문제를 해결하기 위해
+   * socket이 연결된 상태에서만 등록하도록 보장
    */
   static on(event: string, callback: (...args: any[]) => void): void {
-    if (!this.socket) {
-      // socket이 생성될 때까지 대기 후 등록
-      const checkAndRegister = () => {
-        if (!this.socket) {
-          setTimeout(checkAndRegister, 10);
-          return;
-        }
+    const registerListener = () => {
+      if (!this.socket) {
+        // socket이 생성될 때까지 대기 후 등록
+        const checkAndRegister = () => {
+          if (!this.socket) {
+            setTimeout(checkAndRegister, 10);
+            return;
+          }
+          registerListener();
+        };
+        checkAndRegister();
+        return;
+      }
 
-        this.socket.on(event, callback);
-        if (event === 'connect' && this.socket.connected) callback();
-      };
-      checkAndRegister();
-      return;
-    }
+      // Chrome에서 이벤트 리스너가 제대로 등록되도록
+      // socket이 연결된 상태에서만 등록하도록 보장
+      if (!this.socket.connected) {
+        // 연결 완료 후 등록
+        const connectHandler = () => {
+          this.socket?.off('connect', connectHandler);
+          this.socket?.on(event, callback);
+        };
+        this.socket.once('connect', connectHandler);
+        return;
+      }
 
-    this.socket.on(event, callback);
-    if (event === 'connect' && this.socket.connected) callback();
+      // Chrome에서 중복 등록 방지를 위해 먼저 제거 후 등록
+      this.socket.off(event, callback);
+      this.socket.on(event, callback);
+      if (event === 'connect' && this.socket.connected) callback();
+    };
+
+    registerListener();
   }
 
   /**
@@ -144,6 +209,7 @@ export class WebSocketService {
    */
   static off(event: string, callback?: (...args: any[]) => void): void {
     if (!this.socket) return;
-    this.socket.off(event, callback);
+    if (callback) this.socket.off(event, callback);
+    else this.socket.removeAllListeners(event);
   }
 }

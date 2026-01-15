@@ -15,7 +15,9 @@ const databaseConfig: DataSourceOptions = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [isProduction ? 'dist/**/*.entity.js' : 'src/**/*.entity.ts'],
+  entities: isProduction
+    ? [path.join(rootDir, 'dist', '**', '*.entity.js')]
+    : [path.join(rootDir, 'src', '**', '*.entity.ts')],
   migrations: isProduction
     ? [path.join(rootDir, 'dist', 'providers', 'database', 'migrations', '*.js')]
     : [path.join(rootDir, 'src', 'providers', 'database', 'migrations', '*.ts')],

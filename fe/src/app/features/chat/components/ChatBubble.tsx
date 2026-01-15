@@ -1,16 +1,21 @@
 'use client';
 
-import { ChatBubbleProps } from './chat.type';
+import { ChatBubbleProps } from './type';
 import Avatar from '@/app/components/shared/profile/Avatar';
-import styles from './chatBubble.module.css';
+import styles from './chat.module.css';
 import CSSUtil from '@/utils/css';
 import DateUtil from '@/utils/date';
 import Rules from '@/app/shared/rule';
+import { useEffect, useState } from 'react';
 
 function ChatBubble({ id, message, sender, timestamp }: ChatBubbleProps) {
   const className = CSSUtil.buildCls(styles.chatBubble, sender.isMe && styles.isMe);
-  const time = DateUtil.format(timestamp, { format: Rules.DATETIME_FORMAT.TIME });
   const displayAuthor = sender.isMe ? `나(${sender.nickname})` : sender.nickname;
+  const [time, setTime] = useState('');
+
+  useEffect(() => {
+    setTime(DateUtil.format(timestamp, { format: Rules.DATETIME_FORMAT.TIME }));
+  }, [timestamp]);
 
   return (
     <div className={className} data-chat-id={id}>

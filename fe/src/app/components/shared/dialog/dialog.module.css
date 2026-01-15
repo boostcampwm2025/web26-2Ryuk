@@ -1,0 +1,80 @@
+.dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 400px;
+  padding: 32px;
+  background: var(--neutral-1);
+  border-radius: 48px;
+  gap: 40px;
+}
+
+.cancelButton, .cancelButton button,
+.confirmButton, .confirmButton button {
+  width: 100%;
+} 
+
+.dialog.danger .confirmButton button,
+.dialog.danger .confirmButton button:hover:not(:disabled),
+.dialog.danger .confirmButton button:active:not(:disabled) {
+  background: var(--error);
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.imageWrapper {
+  position: relative;
+  width: 160px;
+  height: 160px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.title {
+  font: var(--display-1);
+  color: var(--neutral-9);
+  margin: 0;
+}
+
+.content {
+  font: var(--body-2);
+  color: var(--secondary);
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-line;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.children {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.footer {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+}
+
+.footer button {
+  flex: 1;
+}

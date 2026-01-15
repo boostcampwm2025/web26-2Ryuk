@@ -17,14 +17,16 @@ export default function Stepper({
 
   const handleIncrease = () => {
     if (!IS.nil(maxValue) && value >= maxValue!) return;
-    setValue((prev) => prev + 1);
-    onChange?.(value);
+    const newValue = value + 1;
+    setValue(newValue);
+    onChange?.(newValue);
   };
 
   const handleDecrease = () => {
     if (!IS.nil(minValue) && value <= minValue!) return;
-    setValue((prev) => prev - 1);
-    onChange?.(value);
+    const newValue = value - 1;
+    setValue(newValue);
+    onChange?.(newValue);
   };
 
   const isDecreaseDisabled = !IS.nil(minValue) && value <= minValue!;

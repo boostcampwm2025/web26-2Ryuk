@@ -1,9 +1,10 @@
 import { HttpService } from '@/app/services/http.service';
+import { ApiResponse } from '@/app/features/room/services/type';
 
 export interface User {
   id: string;
   nickname: string;
-  avatar: string; // profile_image를 avatar로 매핑
+  profileImage?: string;
 }
 
 interface MockLoginResponse {
@@ -44,7 +45,14 @@ export class UserService {
    * @param userId Mock 사용자 ID
    */
   static async mockLogin(userId: string): Promise<MockLoginResponse> {
-    return HttpService.post<MockLoginResponse>('/api/auth/mock/login', { userId });
+    const response = await HttpService.post<ApiResponse<MockLoginResponse>>(
+      '/api/auth/mock/login',
+      { userId },
+    );
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '로그인에 실패했습니다.');
+    }
+    return response.data;
   }
 }
 

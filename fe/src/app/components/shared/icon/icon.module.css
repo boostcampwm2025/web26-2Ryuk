@@ -45,7 +45,11 @@ svg.large {
   color: var(--primary-6);
 }
 
-.outline,
+.outline {
+  background: var(--neutral-1);
+  color: var(--secondary);
+}
+
 .ghost {
   background: transparent;
   color: var(--secondary);
@@ -137,4 +141,62 @@ svg.large {
 
 .icon {
   box-sizing: content-box;
+}
+
+
+
+.button.secondary .circle {
+  border: 2px solid var(--secondary-border);
+  background: var(--secondary-bg);
+}
+
+.button.secondary .circle:hover {
+  background: var(--secondary-bg);
+}
+
+.button.secondary svg {
+  color: var(--secondary);
+}
+
+
+.button.success .circle {
+  border: 2px solid var(--success-border);
+  background: var(--success-bg);
+}
+
+.button.success .circle:hover {
+  background: var(--success-bg);
+}
+
+
+.button.success svg {
+  color: var(--success);
+}
+
+
+.button.warning .circle {
+  border: 2px solid var(--warning-border);
+  background: var(--warning-bg);
+}
+
+.button.warning .circle:hover {
+  background: var(--warning-bg);
+}
+
+.button.warning svg {
+  color: var(--warning);
+}
+
+
+.button.error .circle {
+  border: 2px solid var(--error-border);
+  background: var(--error-bg);
+}
+
+.button.error .circle:hover {
+  background: var(--error-bg);
+}
+
+.button.error svg {
+  color: var(--error);
 }

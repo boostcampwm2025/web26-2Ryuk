@@ -9,9 +9,8 @@ export default function useNavigation() {
   const router = useRouter();
 
   return {
-    goHome: () => {
-      router.push(ROUTES.HOME);
-    },
+    refresh: () => router.refresh(),
+    goHome: () => router.replace(ROUTES.HOME),
     goBack: () => {
       if (!IS.undefined(window) && window.history.length > 1) router.back();
       else router.push(ROUTES.HOME);
@@ -27,3 +26,7 @@ export default function useNavigation() {
     },
   };
 }
+
+export const goHome = () => {
+  window.location.href = ROUTES.HOME;
+};

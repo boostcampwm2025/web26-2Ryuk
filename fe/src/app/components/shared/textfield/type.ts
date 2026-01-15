@@ -1,4 +1,5 @@
 export type TextfieldVariant = 'primary' | 'outline' | 'default';
+export type InputType = 'text' | 'password';
 
 export interface TextfieldProps {
   placeholder?: string;

@@ -15,13 +15,6 @@ async function bootstrap() {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // CORS 설정
-  app.enableCors({
-    origin: process.env.FRONTEND_URL,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-  });
-
   // 전역 파이프 설정 (DTO 유효성 검사)
   app.useGlobalPipes(
     new ValidationPipe({
@@ -30,6 +23,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // 전역 Interceptor는 AppModule의 APP_INTERCEPTOR provider로 등록됨
 
   // Redis WebSocket 어댑터 연결 (공유 Redis 클라이언트 사용)
   const redisClient = app.get(REDIS_CLIENT);

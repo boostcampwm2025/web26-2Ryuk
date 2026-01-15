@@ -7,14 +7,12 @@ import { OutlineIconButton } from '@/app/components/shared/icon/IconButton';
 import Profile from '@/app/components/shared/profile/Profile';
 import LoginButton from '@/app/components/shared/button/LoginButton';
 import { authStore, type AuthStore } from '@/app/features/user/stores/auth';
-import { ROUTES } from '@/app/shared/routes';
+import useNavigation from '@/app/hooks/useNavigation';
 import LogoutButton from '@/app/components/shared/button/LogoutButton';
 
 export default function Header() {
-  const router = useRouter();
+  const { goHome } = useNavigation();
   const user = authStore((state: AuthStore) => state.user);
-
-  const goHome = () => router.push(ROUTES.HOME);
 
   return (
     <header className={styles.header}>
@@ -26,7 +24,7 @@ export default function Header() {
           <OutlineIconButton name="settings" size="small" />
           {user ? <LogoutButton /> : <LoginButton />}
           <div className={styles.separator} />
-          {user && <Profile nickname={user.nickname} profileImage={user.avatar} />}
+          {user && <Profile nickname={user.nickname} profileImage={user.profileImage} />}
         </div>
       </div>
     </header>

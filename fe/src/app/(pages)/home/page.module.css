@@ -24,7 +24,7 @@
   flex-direction: column;
 }
 
-.globalChatContainer {
+.chatContainer {
   position: fixed;
   bottom: 48px;
   right: 48px;

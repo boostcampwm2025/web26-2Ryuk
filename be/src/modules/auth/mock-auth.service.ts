@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import mockUsersData from '../../mocks/users.js';
+import { buildUuidToMockIdMap, toUuid } from '@src/common/utils/user-id';
 
 export interface MockUser {
   id: string;
@@ -17,6 +18,8 @@ export interface MockUser {
 export class MockAuthService {
   // 개발용 Mock 사용자 목록 (users.js에서 로드)
   private readonly mockUsers: MockUser[];
+  // UUID → 원본 ID 매핑 (빠른 조회를 위한 캐시)
+  private readonly uuidToIdMap: Map<string, string>;
 
   constructor() {
     // JSON 데이터를 MockUser 형식으로 변환 (Date 객체 변환)
@@ -25,6 +28,9 @@ export class MockAuthService {
       create_date: new Date(user.create_date),
       update_date: user.update_date ? new Date(user.update_date) : null,
     }));
+
+    // UUID → 원본 ID 매핑 생성
+    this.uuidToIdMap = buildUuidToMockIdMap(this.mockUsers);
   }
 
   /**
@@ -38,6 +44,7 @@ export class MockAuthService {
 
   /**
    * Mock 토큰에서 userId 추출
+   * 원본 ID('J001') 또는 UUID 형식 모두 지원
    * @returns { userId: string } | null
    */
   verifyMockToken(token: string): { userId: string } | null {
@@ -48,11 +55,12 @@ export class MockAuthService {
 
     const userId = match[1];
 
-    // Mock 사용자 목록에 있는지 확인
-    const userExists = this.mockUsers.some((user) => user.id === userId);
-    if (!userExists) return null;
+    // 원본 ID 형식인지 확인
+    const user = this.getMockUserById(userId);
+    if (!user) return null;
 
-    return { userId };
+    // 원본 ID 반환 (일관성을 위해)
+    return { userId: user.id };
   }
 
   /**
@@ -64,8 +72,22 @@ export class MockAuthService {
 
   /**
    * userId로 Mock 사용자 조회
+   * 원본 ID('J001') 또는 UUID 형식 모두 지원
+   *
+   * 주의: 이 메서드는 Mock 로그인/토큰 검증용으로만 사용됩니다.
+   * 실제 사용자 정보 조회는 MySQL에서 수행해야 합니다.
    */
   getMockUserById(userId: string): MockUser | undefined {
-    return this.mockUsers.find((user) => user.id === userId);
+    // 원본 ID 형식인지 확인 (J001, J002 등)
+    const originalUser = this.mockUsers.find((user) => user.id === userId);
+    if (originalUser) return originalUser;
+
+    // UUID 형식인 경우 원본 ID로 변환
+    const originalId = this.uuidToIdMap.get(toUuid(userId));
+    if (originalId) {
+      return this.mockUsers.find((user) => user.id === originalId);
+    }
+
+    return undefined;
   }
 }

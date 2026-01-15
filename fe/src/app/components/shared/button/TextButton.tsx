@@ -11,11 +11,18 @@ function TextButtonBase({
   variant,
   size,
   type = 'button',
+  modalId,
 }: TextButtonProps) {
   const className = CSSUtil.buildCls(styles.button, styles[size], styles[variant]);
 
   return (
-    <button type={type} className={className} onClick={onClick} disabled={disabled}>
+    <button
+      type={type}
+      className={className}
+      onClick={onClick}
+      disabled={disabled}
+      modal-id={modalId}
+    >
       <div className={styles.content}>
         {iconName && <Icon name={iconName} size={size} />}
         {text}

@@ -1,12 +1,21 @@
+import { CSSProperties } from 'react';
 import IconCircle from './IconCircle';
 import styles from './icon.module.css';
 import { IconButtonProps } from './type';
+import CSSUtil from '@/utils/css';
 
-function IconButtonBase({ name, size, onClick, disabled, variant }: IconButtonProps) {
+function IconButtonBase({
+  name,
+  size,
+  onClick,
+  disabled,
+  variant,
+  themeColor = 'default',
+}: IconButtonProps) {
   return (
     <button
       type="button"
-      className={styles.button}
+      className={CSSUtil.buildCls(styles.button, styles[themeColor])}
       onClick={onClick}
       disabled={disabled}
       aria-label={name}

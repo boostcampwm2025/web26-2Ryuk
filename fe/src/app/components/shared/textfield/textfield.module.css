@@ -1,4 +1,4 @@
-.textField {
+.textfield {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -12,7 +12,11 @@
   cursor: not-allowed;
 }
 
-.textField .input {
+.textfield.disabled {
+  cursor: not-allowed;
+}
+
+.textfield .input {
   flex: 1;
   min-width: 0;
   height: 24px;
@@ -24,16 +28,16 @@
   padding: 0;
 }
 
-.textField .input::placeholder {
+.textfield .input::placeholder {
   color: var(--neutral-5);
 }
 
-.textField .input:disabled {
+.textfield .input:disabled {
   cursor: not-allowed;
   color: var(--neutral-4);
 }
 
-.textField .iconButton {
+.textfield .iconButton {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -49,12 +53,12 @@
   vertical-align: middle;
 }
 
-.textField .iconButton:disabled {
+.textfield .iconButton:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.textField .iconButton svg {
+.textfield .iconButton svg {
   color: var(--secondary);
   display: block;
   flex-shrink: 0;

@@ -26,7 +26,11 @@
     "migration:run:prod": "NODE_ENV=production pnpm typeorm:prod migration:run -d dist/providers/database/data-source.js",
     "migration:revert": "DB_HOST=localhost DB_PORT=3307 pnpm typeorm migration:revert -d src/providers/database/data-source.ts",
     "migration:revert:prod": "NODE_ENV=production pnpm typeorm:prod migration:revert -d dist/providers/database/data-source.js",
-    "migration:create": "pnpm typeorm migration:create src/providers/database/migrations/init"
+    "migration:create": "pnpm typeorm migration:create src/providers/database/migrations/init",
+    "seed:rooms": "DB_HOST=localhost DB_PORT=3307 ts-node -P ./tsconfig.json -r tsconfig-paths/register src/scripts/seed-rooms.ts",
+    "seed:rooms:docker": "DB_HOST=db DB_PORT=3306 ts-node -P ./tsconfig.json -r tsconfig-paths/register src/scripts/seed-rooms.ts",
+    "seed:users": "DB_HOST=localhost DB_PORT=3307 ts-node -P ./tsconfig.json -r tsconfig-paths/register src/scripts/seed-users.ts",
+    "seed:users:docker": "DB_HOST=db DB_PORT=3306 ts-node -P ./tsconfig.json -r tsconfig-paths/register src/scripts/seed-users.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.20",

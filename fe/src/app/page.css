@@ -2,11 +2,19 @@
   display: flex;
   justify-content: center;
   flex: 1;
-  padding: 40px 0;
+  padding: 80px 0;
   background: var(--primary-3);
 }
 
-.page > .content {
-  width: 1200px;
-  margin: 0 40px;
+.page .content {
+  width: 90vw;
+  max-width: 1200px;
+  margin: 0 60px;
+}
+
+.page .go-back {
+  position: absolute;
+  top: 80px;
+  left: 12px;
+  z-index: 10;
 }

@@ -3,7 +3,7 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import CSSUtil from '@/utils/css';
 import styles from './textfield.module.css';
-import { TextfieldProps } from './type';
+import { TextfieldProps, type InputType } from './type';
 import Icon from '@/app/components/shared/icon/Icon';
 
 function TextfieldBase({
@@ -26,7 +26,7 @@ function TextfieldBase({
   const value = isControlled ? controlledValue : internalValue;
 
   const className = CSSUtil.buildCls(
-    styles.textField,
+    styles.textfield,
     styles[variant],
     disabled && styles.disabled,
   );
@@ -46,7 +46,7 @@ function TextfieldBase({
     setIsVisible(!isVisible);
   };
 
-  let inputType: 'text' | 'password' = 'text';
+  let inputType: InputType = 'text';
   let iconToShow: 'show' | 'hide' | undefined = undefined;
 
   if (hidable) {
@@ -67,6 +67,7 @@ function TextfieldBase({
         onCompositionEnd={onCompositionEnd}
         disabled={disabled}
         className={styles.input}
+        autoComplete="off"
       />
       {hidable && (
         <button

@@ -1,17 +1,44 @@
 import IS from '@/utils/is';
+import { ApiResponse } from '@/app/features/room/services/type';
+import { showErrorToast } from '@/app/components/shared/toast/useToast';
+import useNavigation, { goHome } from '../hooks/useNavigation';
+import { useRouter } from 'next/navigation';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
+const MSW_HANDLED_PATHS: string[] = ['/api/posts/popular', '/api/users/:userId/profile'];
+
+function isMswHandled(path: string): boolean {
+  if (MSW_HANDLED_PATHS.includes(path)) return true;
+
+  return MSW_HANDLED_PATHS.some((pattern) => {
+    const regexPattern = pattern.replace(/:id/g, UUID_PATTERN).replace(/:[^/]+/g, '[^/]+');
+    const regex = new RegExp(`^${regexPattern}$`);
+    return regex.test(path);
+  });
+}
+
+export function isApiResponse(value: unknown): value is ApiResponse {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'success' in value &&
+    'message' in value &&
+    typeof (value as ApiResponse).success === 'boolean'
+  );
+}
 
 export class HttpService {
-  private static getBaseUrl(): string {
-    // 서버 사이드 렌더링에서는 상대 경로 사용
-    if (IS.undefined(window)) return '';
+  private static getBaseUrl(url: string): string {
+    // 1. 서버 컴포넌트
+    if (typeof window === 'undefined') return 'http://server:4000';
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl || apiUrl.trim() === '') return '';
+    // 2. 클라이언트 + MSW
+    if (isMswHandled(url)) return '';
 
-    // NEXT_PUBLIC_API_URL이 설정되어 있으면 그대로 사용
-    return apiUrl;
+    // 3. 클라이언트 + 실제 API (rewrites)
+    return '';
   }
 
   private static async request<T>(
@@ -31,13 +58,32 @@ export class HttpService {
 
     if (!IS.nil(body)) requestInit.body = JSON.stringify(body);
 
-    const baseUrl = this.getBaseUrl();
+    const baseUrl = this.getBaseUrl(url);
     const fullUrl = baseUrl ? baseUrl + url : url;
+
     const response = await fetch(fullUrl, requestInit);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    // 204 No Content 응답 처리
+    if (response.status === 204) {
+      return { success: true, message: 'No Content', data: {} } as T;
+    }
 
     const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/json')) return response.json();
+    if (contentType?.includes('application/json')) {
+      const text = await response.text();
+      if (!text || text.trim() === '') return {} as T;
+      const parsed = JSON.parse(text) as T;
+
+      // ApiResponse 형식이고 success가 false 이면 Toast 표시
+      if (!response.ok && isApiResponse(parsed) && !parsed.success) {
+        const errorMessage = parsed.message || '요청에 실패했습니다.';
+        showErrorToast(errorMessage);
+        goHome();
+        throw new Error(errorMessage);
+      }
+
+      return parsed;
+    }
 
     return response.text() as T;
   }

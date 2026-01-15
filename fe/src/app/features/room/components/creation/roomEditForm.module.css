@@ -1,0 +1,140 @@
+/* Modal Content Styles */
+.modalContent {
+  width: 580px;
+  background: var(--neutral-1);
+  border-radius: 24px;
+  border: 2px solid var(--primary-3);
+  overflow: hidden;
+  box-shadow: 0 2px 8px #0000001a;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 48px;
+  background: var(--primary-2);
+}
+
+.modalHeaderContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 72px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.modalTitle {
+  font: var(--heading-1);
+  color: var(--neutral-9);
+  margin-bottom: 8px;
+}
+
+.modalSubtitle {
+  font: var(--heading-2);
+  color: var(--secondary);
+}
+
+/* Form Styles */
+.form {
+  width: 100%;
+  min-width: 500px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 40px;
+  border-radius: 0 0 24px 24px;
+}
+
+.inputArea {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.headerContent {
+  flex: 1;
+}
+
+.title {
+  font: var(--heading-1);
+  color: var(--neutral-9);
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.subtitle {
+  font: var(--body-2);
+  color: var(--neutral-6);
+}
+
+.label {
+  display: block;
+  margin: 0 0 12px 8px;
+  font: var(--heading-3);
+  color: var(--neutral-9);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tagItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tagRemove {
+  background: transparent;
+  border: none;
+  color: var(--neutral-6);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tagRemove:hover {
+  color: var(--neutral-9);
+}
+
+.row {
+  display: flex;
+  gap: 24px;
+}
+
+.halfSection {
+  flex: 1;
+}
+
+.footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  justify-content: flex-end;
+}
+
+.footer button {
+  flex: 1;
+}

@@ -27,37 +27,37 @@ export const LOG = {
       message: `클라이언트 연결 해제: socketId=${socketId}, userId=${userId || 'anonymous'}`,
       level: 'log',
     }),
-    AUTH_CONNECT: (userId: string): LogMessage => ({
-      message: `인증된 사용자 연결: userId=${userId}`,
-      level: 'log',
-    }),
-    UNAUTH_CONNECT: (socketId: string): LogMessage => ({
-      message: `인증되지 않은 사용자 연결: socketId=${socketId}`,
-      level: 'log',
-    }),
-    SOCKET_IO_JOIN_AUTH: (userId: string, roomId: string): LogMessage => ({
-      message: `인증된 사용자 ${userId}가 글로벌 방 ${roomId}에 Socket.io 참여 완료`,
-      level: 'log',
-    }),
-    SOCKET_IO_JOIN_UNAUTH: (socketId: string, roomId: string): LogMessage => ({
-      message: `익명 사용자 ${socketId}가 글로벌 방 ${roomId}에 Socket.io 참여 완료`,
-      level: 'log',
-    }),
-    REDIS_JOIN: (userId: string, roomId: string): LogMessage => ({
-      message: `인증된 사용자 ${userId}가 글로벌 방 ${roomId}에 Redis 참여 완료`,
-      level: 'log',
-    }),
     ROOM_JOIN_DTO_RECEIVED: (dto: string, type: string): LogMessage => ({
       message: `room:join 받은 DTO: ${dto}, 타입: ${type}`,
       level: 'debug',
+    }),
+    SOCKET_IO_JOIN_AUTH: (userId: string, roomId: string): LogMessage => ({
+      message: `인증 사용자 Socket.io room 참여: userId=${userId}, roomId=${roomId}`,
+      level: 'log',
+    }),
+    SOCKET_IO_JOIN_UNAUTH: (socketId: string, roomId: string): LogMessage => ({
+      message: `비인증 사용자 Socket.io room 참여: socketId=${socketId}, roomId=${roomId}`,
+      level: 'log',
     }),
     SOCKET_IO_JOIN_ERROR: (error: string): LogMessage => ({
       message: `Socket.io room 참여 실패: ${error}`,
       level: 'error',
     }),
+    REDIS_JOIN: (userId: string, roomId: string): LogMessage => ({
+      message: `Redis 방 참여: userId=${userId}, roomId=${roomId}`,
+      level: 'log',
+    }),
     REDIS_JOIN_ERROR: (error: string): LogMessage => ({
       message: `방 참여 실패: ${error}`,
       level: 'error',
+    }),
+    AUTH_CONNECT: (userId: string): LogMessage => ({
+      message: `인증 사용자 연결 완료: userId=${userId}`,
+      level: 'log',
+    }),
+    UNAUTH_CONNECT: (socketId: string): LogMessage => ({
+      message: `비인증 사용자 연결 완료: socketId=${socketId}`,
+      level: 'log',
     }),
     ROOM_PARTICIPATION_CHECK_ERROR: (error: string): LogMessage => ({
       message: `방 참여 확인 실패: ${error}`,
@@ -131,12 +131,20 @@ export const LOG = {
       message: `글로벌 채팅 참여자 수 업데이트: roomId=${roomId}, 참여자 수: ${currentParticipants}`,
       level: 'log',
     }),
+    BROADCAST_CLIENTS_COUNT: (roomId: string, eventType: string, clientsCount: number): LogMessage => ({
+      message: `[${eventType}] roomId=${roomId}에 참여한 클라이언트 수: ${clientsCount}`,
+      level: 'debug',
+    }),
+    BROADCAST_SENT: (roomId: string, eventType: string, userId: string, clientsCount: number): LogMessage => ({
+      message: `[${eventType}] 브로드캐스트 전송 완료: roomId=${roomId}, userId=${userId}, room 참여 클라이언트 수: ${clientsCount}`,
+      level: 'debug',
+    }),
   },
 
   // 방 관련
   ROOM: {
     JOIN: (userId: string, roomId: string): LogMessage => ({
-      message: `사용자 방 입장: userId=${userId}, roomId=${roomId}`,
+      message: `물리적 입장 - 사용자 방 입장: userId=${userId}, roomId=${roomId}`,
       level: 'log',
     }),
     LEAVE: (userId: string, roomId: string): LogMessage => ({
@@ -168,7 +176,7 @@ export const LOG = {
       level: 'debug',
     }),
     USER_JOINED: (userId: string, roomId: string): LogMessage => ({
-      message: `사용자 ${userId}가 방 ${roomId}에 참여했습니다.`,
+      message: `논리적 입장 - 사용자 ${userId}가 방 ${roomId}에 참여했습니다.`,
       level: 'log',
     }),
     USER_LEFT: (userId: string, roomId: string): LogMessage => ({
@@ -199,17 +207,61 @@ export const LOG = {
       message: `방 생성 완료: roomId=${roomId}, type=${type}`,
       level: 'log',
     }),
-    PARTICIPANTS_INCREASE_ERROR: (roomId: string, error: string): LogMessage => ({
-      message: `참여자 수 증가 실패 (roomId: ${roomId}): ${error}`,
-      level: 'error',
+    ROOM_UPDATED: (roomId: string): LogMessage => ({
+      message: `방 정보 업데이트 완료: roomId=${roomId}`,
+      level: 'log',
     }),
-    PARTICIPANTS_DECREASE_ERROR: (roomId: string, error: string): LogMessage => ({
-      message: `참여자 수 감소 실패 (roomId: ${roomId}): ${error}`,
+    ROOM_DELETED: (roomId: string, hostId: string): LogMessage => ({
+      message: `방 삭제 완료: roomId=${roomId}, hostId=${hostId}`,
+      level: 'log',
+    }),
+    PARTICIPANTS_UPDATE_ERROR: (roomId: string, error: string): LogMessage => ({
+      message: `참여자 업데이트 실패 (roomId: ${roomId}): ${error}`,
       level: 'error',
     }),
     PARTICIPANTS_FETCH_ERROR: (roomId: string, error: string): LogMessage => ({
       message: `참여자 수 조회 실패 (roomId: ${roomId}): ${error}`,
       level: 'error',
+    }),
+    LOCAL_ROOMS_FETCH_ERROR: (error: string): LogMessage => ({
+      message: `로컬 방 목록 조회 실패: ${error}`,
+      level: 'error',
+    }),
+    LOCAL_ROOMS_SEARCH_ERROR: (error: string): LogMessage => ({
+      message: `로컬 방 검색 실패: ${error}`,
+      level: 'error',
+    }),
+    VALIDATION_START: (userId: string, roomId: string): LogMessage => ({
+      message: `방 입장 검증 시작: userId=${userId}, roomId=${roomId}`,
+      level: 'debug',
+    }),
+    VALIDATION_SUCCESS: (userId: string, roomId: string): LogMessage => ({
+      message: `방 입장 검증 성공: userId=${userId}, roomId=${roomId}`,
+      level: 'log',
+    }),
+    VALIDATION_ERROR: (userId: string, roomId: string, error: string): LogMessage => ({
+      message: `방 입장 검증 실패: userId=${userId}, roomId=${roomId}, error=${error}`,
+      level: 'warn',
+    }),
+    INTERNAL_VALIDATION_ERROR: (userId: string, roomId: string, error: string): LogMessage => ({
+      message: `방 입장 검증 중 내부 서버 오류 발생: userId=${userId}, roomId=${roomId}, error=${error}`,
+      level: 'error',
+    }),
+    UNAUTH_API_ACCESS_JOIN: (roomId: string): LogMessage => ({
+      message: `인증되지 않은 사용자의 방 입장 검증 시도: roomId=${roomId}`,
+      level: 'warn',
+    }),
+    INVALID_TOKEN_API_JOIN: (roomId: string): LogMessage => ({
+      message: `유효하지 않은 토큰으로 방 입장 검증 시도: roomId=${roomId}`,
+      level: 'warn',
+    }),
+    ROOM_MEMBERS_FETCH_ERROR: (roomId: string, error: string): LogMessage => ({
+      message: `방 멤버 정보 조회 실패 (roomId: ${roomId}): ${error}`,
+      level: 'error',
+    }),
+    ROOM_CREATE_ALREADY_IN_ROOM: (userId: string, roomId: string): LogMessage => ({
+      message: `방 생성 실패 - 이미 참여 중인 방이 있음: userId=${userId}, roomId=${roomId}`,
+      level: 'warn',
     }),
   },
 } as const;

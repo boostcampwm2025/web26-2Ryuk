@@ -13,7 +13,7 @@ export default function ParticipantStepper({
   return (
     <Stepper
       initialValue={initialValue}
-      minValue={0}
+      minValue={2}
       maxValue={maxValue}
       suffix="명"
       onChange={onChange}

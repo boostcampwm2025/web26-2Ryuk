@@ -9,7 +9,7 @@ export class GlobalChatSendDto {
 export class RoomChatSendDto {
   @IsString()
   @IsNotEmpty()
-  roomId: string;
+  room_id: string;
 
   @IsString()
   @IsNotEmpty()

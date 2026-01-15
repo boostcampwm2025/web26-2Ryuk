@@ -1,17 +1,21 @@
 import { Controller, Post, Get, Body, Headers, UsePipes, ValidationPipe } from '@nestjs/common';
+import { AuthService } from './auth.service';
 import { MockAuthService } from './mock-auth.service';
 import { MockLoginDto, MockUserResponseDto } from './dto/mock-login.dto';
+import { toUuid } from '@src/common/utils/user-id';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly mockAuthService: MockAuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly mockAuthService: MockAuthService,
+  ) {}
 
   /**
    * 개발용 Mock 로그인 (토큰 발급)
    * POST /api/auth/mock/login
    */
   @Post('mock/login')
-  @UsePipes(new ValidationPipe({ transform: true }))
   mockLogin(@Body() dto: MockLoginDto) {
     // Mock 사용자 확인
     const user = this.mockAuthService.getMockUserById(dto.userId);
@@ -20,12 +24,15 @@ export class AuthController {
     // Mock 토큰 발급
     const token = this.mockAuthService.generateMockToken(dto.userId);
 
+    // UUID 변환
+    const uuid = toUuid(dto.userId);
+
     return {
       success: true,
       token,
-      userId: dto.userId,
+      userId: uuid,
       user: {
-        id: user.id,
+        id: uuid,
         email: user.email,
         nickname: user.nickname,
         profile_image: user.profile_image,
@@ -55,9 +62,10 @@ export class AuthController {
   /**
    * 현재 인증된 사용자 정보 조회
    * GET /api/auth/me
+   * MySQL에서 실제 사용자 정보 조회
    */
   @Get('me')
-  getMe(@Headers('authorization') authHeader?: string) {
+  async getMe(@Headers('authorization') authHeader?: string) {
     if (!authHeader) return { success: false, message: '인증이 필요합니다.' };
 
     const token = authHeader.replace('Bearer ', '');
@@ -65,8 +73,8 @@ export class AuthController {
 
     if (!payload) return { success: false, message: '유효하지 않은 토큰입니다.' };
 
-    const user = this.mockAuthService.getMockUserById(payload.userId);
-    if (!user) return { success: false, message: '사용자를 찾을 수 없습니다.' };
+    // Service를 통해 MySQL에서 실제 사용자 정보 조회
+    const user = await this.authService.getUserById(payload.userId);
 
     return {
       id: user.id,

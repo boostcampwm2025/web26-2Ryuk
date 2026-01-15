@@ -17,8 +17,8 @@ const IS = {
   numeric: (v: unknown) =>
     IS.number(v) || (IS.string(v) && (v as string).trim() !== '' && !Number.isNaN(Number(v))),
   array: Array.isArray,
-  null: (v: unknown) => v === null,
-  undefined: (v: unknown) => v === undefined,
+  null: (v: unknown) => v === null || (typeof v === 'object' && v === null),
+  undefined: (v: unknown) => v === undefined || typeof v === 'undefined',
   nil: (v: unknown) => IS.null(v) || IS.undefined(v),
   form: (v: unknown) => v instanceof FormData,
   date: (v: unknown) => v instanceof Date,

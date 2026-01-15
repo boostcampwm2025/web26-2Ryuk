@@ -41,6 +41,12 @@ export const componentRelations: ComponentRelation[] = [
   },
   { id: 'text-tooltip', title: 'TextTooltip', category: 'shared' },
   { id: 'radio-button', title: 'RadioButton', category: 'shared' },
+  {
+    id: 'dialog',
+    title: 'Dialog',
+    category: 'shared',
+    children: ['text-button', 'modal'],
+  },
 
   // Layout Components (components/layout/)
   {
@@ -73,22 +79,22 @@ export const componentRelations: ComponentRelation[] = [
   { id: 'chat-bubble', title: 'ChatBubble', category: 'feature' },
   { id: 'chat-bubbles', title: 'ChatBubbles', category: 'feature', children: ['chat-bubble'] },
   {
-    id: 'chat-modal-base',
-    title: 'ChatModalBase',
+    id: 'chat-panel',
+    title: 'ChatPanel',
     category: 'feature',
     children: ['chat-bubbles', 'message-form', 'iconcircle', 'icon-button'],
   },
   {
-    id: 'global-chat-modal',
-    title: 'GlobalChatModal',
+    id: 'global-chat-panel',
+    title: 'GlobalChatPanel',
     category: 'feature',
-    children: ['chat-modal-base'],
+    children: ['chat-panel'],
   },
   {
-    id: 'room-chat-modal',
-    title: 'RoomChatModal',
+    id: 'room-chat-panel',
+    title: 'RoomChatPanel',
     category: 'feature',
-    children: ['chat-modal-base'],
+    children: ['chat-panel'],
   },
   { id: 'post-list-row', title: 'PostListRow', category: 'feature', children: ['chip', 'icon'] },
   { id: 'post-list-item', title: 'PostListItem', category: 'feature', children: ['chip', 'icon'] },
@@ -128,10 +134,29 @@ export const componentRelations: ComponentRelation[] = [
     ],
   },
   {
+    id: 'room-update-modal',
+    title: 'RoomUpdateModal',
+    category: 'feature',
+    children: [
+      'textfield',
+      'text-button',
+      'stepper',
+      'tag-selector',
+      'mic-setting',
+      'password-setting',
+    ],
+  },
+  {
     id: 'room-card',
     title: 'RoomCard',
     category: 'feature',
     children: ['chip', 'status-chip', 'text-tooltip', 'icon-button', 'avatars'],
+  },
+  {
+    id: 'room-info',
+    title: 'RoomInfo',
+    category: 'feature',
+    children: ['chip', 'icon', 'icon-button'],
   },
   {
     id: 'realtime-rooms',
@@ -196,6 +221,7 @@ export const sharedSections = [
   { id: 'tag-selector', title: 'TagSelector' },
   { id: 'text-tooltip', title: 'TextTooltip' },
   { id: 'radio-button', title: 'RadioButton' },
+  { id: 'dialog', title: 'Dialog' },
   { id: 'avatar', title: 'Avatar' },
   { id: 'avatars', title: 'Avatars' },
   { id: 'profile', title: 'Profile' },
@@ -212,9 +238,9 @@ export const layoutSections = [
 export const featureSections = [
   { id: 'chat-bubble', title: 'ChatBubble' },
   { id: 'chat-bubbles', title: 'ChatBubbles' },
-  { id: 'chat-modal-base', title: 'ChatModalBase' },
-  { id: 'global-chat-modal', title: 'GlobalChatModal' },
-  { id: 'room-chat-modal', title: 'RoomChatModal' },
+  { id: 'chat-panel', title: 'ChatPanel' },
+  { id: 'global-chat-panel', title: 'GlobalChatPanel' },
+  { id: 'room-chat-panel', title: 'RoomChatPanel' },
   { id: 'post-list-row', title: 'PostListRow' },
   { id: 'post-list-item', title: 'PostListItem' },
   { id: 'post-list-items', title: 'PostListItems' },
@@ -222,7 +248,9 @@ export const featureSections = [
   { id: 'mic-setting', title: 'MicSetting' },
   { id: 'password-setting', title: 'PasswordSetting' },
   { id: 'room-creation-modal', title: 'RoomCreationModal' },
+  { id: 'room-update-modal', title: 'RoomUpdateModal' },
   { id: 'room-card', title: 'RoomCard' },
+  { id: 'room-info', title: 'RoomInfo' },
   { id: 'realtime-rooms', title: 'RealtimeRoomsSection' },
 ];
 

@@ -4,6 +4,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import { RedisClientType } from 'redis';
 import type { ExtendedError } from 'socket.io/dist/namespace';
 import { MockAuthService } from '@src/modules/auth/mock-auth.service';
+import { toUuid } from '@src/common/utils/user-id';
 
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
@@ -59,7 +60,8 @@ export class RedisIoAdapter extends IoAdapter {
         return next();
       }
 
-      await this.handleAuthenticatedSession(server, socket, authResult.userId);
+      // UUID 형식의 userId와 원본 ID를 모두 저장 (로그용)
+      await this.handleAuthenticatedSession(server, socket, authResult.userId, authResult.originalUserId);
       next();
     });
 
@@ -70,10 +72,15 @@ export class RedisIoAdapter extends IoAdapter {
    * 소켓 인증 처리
    *
    * TODO: Mock 토큰 검증 로직을 JWT 토큰 검증으로 교체
+   *
+   * 반환값: 원본 ID('J001')를 UUID로 변환하여 반환
+   * - MySQL과 Redis 모두 UUID 형식 사용
+   * - 로그에는 원본 ID 표시 (별도 처리)
    */
   private authenticateSocket(socket: Socket): {
     userId: string | null;
     isAuthenticated: boolean;
+    originalUserId?: string; // 로그용 원본 ID
   } {
     // TODO: query.userId 방식 제거 (개발 편의용)
     const queryUserId = socket.handshake.query.userId as string;
@@ -99,13 +106,25 @@ export class RedisIoAdapter extends IoAdapter {
     // TODO: Mock 토큰 검증을 JWT 토큰 검증으로 교체
     if (token && !queryUserId) {
       const payload = this.mockAuthService.verifyMockToken(token);
-      if (payload) return { userId: payload.userId, isAuthenticated: true };
+      if (payload) {
+        // 원본 ID를 UUID로 변환
+        const originalUserId = payload.userId;
+        const uuid = toUuid(originalUserId);
+        return { userId: uuid, isAuthenticated: true, originalUserId };
+      }
     }
 
     // TODO: query.userId 방식 제거 (개발 편의용)
+    // OAuth 환경에서는 이 부분이 제거되고, 토큰 방식만 사용됩니다.
+    // 개발 편의를 위해 Mock 사용자 목록에서 확인 (MySQL 조회 불필요)
     if (queryUserId) {
       const user = this.mockAuthService.getMockUserById(queryUserId);
-      if (user) return { userId: queryUserId, isAuthenticated: true };
+      if (user) {
+        // 원본 ID를 UUID로 변환
+        const originalUserId = queryUserId;
+        const uuid = toUuid(originalUserId);
+        return { userId: uuid, isAuthenticated: true, originalUserId };
+      }
     }
 
     return {
@@ -116,8 +135,15 @@ export class RedisIoAdapter extends IoAdapter {
 
   /**
    * 인증된 사용자의 세션 관리
+   * @param userId UUID 형식의 사용자 ID (MySQL/Redis에서 사용)
+   * @param originalUserId 원본 ID('J001' 형식, 로그용)
    */
-  private async handleAuthenticatedSession(server: any, socket: Socket, userId: string): Promise<void> {
+  private async handleAuthenticatedSession(
+    server: any,
+    socket: Socket,
+    userId: string,
+    originalUserId?: string,
+  ): Promise<void> {
     const sessionKey = `user:session:${userId}`;
     const existingSocketId = await this.pubClient.get(sessionKey);
 
@@ -127,12 +153,16 @@ export class RedisIoAdapter extends IoAdapter {
       if (existingSocket) existingSocket.disconnect(true);
     }
 
-    // 세션 저장 (24시간 유지)
+    // 세션 저장 (24시간 유지) - UUID 형식 사용
     await this.pubClient.set(sessionKey, socket.id, { EX: 86400 });
 
-    // socket.data에 userId 저장 (권한 검증용)
+    // socket.data에 UUID 형식의 userId 저장 (권한 검증용)
     socket.data.userId = userId;
     socket.data.authenticated = true;
+    // 로그용 원본 ID도 저장 (선택사항)
+    if (originalUserId) {
+      socket.data.originalUserId = originalUserId;
+    }
 
     // disconnect 핸들러 설정
     this.setupDisconnectHandler(socket, sessionKey);

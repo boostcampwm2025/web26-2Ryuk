@@ -2,8 +2,7 @@
   width: 100vw;
   min-height: 100vh;
   overflow-x: hidden;
-  padding: 80px 80px 120px;
-  background: #f5f7fb;
+  padding: 0 80px;
 }
 
 .header {
