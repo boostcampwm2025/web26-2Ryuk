@@ -1,4 +1,4 @@
-import { ChatReceiveData } from '@/app/features/chat/dtos/type';
+import { RoomChatReceiveData } from '@/app/features/chat/dtos/type';
 import { WebSocketService } from '@/app/services/websocket.service';
 import { ChatConverter } from '@/app/features/chat/dtos/Chat';
 import { roomStore } from '@/app/features/room/stores/room';
@@ -9,24 +9,11 @@ import {
   RoomLeftAckDto,
   RoomLeftBroadcastDto,
 } from './type';
+import { RoomChatReceiveDto } from '@/app/features/chat/dtos/type';
 import { toastStore } from '@/app/components/shared/toast/toast.store';
-import IS from '@/utils/is';
+import { authStore } from '@/app/features/user/stores/auth';
 
-// WebSocket 수신 DTO
-interface RoomChatReceiveDto {
-  roomId: string;
-  userId: string;
-  message: string;
-  timestamp: string;
-  sender?: {
-    role: string;
-    nickname: string;
-    profile_image: string | null;
-    is_me: boolean;
-  };
-}
-
-type MessageCallback = (message: ChatReceiveData) => void;
+type MessageCallback = (message: RoomChatReceiveData) => void;
 type ConnectionCallback = (connected: boolean) => void;
 
 /**
@@ -37,7 +24,7 @@ export class RoomChatService {
   private messageCallbacks: Set<MessageCallback> = new Set();
   private connectionCallbacks: Set<ConnectionCallback> = new Set();
   private isSubscribed = false;
-  private messages: ChatReceiveData[] = [];
+  private messages: RoomChatReceiveData[] = [];
   private currentRoomId: string | null = null;
   private eventHandlers: Map<string, (...args: any[]) => void> = new Map();
 
@@ -87,10 +74,38 @@ export class RoomChatService {
       // 방 입장 요청 (연결 보장 후 이벤트 전송)
       await globalChatService.joinRoom(roomId);
 
-      // 연결 상태는 이미 연결되어 있으므로 true로 설정
-      this.notifyConnection(true);
+      // room:join ACK를 받을 때까지 대기 (최대 2초)
+      // registerEventHandlers()에서 등록한 핸들러가 ACK를 받으면 연결 상태가 업데이트됨
+      let ackReceived = false;
+      const ackPromise = new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => {
+          if (!ackReceived) {
+            // 타임아웃 시에도 연결 상태는 true로 설정 (이미 WebSocket은 연결됨)
+            this.notifyConnection(true);
+          }
+          resolve();
+        }, 2000);
 
+        const ackHandler = (data: RoomJoinedAckDto) => {
+          if (data.roomId === roomId && !ackReceived) {
+            ackReceived = true;
+            clearTimeout(timeout);
+            WebSocketService.off('room:join', ackHandler);
+            // ACK를 받았으므로 연결 완료
+            this.notifyConnection(true);
+            resolve();
+          }
+        };
+
+        // room:join ACK 리스너 등록 (registerEventHandlers의 핸들러와 별도로)
+        WebSocketService.on('room:join', ackHandler);
+      });
+
+      await ackPromise;
+
+      // 구독 완료 후 연결 상태 확실히 업데이트
       this.isSubscribed = true;
+      this.notifyConnection(true);
     } catch (error) {
       console.error('[RoomChatService] 구독 실패:', error);
       this.notifyConnection(false);
@@ -107,6 +122,8 @@ export class RoomChatService {
       if (typeof window !== 'undefined') {
         roomStore.getState().setJoined(true);
       }
+      // 연결 상태 업데이트
+      this.notifyConnection(true);
     }
   }
 
@@ -122,6 +139,8 @@ export class RoomChatService {
     const joinAckHandler = (data: RoomJoinedAckDto) => {
       if (data.roomId === this.currentRoomId) {
         this.onRoomJoined(data.roomId);
+        // 연결 상태 업데이트 (onRoomJoined에서도 호출되지만 확실하게)
+        this.notifyConnection(true);
       }
     };
     this.eventHandlers.set('room:join', joinAckHandler);
@@ -132,17 +151,17 @@ export class RoomChatService {
       if (data.roomId === this.currentRoomId) {
         if (typeof window !== 'undefined') {
           // 자신의 입장인지 확인 (authStore에서 userId 가져오기)
-          let currentUserId: string | null = null;
-          try {
-            const { authStore } = require('@/app/features/user/stores/auth');
-            currentUserId = authStore.getState().userId;
-          } catch {
-            // authStore를 가져올 수 없으면 무시
-          }
+          const currentUserId = authStore.getState().userId;
 
-          // 다른 사용자 입장인 경우에만 toast 표시
+          // 다른 사용자 입장인 경우에만 toast 표시 및 참여자 추가
           if (!currentUserId || data.user.id !== currentUserId) {
             toastStore.getState().showInfoToast(`${data.user.nickname}님이 입장했습니다.`);
+            // 참여자 목록에 추가
+            roomStore.getState().addParticipant({
+              userId: data.user.id,
+              nickname: data.user.nickname,
+              profileImage: data.user.profile_image || '',
+            });
           }
 
           roomStore.getState().updateRoomData({
@@ -166,13 +185,7 @@ export class RoomChatService {
       if (data.roomId === this.currentRoomId) {
         if (typeof window !== 'undefined') {
           // 자신의 퇴장인지 확인 (authStore에서 userId 가져오기)
-          let currentUserId: string | null = null;
-          try {
-            const { authStore } = require('@/app/features/user/stores/auth');
-            currentUserId = authStore.getState().userId;
-          } catch {
-            // authStore를 가져올 수 없으면 무시
-          }
+          const currentUserId = authStore.getState().userId;
 
           // 다른 사용자 퇴장인 경우에만 toast 표시
           if (!currentUserId || data.userId !== currentUserId) {
@@ -213,41 +226,25 @@ export class RoomChatService {
 
   /**
    * 방 채팅 메시지 수신 이벤트 핸들러
+   * Dto를 받아서 Converter를 통해 Data로 변환
    */
   private handleRoomMessage(dto: RoomChatReceiveDto): void {
     // 현재 방의 메시지만 처리
-    if (dto.roomId !== this.currentRoomId) return;
+    if (dto.room_id !== this.currentRoomId) return;
 
-    // sender 정보가 없으면 기본값 사용
-    let senderInfo = dto.sender;
-    if (!senderInfo) {
-      // authStore에서 현재 userId 가져오기
-      let currentUserId: string | null = null;
-      if (!IS.undefined(window)) {
-        try {
-          const { authStore } = require('@/app/features/user/stores/auth');
-          currentUserId = authStore.getState().userId;
-        } catch {
-          // authStore를 가져올 수 없으면 무시
-        }
-      }
-
-      senderInfo = {
+    // sender 정보가 없으면 현재 사용자 정보로 채우기
+    if (!dto.sender) {
+      const currentUserId = authStore.getState().userId;
+      dto.sender = {
         role: 'USER',
-        nickname: dto.userId,
+        nickname: dto.user_id || 'Unknown',
         profile_image: null,
-        is_me: currentUserId === dto.userId,
+        is_me: currentUserId === dto.user_id,
       };
     }
 
-    // ChatReceiveDto 형식으로 변환
-    const chatReceiveDto = {
-      message: dto.message,
-      sender: senderInfo,
-      timestamp: dto.timestamp,
-    };
-
-    const chatData = ChatConverter.toReceiveData(chatReceiveDto);
+    // Converter를 통해 Dto를 Data로 변환
+    const chatData = ChatConverter.toRoomChatReceiveData(dto);
     this.messages.push(chatData);
     this.notifyMessage(chatData);
   }
@@ -309,7 +306,7 @@ export class RoomChatService {
     }
 
     WebSocketService.send('chat:room:send', {
-      roomId: this.currentRoomId,
+      room_id: this.currentRoomId,
       message,
     });
   }
@@ -317,7 +314,7 @@ export class RoomChatService {
   /**
    * 저장된 메시지 가져오기
    */
-  getMessages(): ChatReceiveData[] {
+  getMessages(): RoomChatReceiveData[] {
     return [...this.messages];
   }
 
@@ -347,7 +344,7 @@ export class RoomChatService {
   /**
    * 메시지 수신 알림
    */
-  private notifyMessage(message: ChatReceiveData): void {
+  private notifyMessage(message: RoomChatReceiveData): void {
     this.messageCallbacks.forEach((callback) => callback(message));
   }
 

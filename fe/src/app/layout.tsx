@@ -1,6 +1,7 @@
 import './globals.css';
 import MSWProvider from '@/app/providers/MSWProvider';
 import AuthProvider from '@/app/providers/AuthProvider';
+import RoomProvider from '@/app/providers/RoomProvider';
 import ModalEventDelegation from '@/app/components/shared/modal/ModalEventDelegation';
 import Toast from '@/app/components/shared/toast/Toast';
 import Header from './components/layout/header/Header';
@@ -19,9 +20,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <ModalEventDelegation />
         <MSWProvider>
           <AuthProvider>
-            <Header />
-            <div className="page">{children}</div>
-            <Toast />
+            <RoomProvider>
+              <Header />
+              <div className="page">{children}</div>
+              <Toast />
+            </RoomProvider>
           </AuthProvider>
         </MSWProvider>
       </body>

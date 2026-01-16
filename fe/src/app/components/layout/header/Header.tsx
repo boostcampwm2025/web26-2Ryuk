@@ -11,7 +11,7 @@ import useNavigation from '@/app/hooks/useNavigation';
 import LogoutButton from '@/app/components/shared/button/LogoutButton';
 
 export default function Header() {
-  const { goHome } = useNavigation();
+  const { goHome, gotoComponents } = useNavigation();
   const user = authStore((state: AuthStore) => state.user);
 
   return (
@@ -21,7 +21,11 @@ export default function Header() {
           <Logo size="small" onClick={goHome} />
         </div>
         <div className={styles.right}>
-          <OutlineIconButton name="settings" size="small" />
+          <OutlineIconButton
+            name="settings"
+            size="small"
+            onClick={() => gotoComponents('shared')}
+          />
           {user ? <LogoutButton /> : <LoginButton />}
           <div className={styles.separator} />
           {user && <Profile nickname={user.nickname} profileImage={user.profileImage} />}

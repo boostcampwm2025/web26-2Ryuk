@@ -80,7 +80,6 @@ export const authStore = create<AuthStore>()(
       /* ---------- login ---------- */
       login: async (userId: string) => {
         const data = await UserService.mockLogin(userId);
-        console.log('data', data);
 
         const user: User = {
           id: data.user.id,

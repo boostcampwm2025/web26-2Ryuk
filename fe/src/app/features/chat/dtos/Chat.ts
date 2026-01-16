@@ -1,4 +1,11 @@
-import { ChatReceiveDto, ChatReceiveData, ChatSendDto, ChatSendData } from './type';
+import {
+  ChatReceiveDto,
+  ChatReceiveData,
+  ChatSendDto,
+  ChatSendData,
+  RoomChatReceiveDto,
+  RoomChatReceiveData,
+} from './type';
 
 export const ChatConverter = {
   /**
@@ -53,6 +60,33 @@ export const ChatConverter = {
   toSendData(message: string): ChatSendData {
     return {
       message,
+    };
+  },
+
+  /**
+   * 방 채팅 WebSocket 수신 DTO를 RoomChatReceiveData로 변환
+   * @param dto WebSocket 이벤트에서 받은 DTO (snake_case)
+   */
+  toRoomChatReceiveData(dto: RoomChatReceiveDto): RoomChatReceiveData {
+    // sender 정보가 없으면 기본값 사용
+    const sender = dto.sender || {
+      role: 'USER',
+      nickname: dto.user_id || 'Unknown',
+      profile_image: null,
+      is_me: false,
+    };
+
+    return {
+      id: `room_chat_${Date.now()}_${Math.random()}`,
+      roomId: dto.room_id,
+      message: dto.message,
+      sender: {
+        role: sender.role,
+        nickname: sender.nickname,
+        profileImage: sender.profile_image,
+        isMe: sender.is_me,
+      },
+      timestamp: new Date(dto.timestamp),
     };
   },
 };

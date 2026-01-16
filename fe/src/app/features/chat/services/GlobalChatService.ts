@@ -20,6 +20,19 @@ interface ParticipantsUpdatedDto {
   current_participants: number;
 }
 
+interface GlobalChatRecentsDto {
+  messages: Array<{
+    message: string;
+    sender: {
+      sender_id: string;
+      nickname: string;
+      profile_image: string;
+      is_me: boolean;
+    };
+    timestamp: string;
+  }>;
+}
+
 /**
  * GlobalChat 클라이언트 서비스
  * WebSocket 연결 생명주기를 단일 책임으로 관리
@@ -143,6 +156,11 @@ export class GlobalChatService implements ChatChannel {
     this.eventHandlers.set('chat:global:participants-updated', participantsHandler);
     WebSocketService.on('chat:global:participants-updated', participantsHandler);
 
+    // recents 핸들러 (최초 접속 시 최신 메시지 목록)
+    const recentsHandler = (dto: GlobalChatRecentsDto) => this.handleGlobalChatRecents(dto);
+    this.eventHandlers.set('chat:global:recents', recentsHandler);
+    WebSocketService.on('chat:global:recents', recentsHandler);
+
     // error 핸들러
     const errorHandler = (error: WebSocketError) => this.handleError(error);
     this.eventHandlers.set('error', errorHandler);
@@ -188,6 +206,33 @@ export class GlobalChatService implements ChatChannel {
    */
   private handleParticipantsUpdated(dto: ParticipantsUpdatedDto): void {
     this.notifyParticipants(dto.current_participants);
+  }
+
+  /**
+   * 글로벌 채팅 최신 메시지 목록 수신 이벤트 핸들러
+   * 최초 접속 시 Redis에 저장된 최신 메시지들을 받아옴
+   */
+  private handleGlobalChatRecents(dto: GlobalChatRecentsDto): void {
+    // 기존 메시지 초기화 (중복 방지)
+    this.messages = [];
+
+    // 받은 메시지들을 ChatReceiveDto 형식으로 변환하여 처리
+    dto.messages.forEach((msg) => {
+      const chatReceiveDto: ChatReceiveDto = {
+        message: msg.message,
+        sender: {
+          role: 'USER', // recents에는 role 정보가 없으므로 기본값 사용
+          nickname: msg.sender.nickname,
+          profile_image: msg.sender.profile_image,
+          is_me: msg.sender.is_me,
+        },
+        timestamp: msg.timestamp,
+      };
+
+      const chatData = ChatConverter.toReceiveData(chatReceiveDto);
+      this.messages.push(chatData);
+      this.notifyMessage(chatData);
+    });
   }
 
   /**

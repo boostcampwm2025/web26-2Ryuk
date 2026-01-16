@@ -131,6 +131,9 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
           // Redis 상태 복구
           await this.roomService.joinRoom(userId, roomId);
 
+          // 클라이언트에게 직접 room:join ACK 전송 (세션 복구 알림)
+          client.emit('room:join', { roomId });
+
           // 참여자 수 업데이트 및 브로드캐스트
           const mockUser = this.mockAuthService.getMockUserById(userId);
           const currentParticipants = await this.roomService.getCurrentParticipants(roomId);
