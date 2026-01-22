@@ -3,14 +3,14 @@
     "id": "user_1",
     "email": "alice@example.com",
     "nickname": "앨리스",
-    "profile_image": "https://i.pravatar.cc/150?img=1",
+    "profile_image": null,
     "role": "USER"
   },
   {
     "id": "user_2",
     "email": "bob@example.com",
     "nickname": "밥",
-    "profile_image": "https://i.pravatar.cc/150?img=2",
+    "profile_image": null,
     "role": "USER"
   },
   {
@@ -24,7 +24,7 @@
     "id": "test_user",
     "email": "test@example.com",
     "nickname": "테스트",
-    "profile_image": "https://i.pravatar.cc/150?img=3",
+    "profile_image": null,
     "role": "ADMIN"
   }
 ]

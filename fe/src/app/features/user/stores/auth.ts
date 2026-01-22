@@ -67,12 +67,11 @@ export const authStore = create<AuthStore>()(
           });
 
           // WebSocket 구독
-          if (!IS.undefined(window)) {
+          if (typeof window !== 'undefined') {
             await globalChatService.subscribe();
           }
         } catch (e) {
           console.warn('[Auth] initialize failed', e);
-          // ❗ 토큰은 유지 (자동 로그아웃 안 함)
           set({ isAuthenticated: false, user: null });
         }
       },
@@ -80,7 +79,6 @@ export const authStore = create<AuthStore>()(
       /* ---------- login ---------- */
       login: async (userId: string) => {
         const data = await UserService.mockLogin(userId);
-        console.log('data', data);
 
         const user: User = {
           id: data.user.id,
@@ -95,10 +93,12 @@ export const authStore = create<AuthStore>()(
           user,
         });
 
-        if (IS.undefined(window)) return;
+        if (typeof window === 'undefined') return;
         const { globalChatService } =
           await import('@/app/features/chat/services/GlobalChatService');
         await globalChatService.subscribe();
+        // 로그인 시 글로벌 채팅 참가자 수 낙관적 +1
+        globalChatService.incrementParticipantsOptimistic();
       },
 
       /* ---------- logout ---------- */
@@ -110,7 +110,9 @@ export const authStore = create<AuthStore>()(
           user: null,
         });
 
-        if (IS.undefined(window)) return;
+        if (typeof window === 'undefined') return;
+        // 로그아웃 시 글로벌 채팅 참가자 수 낙관적 -1
+        globalChatService.decrementParticipantsOptimistic();
         globalChatService.notifyLogout();
       },
     }),
@@ -137,10 +139,7 @@ export const authStore = create<AuthStore>()(
           const parsed = e.newValue ? JSON.parse(e.newValue) : null;
           const next = parsed?.state;
 
-          if (!next?.token) {
-            authStore.getState().logout();
-            return;
-          }
+          if (!next?.token) return authStore.getState().logout();
 
           if (next.token !== authStore.getState().token) {
             authStore.setState({
@@ -158,7 +157,7 @@ export const authStore = create<AuthStore>()(
           }
         };
 
-        if (!IS.undefined(window)) {
+        if (typeof window !== 'undefined') {
           window.addEventListener('storage', onStorage);
         }
       },

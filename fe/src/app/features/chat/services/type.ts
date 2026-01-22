@@ -1,32 +1,18 @@
 export interface ChatChannel {
-  sendMessage(message: string): void;
-  subscribe(): void;
-  unsubscribe(): void;
+  sendMessage(message: string): Promise<void>;
+  subscribe(): Promise<void>;
+  unsubscribe(): Promise<void>;
 }
 
-/**
- * WebSocket 수신 DTO
- */
-export interface RoomJoinedAckDto {
-  roomId: string;
-}
+import { ChatReceiveData } from '@/app/features/chat/dtos/data';
 
-export interface RoomJoinedBroadcastDto {
-  roomId: string;
-  user: {
-    id: string;
-    nickname: string;
-    profile_image: string | null;
-  };
-  current_participants: string;
-}
+// WebSocket 콜백 타입
+export type MessageCallback = (message: ChatReceiveData) => void;
+export type ConnectionCallback = (isConnected: boolean) => void;
+export type ParticipantsCallback = (count: number) => void;
+export type RecentsCallback = (messages: ChatReceiveData[]) => void;
 
-export interface RoomLeftAckDto {
-  roomId: string;
-}
-
-export interface RoomLeftBroadcastDto {
-  roomId: string;
-  userId: string;
-  current_participants: string;
+// WebSocket 에러 DTO
+export interface WebSocketErrorDto {
+  message: string;
 }

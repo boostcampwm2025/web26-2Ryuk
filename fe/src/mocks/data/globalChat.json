@@ -6,7 +6,6 @@
       "sender": {
         "role": "user",
         "nickname": "박지원",
-        "profile_image": null,
         "is_me": false
       },
       "timestamp": "2024-01-15T14:30:00.000Z"
@@ -16,7 +15,6 @@
       "sender": {
         "role": "user",
         "nickname": "강하늘",
-        "profile_image": null,
         "is_me": true
       },
       "timestamp": "2024-01-15T14:31:00.000Z"
@@ -26,7 +24,6 @@
       "sender": {
         "role": "user",
         "nickname": "김민수",
-        "profile_image": null,
         "is_me": false
       },
       "timestamp": "2024-01-15T14:32:00.000Z"

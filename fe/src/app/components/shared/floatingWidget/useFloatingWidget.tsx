@@ -40,13 +40,20 @@ export function useFloatingWidget({
   }, [isDragging, isTransitioning]);
 
   useEffect(() => {
-    ensureInBounds();
-    if (initialPosition || !widgetRef.current) return;
+    if (initialPosition) return setPosition(initialPosition);
+
+    if (!widgetRef.current) return;
     requestAnimationFrame(() => {
       if (!widgetRef.current) return;
-      setPosition(getInitialPosition(widgetRef.current));
+      const pos = getInitialPosition(widgetRef.current);
+      setPosition(pos);
     });
   }, [initialPosition]);
+
+  useEffect(() => {
+    if (!widgetRef.current) return;
+    requestAnimationFrame(ensureInBounds);
+  }, [position, ensureInBounds]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

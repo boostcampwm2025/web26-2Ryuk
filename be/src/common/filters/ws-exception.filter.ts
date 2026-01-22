@@ -1,5 +1,6 @@
 import { Catch, ArgumentsHost, HttpException, Logger } from '@nestjs/common';
 import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
+import { createWsErrorResponse } from '@src/common/utils/ws-error-code';
 
 @Catch() // 모든 예외를 잡음
 export class WsExceptionFilter extends BaseWsExceptionFilter {
@@ -13,40 +14,16 @@ export class WsExceptionFilter extends BaseWsExceptionFilter {
     // 디버깅: 받은 원본 데이터 로그
     this.logger.debug(`예외 필터 - 받은 데이터: ${JSON.stringify(data)}, 타입: ${typeof data}`);
 
-    const errorResponse = {
-      event: 'error',
-      data: {
-        path: `event: ${ctx.getPattern()}`,
-        message: 'Internal server error',
-      },
+    // 모든 예외를 일관되게 처리
+    const errorResponse = createWsErrorResponse(exception, '서버 오류가 발생했습니다.');
+
+    // path 정보를 추가 (디버깅 용도)
+    const responseWithPath = {
+      ...errorResponse,
+      path: `event: ${ctx.getPattern()}`,
     };
 
-    if (exception instanceof WsException) {
-      // NestJS WebSocket 전용 예외
-      errorResponse.data.message = exception.getError() as string;
-    } else if (exception instanceof HttpException) {
-      // ValidationPipe 등에서 발생하는 HttpException 처리
-      const response = exception.getResponse();
-      let message: string | string[];
-
-      if (typeof response === 'object' && response !== null && 'message' in response) {
-        // NestJS 기본 오류 응답 형식: { statusCode, message, error }
-        message = (response as { message: string | string[] }).message;
-      } else {
-        // 그 외의 경우 (예: 문자열 응답)
-        message = exception.message;
-      }
-
-      if (Array.isArray(message)) {
-        errorResponse.data.message = message.join(', ');
-      } else {
-        errorResponse.data.message = message;
-      }
-    } else if (exception instanceof Error) {
-      // 그 외 일반적인 JavaScript 에러
-      errorResponse.data.message = exception.message;
-    }
-
-    client.emit(errorResponse.event, errorResponse.data);
+    client.emit('error', responseWithPath);
+    return;
   }
 }

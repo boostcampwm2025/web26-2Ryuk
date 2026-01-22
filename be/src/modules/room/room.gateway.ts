@@ -1,6 +1,6 @@
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, Inject, ValidationPipe, BadRequestException, UsePipes, UseFilters } from '@nestjs/common';
+import { Logger, ValidationPipe, UsePipes, UseFilters, forwardRef, Inject } from '@nestjs/common';
 import { WsExceptionFilter } from '@src/common/filters/ws-exception.filter';
 import { WsJsonParsePipe } from '@src/common/pipes/ws-json-parse.pipe';
 import { RoomService } from './room.service';
@@ -10,6 +10,9 @@ import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import { RedisClientType } from 'redis';
 import { LOG, logMessage } from '@src/common/utils/log-messages';
 import { GLOBAL_ROOM_ID } from '@src/common/constants/constants';
+import { createWsError, createWsErrorResponse } from '@src/common/utils/ws-error-code';
+import { WS_EVENTS_ROOM, WS_EVENTS_ERROR } from '@src/common/constants/ws-events.constant';
+import { ChatService } from '@src/modules/chat/chat.service';
 
 @UseFilters(new WsExceptionFilter())
 @WebSocketGateway({ namespace: '/' })
@@ -34,6 +37,7 @@ export class RoomGateway {
   constructor(
     private readonly roomService: RoomService,
     private readonly authService: AuthService,
+    @Inject(forwardRef(() => ChatService)) private readonly chatService: ChatService,
     @Inject(REDIS_CLIENT) private readonly redisClient: RedisClientType,
   ) {}
 
@@ -41,7 +45,7 @@ export class RoomGateway {
    * 대화방 입장 처리 (로컬)
    * 요구사항: 권한 검증 후 논리적 상태 변경 및 Socket.io room 참여
    */
-  @SubscribeMessage('room:join')
+  @SubscribeMessage(WS_EVENTS_ROOM.JOIN)
   async handleRoomJoin(@ConnectedSocket() client: Socket, @MessageBody() dto: RoomJoinDto) {
     // 디버깅: 받은 데이터 로그
     logMessage(this.logger, LOG.WS.ROOM_JOIN_DTO_RECEIVED(JSON.stringify(dto), typeof dto));
@@ -57,7 +61,7 @@ export class RoomGateway {
     // 인증 확인
     if (!isAuthenticated || !userId) {
       logMessage(this.logger, LOG.ROOM.UNAUTH_JOIN(client.id));
-      client.emit('error', { message: '로그인이 필요합니다.' });
+      client.emit(WS_EVENTS_ERROR.ERROR, createWsError('UNAUTHORIZED', '로그인이 필요합니다.'));
       return;
     }
 
@@ -68,7 +72,7 @@ export class RoomGateway {
       // 방 존재 여부 및 타입 확인
       if (roomType === null) {
         logMessage(this.logger, LOG.ROOM.NO_PERMISSION(userId, dto.room_id));
-        client.emit('error', { message: '존재하지 않는 방입니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, createWsError('NOT_FOUND', '존재하지 않는 방입니다.'));
         return;
       }
 
@@ -76,7 +80,7 @@ export class RoomGateway {
       const canJoin = await this.roomService.canUserJoinRoom(userId, dto.room_id);
       if (!canJoin) {
         logMessage(this.logger, LOG.ROOM.NO_PERMISSION(userId, dto.room_id));
-        client.emit('error', { message: '방 입장 권한이 없습니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, createWsError('FORBIDDEN', '방 입장 권한이 없습니다.'));
         return;
       }
 
@@ -85,32 +89,11 @@ export class RoomGateway {
       if (isInRoom) {
         logMessage(this.logger, LOG.ROOM.ALREADY_IN(userId, dto.room_id));
 
-        // Redis에는 참여 중이지만 Socket.io room에 참여하지 않았을 수 있으므로
-        // Socket.io room에 참여하도록 보장
-        client.join(dto.room_id);
-        client.emit('room:join', { roomId: dto.room_id });
-
-        // 이미 참여 중이어도 다른 사용자에게 브로드캐스트를 보내야 함
-        // (예: 호스트가 방을 만든 직후 다른 사용자가 입장하는 경우)
-        const user = await this.authService.getUserById(userId);
+        // Redis에는 참여 중이지만 Socket.io room에 참여하지 않았을 수 있으므로 재참여만
+        void client.join(dto.room_id);
         const currentParticipants = await this.roomService.getCurrentParticipants(dto.room_id);
-
-        // Redis adapter를 사용하는 경우 room 참여가 전파되는 데 시간이 걸릴 수 있으므로
-        // 약간의 지연을 두고 브로드캐스트 전송
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        await this.roomService.notifyUserJoined(
-          this.server,
-          dto.room_id,
-          {
-            userId,
-            nickname: user.nickname,
-            profile_image: user.profile_image,
-          },
-          currentParticipants,
-        );
-
-        return;
+        const recents = await this.chatService.getRoomChatRecents(dto.room_id, userId);
+        return { room_id: dto.room_id, current_participants: currentParticipants, recents };
       }
 
       // 정원 확인
@@ -119,7 +102,8 @@ export class RoomGateway {
 
       if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
         logMessage(this.logger, LOG.ROOM.VALIDATION_ERROR(userId, dto.room_id, '방 정원 초과'));
-        client.emit('error', { message: '방 정원이 초과되었습니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, createWsError('FORBIDDEN', '방 정원이 초과되었습니다.'));
+        return;
       }
 
       // 기존 로컬 방 자동 퇴장 처리 (방 이동)
@@ -134,10 +118,7 @@ export class RoomGateway {
       currentParticipants = await this.roomService.getCurrentParticipants(dto.room_id);
 
       // Socket.io room에 참여
-      client.join(dto.room_id);
-
-      // 클라이언트에 입장 성공 알림 (ACK)
-      client.emit('room:join', { roomId: dto.room_id });
+      void client.join(dto.room_id);
 
       // 브로드캐스트: 사용자 정보 및 현재 참여자 수 조회
       // Service를 통해 MySQL에서 사용자 정보 조회
@@ -159,32 +140,22 @@ export class RoomGateway {
       );
 
       logMessage(this.logger, LOG.ROOM.JOIN(userId, dto.room_id));
+
+      // 최근 방 채팅 불러오기
+      const recents = await this.chatService.getRoomChatRecents(dto.room_id, userId);
+
+      // 클라이언트에 입장 성공 알림 (ACK, 참여자 수/최근 메시지 포함)
+      return { room_id: dto.room_id, current_participants: currentParticipants, recents };
     } catch (error) {
-      // ValidationPipe 에러 처리
-      if (error instanceof BadRequestException) {
-        const errorResponse = error.getResponse();
-        const message =
-          typeof errorResponse === 'object' && errorResponse !== null && 'message' in errorResponse
-            ? Array.isArray(errorResponse.message)
-              ? errorResponse.message.join(', ')
-              : errorResponse.message
-            : '입력값이 올바르지 않습니다.';
-
-        try {
-          client.emit('error', { message: String(message) });
-        } catch (emitError) {
-          this.logger.warn('에러 메시지 전송 실패', emitError);
-        }
-        return;
-      }
-
-      // Redis 연결 문제나 예상치 못한 에러 발생 시 처리
+      // 모든 예외를 일관되게 처리
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       logMessage(this.logger, LOG.WS.ROOM_JOIN_HANDLE_ERROR(errorMessage, errorStack));
 
+      const errorResponse = createWsErrorResponse(error, '방 입장 처리 중 문제가 발생했습니다.');
       try {
-        client.emit('error', { message: '방 입장 처리 중 문제가 발생했습니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+        return;
       } catch (emitError) {
         // emit 실패 시 무시
         this.logger.warn('에러 메시지 전송 실패', emitError);
@@ -196,7 +167,7 @@ export class RoomGateway {
    * 방 퇴장 처리
    * 요구사항: 논리적 상태 변경 및 Socket.io room에서 제거
    */
-  @SubscribeMessage('room:leave')
+  @SubscribeMessage(WS_EVENTS_ROOM.LEAVE)
   async handleRoomLeave(@ConnectedSocket() client: Socket, @MessageBody() dto: RoomLeaveDto) {
     try {
       const userId = client.data.userId;
@@ -205,7 +176,7 @@ export class RoomGateway {
       // 권한 검증: 인증되지 않은 사용자는 방 퇴장 불가능
       if (!isAuthenticated || !userId) {
         logMessage(this.logger, LOG.ROOM.UNAUTH_LEAVE(client.id));
-        client.emit('error', { message: '인증이 필요합니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, createWsError('UNAUTHORIZED', '인증이 필요합니다.'));
         return;
       }
 
@@ -213,43 +184,26 @@ export class RoomGateway {
       const isInRoom = await this.roomService.isUserInRoom(userId, dto.room_id);
       if (!isInRoom) {
         logMessage(this.logger, LOG.ROOM.NOT_IN(userId, dto.room_id));
-        client.emit('error', { message: '해당 방에 참여하지 않았습니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, createWsError('NOT_FOUND', '해당 방에 참여하지 않았습니다.'));
         return;
       }
 
       // 공통 퇴장 처리
       await this.leaveRoomProcess(client, userId, dto.room_id);
 
-      // 클라이언트에 퇴장 성공 알림 (ACK)
-      client.emit('room:leave', { roomId: dto.room_id });
-
       logMessage(this.logger, LOG.ROOM.LEAVE(userId, dto.room_id));
+      // 클라이언트에 퇴장 성공 알림 (ACK)
+      return { room_id: dto.room_id };
     } catch (error) {
-      // ValidationPipe 에러 처리
-      if (error instanceof BadRequestException) {
-        const errorResponse = error.getResponse();
-        const message =
-          typeof errorResponse === 'object' && errorResponse !== null && 'message' in errorResponse
-            ? Array.isArray(errorResponse.message)
-              ? errorResponse.message.join(', ')
-              : errorResponse.message
-            : '입력값이 올바르지 않습니다.';
-
-        try {
-          client.emit('error', { message: String(message) });
-        } catch (emitError) {
-          this.logger.warn('에러 메시지 전송 실패', emitError);
-        }
-        return;
-      }
-
-      // 기타 에러 처리
+      // 모든 예외를 일관되게 처리
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       logMessage(this.logger, LOG.WS.ROOM_LEAVE_HANDLE_ERROR(errorMessage, errorStack));
 
+      const errorResponse = createWsErrorResponse(error, '방 퇴장 처리 중 문제가 발생했습니다.');
       try {
-        client.emit('error', { message: '방 퇴장 처리 중 문제가 발생했습니다.' });
+        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+        return;
       } catch (emitError) {
         this.logger.warn('에러 메시지 전송 실패', emitError);
       }
@@ -262,10 +216,10 @@ export class RoomGateway {
    */
   private async leaveRoomProcess(client: Socket, userId: string, roomId: string) {
     // Redis에서 제거
-    await this.roomService.leaveRoom(userId, roomId);
+    await this.roomService.leaveRoom(this.server, userId, roomId);
 
     // 소켓 room 탈퇴
-    client.leave(roomId);
+    void client.leave(roomId);
 
     // 퇴장 후 참여자 수 조회
     const currentParticipants = await this.roomService.getCurrentParticipants(roomId);

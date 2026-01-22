@@ -14,6 +14,9 @@ export class Game {
   @Column({ type: 'varchar', length: 20 })
   title: string;
 
+  @Column({ type: 'int' })
+  time: number;
+
   @Column({
     type: 'enum',
     enum: GameType,
@@ -21,10 +24,10 @@ export class Game {
   type: GameType;
 
   @Column({ type: 'int', nullable: true })
-  max_participants: number;
+  max_players: number;
 
   @Column({ type: 'int', nullable: true })
-  min_participants: number;
+  min_players: number;
 
   @Column({ type: 'text', nullable: true })
   description: string;

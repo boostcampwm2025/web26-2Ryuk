@@ -1,5 +1,15 @@
 export type ButtonSize = 'small' | 'medium' | 'large';
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'ghost'
+  | 'success-primary'
+  | 'success-secondary'
+  | 'warning-primary'
+  | 'warning-secondary'
+  | 'error-primary'
+  | 'error-secondary';
 
 export interface TextButtonProps {
   iconName?: string;

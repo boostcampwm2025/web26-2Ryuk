@@ -4,11 +4,12 @@ import RoomInfo from './RoomInfo';
 import Modal from '@/app/components/shared/modal/Modal';
 import RoomUpdateModalContent from '../creation/RoomUpdateModalContent';
 import { useModal } from '@/app/components/shared/modal/useModal';
-import { RoomEditData } from '@/app/features/room/dtos/type';
-import { RoomConverter } from '@/app/features/room/dtos/Room';
+import { RoomEditData } from '@/app/features/room/dtos/data';
+import { RoomConverter } from '@/app/features/room/dtos/converter';
 import roomService from '@/app/features/room/services/RoomService';
 import { roomStore } from '@/app/features/room/stores/room';
 import { useToast } from '@/app/components/shared/toast/useToast';
+import { useRoomChat } from '@/app/features/chat/hooks/useRoomChat';
 
 interface RoomInfoWithModalProps {
   roomId: string;
@@ -31,6 +32,8 @@ export default function RoomInfoWithModal({
 }: RoomInfoWithModalProps) {
   const { openModal, closeModal } = useModal();
   const { showSuccessToast } = useToast();
+  const isJoined = roomStore((s) => s.isJoined);
+  const { isConnected } = useRoomChat(roomId, isJoined);
 
   const modalId = `room-update-${title}`;
 
@@ -38,7 +41,7 @@ export default function RoomInfoWithModal({
 
   const handleCancel = () => closeModal(modalId);
   const handleSubmit = async (data: RoomEditData) => {
-    const roomDto = RoomConverter.editToDto(data);
+    const roomDto = RoomConverter.toEditDto(data);
     const updatedDto = await roomService.updateRoom(roomId, roomDto);
     const updated = RoomConverter.toData(updatedDto);
 
@@ -71,6 +74,7 @@ export default function RoomInfoWithModal({
         isMicAvailable={isMicAvailable}
         isPrivate={isPrivate}
         onEditClick={handleEditClick}
+        isConnected={isConnected}
       />
       <Modal id={modalId}>
         <RoomUpdateModalContent

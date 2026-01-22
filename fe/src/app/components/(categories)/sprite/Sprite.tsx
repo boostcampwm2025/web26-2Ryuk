@@ -1,6 +1,7 @@
 import styles from '@/app/components/helpers/components.module.css';
 import { LogoImage, Logo } from '@/app/components/sprite/logo/Logo';
 import SpriteAnimation from '@/app/components/sprite/spriteAnimation/SpriteAnimation';
+import WaterDrop from '@/app/components/sprite/waterDrop/WaterDrop';
 import Component from '@/app/components/helpers/Component';
 import ComponentRelations from '@/app/components/helpers/ComponentRelations';
 
@@ -133,6 +134,27 @@ export default function SpriteComponents() {
             <Component>
               <SpriteAnimation variant="drop" size="small" />
             </Component>
+          </div>
+        </div>
+      </section>
+
+      <section id="water-drop" className={styles.section}>
+        <h2 className={styles.sectionTitle}>WaterDrop</h2>
+        <ComponentRelations componentId="water-drop" />
+        <div className={styles.showcaseBlock}>
+          <div className={styles.iconRow}>
+            <div className={styles.iconItem}>
+              <Component>
+                <WaterDrop type="me" />
+              </Component>
+              <span className={styles.iconLabel}>Primary</span>
+            </div>
+            <div className={styles.iconItem}>
+              <Component>
+                <WaterDrop type="other" />
+              </Component>
+              <span className={styles.iconLabel}>Secondary</span>
+            </div>
           </div>
         </div>
       </section>

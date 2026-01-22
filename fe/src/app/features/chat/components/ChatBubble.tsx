@@ -20,7 +20,7 @@ function ChatBubble({ id, message, sender, timestamp }: ChatBubbleProps) {
   return (
     <div className={className} data-chat-id={id}>
       <div className={styles.avatar}>
-        <Avatar profileImage={sender.profileImage || ''} />
+        <Avatar nickname={sender.nickname} profileImage={sender.profileImage || ''} />
       </div>
       <div className={styles.content}>
         <div className={styles.header}>

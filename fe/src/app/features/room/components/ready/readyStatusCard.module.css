@@ -1,0 +1,80 @@
+.myCard {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  background: var(--neutral-2);
+  border: var(--neutral-4) 1px solid;
+  border-radius: 52px;
+  transition: all .2s ease-in-out;
+}
+
+.myCard.isHost {
+  background: var(--primary-3);
+  border: var(--primary-5) 1px solid;
+}
+
+.myCard.ready {
+  background: var(--success-bg);
+  border: var(--success-border) 1px solid;
+}
+
+.myCard .header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.myCard .profile {
+  min-width: 120px;
+}
+
+.otherCard {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  height: 112px;
+  border-radius: 8px;
+  background: var(--neutral-2);
+  border: 1px solid var(--neutral-4);
+  transition: all .2s ease-in-out;
+}
+
+.otherCard.isHost {
+  background: var(--primary-3);
+  border-color: var(--primary-5);
+}
+
+.otherCard.ready {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+}
+
+.otherCard .tag {
+  height: 24px;
+}
+
+.otherGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 112px;
+  border: 1px dashed var(--neutral-4);
+  border-radius: 8px;
+  background: var(--neutral-1);
+}

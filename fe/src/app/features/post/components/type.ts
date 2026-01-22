@@ -1,4 +1,4 @@
-import { PostListItemData, PostListRowData } from '@/app/features/post/dtos/type';
+import { PostListItemData, PostListRowData } from '../dtos/type';
 
 export interface PostListItemProps extends PostListItemData {}
 

@@ -19,7 +19,7 @@ export class WebSocketService {
     onMessage?: (data: unknown) => void,
     onError?: (error: Error) => void,
   ): void {
-    // 이미 연결되어 있으면 재연결
+    // 이미 연결되어 있으면 재연결을 위해 기존 연결 해제
     if (this.socket?.connected) this.disconnect();
 
     const connectionOptions: any = {
@@ -32,21 +32,19 @@ export class WebSocketService {
     };
 
     // Mock 인증: query.userId 또는 auth.token 사용
-    if (userId) connectionOptions.query = { userId };
-    else {
+    if (userId) {
+      connectionOptions.query = { userId };
+    } else {
       const mockToken = this.getMockToken();
       if (mockToken) connectionOptions.auth = { token: mockToken };
     }
 
     this.socket = io(url, connectionOptions);
 
-    // 연결 완료 Promise 생성
+    // 연결 완료 Promise 관리
     const socket = this.socket;
     this.connectPromise = new Promise<void>((resolve) => {
-      if (socket.connected) {
-        resolve();
-        return;
-      }
+      if (socket.connected) return resolve();
 
       const connectHandler = () => {
         socket.off('connect', connectHandler);
@@ -58,18 +56,14 @@ export class WebSocketService {
       socket.on('connect', connectHandler);
     });
 
-    // 이벤트 리스너 설정
-    this.socket.on('connect', () => {
-      // 연결 완료
-    });
-
-    this.socket.on('disconnect', (reason: any) => {
-      this.connectPromise = null;
-    });
-
     this.socket.on('connect_error', (error: any) => {
-      console.error('WebSocket connection error:', error);
+      console.error('[WebSocket] 연결 에러:', error);
       if (onError) onError(error);
+    });
+
+    this.socket.on('disconnect', (reason: string) => {
+      console.warn('[WebSocket] 연결 해제:', reason);
+      this.connectPromise = null;
     });
 
     // 모든 이벤트를 onMessage로 전달
@@ -81,7 +75,7 @@ export class WebSocketService {
   }
 
   /**
-   * Socket 인스턴스 가져오기 (이벤트 핸들러 등록용)
+   * Socket 인스턴스 가져오기
    */
   static getSocket(): Socket | null {
     return this.socket;
@@ -98,40 +92,61 @@ export class WebSocketService {
     this.connectResolvers.clear();
   }
 
+  static onReconnect(cb: () => void) {
+    this.on('connect', cb);
+  }
+
   /**
    * WebSocket 연결 완료 보장
-   * 이미 연결되어 있으면 즉시 resolve, 아니면 연결 완료까지 대기
    * @param timeout 타임아웃 (ms), 기본값 10초
    */
   static async ensureConnected(timeout: number = 10000): Promise<void> {
-    // 이미 연결되어 있으면 즉시 반환
     if (this.socket?.connected) return;
 
-    // 연결 중이면 기존 Promise 대기
     if (this.connectPromise) {
       return Promise.race([
         this.connectPromise,
         new Promise<void>((_, reject) =>
-          setTimeout(() => reject(new Error('WebSocket connection timeout')), timeout),
+          setTimeout(() => reject(new Error('[WebSocket] 연결 시간 초과')), timeout),
         ),
       ]);
     }
 
-    // 연결이 시작되지 않았으면 에러
-    throw new Error('WebSocket is not connecting. Call connect() first.');
+    throw new Error('[WebSocket] 연결이 시작되지 않았습니다. connect()를 먼저 호출하세요.');
   }
 
   /**
    * 메시지 전송
-   * @param event 이벤트 이름
-   * @param data 전송할 데이터
    */
   static send(event: string, data?: unknown): void {
     if (!this.socket?.connected) {
-      console.error('WebSocket is not connected');
+      console.error('[WebSocket] 메시지 전송 실패: 연결되지 않은 상태입니다.');
       return;
     }
     this.socket.emit(event, data);
+  }
+
+  /**
+   * 소켓 요청 유틸리티 (Ack 응답 대기)
+   */
+  static request(event: string, data: any, timeout = 5000): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const socket = this.socket;
+
+      if (!socket || !socket.connected) {
+        return reject(new Error('[WebSocket] 요청 실패: 연결되지 않은 상태입니다.'));
+      }
+
+      const timer = setTimeout(() => {
+        reject(new Error(`[WebSocket] 요청 응답 시간 초과: ${event}`));
+      }, timeout);
+
+      socket.emit(event, data, (res: any) => {
+        clearTimeout(timer);
+        if (res?.error) reject(new Error(`[WebSocket] 서버 에러: ${res.error}`));
+        else resolve(res?.data ?? res);
+      });
+    });
   }
 
   /**
@@ -142,7 +157,7 @@ export class WebSocketService {
   }
 
   /**
-   * Mock 토큰 가져오기 (authStore에서)
+   * Mock 토큰 가져오기
    */
   private static getMockToken(): string | null {
     if (IS.undefined(window)) return null;
@@ -165,39 +180,37 @@ export class WebSocketService {
 
   /**
    * 특정 이벤트 리스너 등록
-   * Chrome에서 이벤트 리스너가 제대로 등록되지 않는 문제를 해결하기 위해
-   * socket이 연결된 상태에서만 등록하도록 보장
    */
   static on(event: string, callback: (...args: any[]) => void): void {
     const registerListener = () => {
       if (!this.socket) {
-        // socket이 생성될 때까지 대기 후 등록
+        // socket 인스턴스가 없을 경우 연결될 때까지 재시도 (최대 50회)
+        let attempts = 0;
         const checkAndRegister = () => {
-          if (!this.socket) {
-            setTimeout(checkAndRegister, 10);
-            return;
+          attempts++;
+          if (this.socket) {
+            registerListener();
+          } else if (attempts < 50) {
+            setTimeout(checkAndRegister, 100);
+          } else {
+            console.error('[WebSocket] 리스너 등록 실패: Socket 인스턴스가 존재하지 않습니다.');
           }
-          registerListener();
         };
         checkAndRegister();
         return;
       }
 
-      // Chrome에서 이벤트 리스너가 제대로 등록되도록
-      // socket이 연결된 상태에서만 등록하도록 보장
       if (!this.socket.connected) {
-        // 연결 완료 후 등록
-        const connectHandler = () => {
-          this.socket?.off('connect', connectHandler);
+        this.socket.once('connect', () => {
           this.socket?.on(event, callback);
-        };
-        this.socket.once('connect', connectHandler);
+        });
         return;
       }
 
-      // Chrome에서 중복 등록 방지를 위해 먼저 제거 후 등록
       this.socket.off(event, callback);
       this.socket.on(event, callback);
+
+      // 만약 이미 연결된 상태에서 connect 이벤트를 등록하려 한다면 즉시 콜백 실행
       if (event === 'connect' && this.socket.connected) callback();
     };
 

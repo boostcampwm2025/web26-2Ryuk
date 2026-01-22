@@ -1,2 +1,13 @@
 export const GLOBAL_ROOM_ID = 'global-room-001';
 export const USER_SESSION_EXPIRATION_TIME = 30;
+
+/**
+ * WebSocket 및 HTTP 에러 코드 상수
+ */
+export const ERROR_CODE = {
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND',
+  BAD_REQUEST: 'BAD_REQUEST',
+  INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+} as const;

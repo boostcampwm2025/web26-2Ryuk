@@ -5,18 +5,20 @@ import CSSUtil from '@/utils/css';
 import styles from './slider.module.css';
 import { SliderProps } from './type';
 
-function SliderBase({
+export function SliderBase({
   initialValue = 0,
   min = 0,
   max = 100,
   step = 1,
   onChange,
   disabled = false,
-  variant,
+  variant = 'primary',
 }: SliderProps) {
   const [value, setValue] = useState(initialValue);
   const percentage = ((value - min) / (max - min)) * 100;
   const style = { '--slider-percentage': `${percentage}%` } as React.CSSProperties;
+
+  const className = CSSUtil.buildCls(styles.slider, styles[variant], disabled && styles.disabled);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(event.target.value);
@@ -27,13 +29,13 @@ function SliderBase({
   return (
     <input
       type="range"
+      className={className}
       min={min}
       max={max}
       step={step}
       value={value}
       onChange={handleChange}
       disabled={disabled}
-      className={CSSUtil.buildCls(styles.slider, styles[variant])}
       style={style}
     />
   );

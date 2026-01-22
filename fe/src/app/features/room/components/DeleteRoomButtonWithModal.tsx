@@ -25,7 +25,7 @@ export default function DeleteRoomButtonWithModal() {
     if (!roomId) return;
 
     await roomService.deleteRoom(roomId);
-    roomChatService.unsubscribe();
+    await roomChatService.unsubscribe();
     roomStore.getState().leaveRoom();
     closeModal(modalId);
     showSuccessToast('방이 삭제되었습니다.');

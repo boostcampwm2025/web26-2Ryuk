@@ -19,8 +19,14 @@ export default [
       },
       globals: {
         // Node.js globals
+        NodeJS: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        crypto: 'readonly',
         __dirname: 'readonly',
         __filename: 'readonly',
         global: 'readonly',
@@ -28,7 +34,13 @@ export default [
         require: 'readonly',
         exports: 'readonly',
         console: 'readonly',
-        // Jest globals
+
+        // ES2021
+        Promise: 'readonly',
+        Map: 'readonly',
+        Set: 'readonly',
+
+        // Jest (필요 시)
         jest: 'readonly',
         describe: 'readonly',
         it: 'readonly',

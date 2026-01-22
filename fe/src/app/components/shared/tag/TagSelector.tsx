@@ -32,10 +32,7 @@ export default function TagSelector({
     if (tagLength > 10) return; // 입력 자체를 막음
 
     // 한글 입력 중이면 # 자동 추가하지 않음
-    if (isComposing) {
-      setInputValue(value);
-      return;
-    }
+    if (isComposing) return setInputValue(value);
 
     // #으로 시작하지 않으면 자동으로 # 앞에 붙임
     if (value.length > 0 && !value.startsWith('#')) setInputValue('#' + value);
@@ -66,14 +63,16 @@ export default function TagSelector({
     // Enter 키 처리
     if (e.key === 'Enter') {
       // 조합 중일 때는 태그 추가 불가
-      if (isComposing) {
-        e.preventDefault();
-        return;
-      }
+      if (isComposing) return e.preventDefault();
 
       e.preventDefault();
       if (inputValue.trim() !== '') addTag(inputValue);
     }
+  };
+
+  const handleBlur = () => {
+    // 조합 중이 아니고 입력값이 있으면 태그 추가
+    if (!isComposing && inputValue.trim() !== '') addTag(inputValue);
   };
 
   const addTag = (tagInput: string) => {
@@ -84,16 +83,10 @@ export default function TagSelector({
     if (tagName.includes(' ')) tagName = tagName.replace(/\s+/g, '_');
 
     // 빈 태그 무시
-    if (!tagName) {
-      setInputValue('');
-      return;
-    }
+    if (!tagName) return setInputValue('');
 
     // 중복 태그 무시
-    if (selectedTags.includes(tagName)) {
-      setInputValue('');
-      return;
-    }
+    if (selectedTags.includes(tagName)) return setInputValue('');
 
     // 새 태그 추가
     const newSelectedTags = [...selectedTags, tagName];
@@ -104,7 +97,7 @@ export default function TagSelector({
 
   const handleTagClick = (tagName: string) => {
     if (defaultTags.includes(tagName)) {
-      // 기본값에 포함되어 있으면 토글 (추가/해제)
+      // 기본값에 포함되어 있으면 토글
       if (selectedTags.includes(tagName)) {
         // 선택되어 있으면 해제
         const newSelectedTags = selectedTags.filter((tag) => tag !== tagName);
@@ -124,7 +117,7 @@ export default function TagSelector({
     }
   };
 
-  // 모든 태그 (기본값 + 선택된 태그 중 기본값에 없는 것)
+  // 모든 태그
   const allTags = Array.from(new Set([...defaultTags, ...selectedTags]));
 
   return (
@@ -134,6 +127,7 @@ export default function TagSelector({
         value={inputValue}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
       />

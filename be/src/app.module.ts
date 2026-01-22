@@ -9,6 +9,7 @@ import databaseConfig from './providers/database/database.config';
 import { ChatModule } from './modules/chat/chat.module';
 import { RoomModule } from './modules/room/room.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { GameModule } from './modules/game/game.module';
 import { RedisModule } from './providers/redis/redis.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -37,6 +38,7 @@ import { Comment } from './modules/comment/comment.entity';
     ChatModule,
     RoomModule,
     AuthModule,
+    GameModule,
   ],
   controllers: [AppController],
   providers: [

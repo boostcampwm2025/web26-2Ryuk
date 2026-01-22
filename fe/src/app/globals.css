@@ -29,3 +29,58 @@ body {
 [data-anchor]:hover ~ [data-tooltip] {
   opacity: 1;
 }
+
+:root {
+  --clickable-overlay-hover: rgba(0, 0, 0, 0.1);
+  --clickable-overlay-active: rgba(0, 0, 0, 0.2);
+  --clickable-overlay-scale: 0.99;
+}
+
+.clickable {
+  position: relative;
+  cursor: pointer;
+  transition: all .2s ease-in-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.clickable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: all .2s ease-in-out;
+}
+
+.clickable:hover::after {
+  background: var(--clickable-overlay-hover);
+}
+
+.clickable:active::after {
+  background: var(--clickable-overlay-active);
+}
+
+.clickable:active { 
+  transform: scale(var(--clickable-overlay-scale)); 
+}
+
+.clickable:focus-visible::after {
+  outline: 2px solid var(--primary-5);
+  outline-offset: 2px;
+}
+
+/* Disabled states (highest priority) */
+.clickable.is-disabled,
+.clickable[aria-disabled='true'],
+.clickable:disabled {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.clickable.is-disabled::after,
+.clickable[aria-disabled='true']::after,
+.clickable:disabled::after {
+  background: transparent;
+  transform: none;
+}

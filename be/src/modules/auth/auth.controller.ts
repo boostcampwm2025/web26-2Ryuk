@@ -2,7 +2,10 @@ import { Controller, Post, Get, Body, Headers, UsePipes, ValidationPipe } from '
 import { AuthService } from './auth.service';
 import { MockAuthService } from './mock-auth.service';
 import { MockLoginDto, MockUserResponseDto } from './dto/mock-login.dto';
+import { GetMeResponseDto } from './dto/auth-response.dto';
 import { toUuid } from '@src/common/utils/user-id';
+import { WS_EVENTS_CHAT } from '@src/common/constants/ws-events.constant';
+import { GLOBAL_ROOM_ID } from '@src/common/constants/constants';
 
 @Controller('auth')
 export class AuthController {
@@ -76,10 +79,6 @@ export class AuthController {
     // Service를 통해 MySQL에서 실제 사용자 정보 조회
     const user = await this.authService.getUserById(payload.userId);
 
-    return {
-      id: user.id,
-      nickname: user.nickname,
-      avatar: user.profile_image || '',
-    };
+    return new GetMeResponseDto(user);
   }
 }

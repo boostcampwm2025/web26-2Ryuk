@@ -1,14 +1,15 @@
 /* Base */
 .chip {
-  --large-size: 24px;
+  --large-size: 21px;
   --medium-size: 16px;
-  --small-size: 12px;
+  --small-size: 10px;
 
   display: flex;
   gap: 4px;
   font: var(--body-1);
   border-radius: 52px;
   white-space: nowrap;
+  transition: all .2s ease-in-out;
 }
 
 .chip .label {
@@ -72,15 +73,134 @@
   color: var(--primary-1);
 }
 
+.chip.success-primary {
+  background: var(--success);
+  color: var(--neutral-1);
+}
+
+.chip.warning-primary {
+  background: var(--warning);
+  color: var(--neutral-1);
+}
+
+.chip.error-primary {
+  background: var(--error);
+  color: var(--neutral-1);
+}
+
 .chip.secondary {
   background: var(--primary-3);
   color: var(--primary-6);
+}
+
+.chip.success-secondary {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.chip.warning-secondary {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.chip.error-secondary {
+  background: var(--error-bg);
+  color: var(--error);
 }
 
 .chip.outline {
   background: var(--neutral-1);
   color: var(--secondary);
   box-shadow: inset 0 0 0 2px var(--neutral-3);
+}
+
+.chip.ghost {
+  background: transparent;
+  color: var(--secondary);
+}
+
+/* ChipButton */
+.chipButton {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 52px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.chipButton:disabled {
+  cursor: not-allowed;
+}
+
+.chipButton:disabled .chip.primary,
+.chipButton:disabled .chip.success-primary,
+.chipButton:disabled .chip.warning-primary,
+.chipButton:disabled .chip.error-primary {
+  background: var(--neutral-4);
+  color: var(--neutral-3);
+}
+
+.chipButton:disabled .chip.secondary,
+.chipButton:disabled .chip.success-secondary,
+.chipButton:disabled .chip.warning-secondary,
+.chipButton:disabled .chip.error-secondary,
+.chipButton:disabled .chip.default {
+  background: var(--neutral-3);
+  color: var(--neutral-4);
+}
+
+.chipButton:disabled .chip.outline {
+  background: var(--neutral-2);
+  color: var(--neutral-4);
+  box-shadow: inset 0 0 0 2px var(--neutral-3);
+}
+
+.chipButton:disabled .chip.ghost {
+  background: transparent;
+  color: var(--neutral-4);
+}
+
+.chipButton:hover:not(:disabled) .chip.outline {
+  background: var(--neutral-2);
+}
+
+.chipButton:active:not(:disabled) .chip.outline {
+  background: var(--neutral-4);
+}
+
+.chipButton:disabled .chip.outline {
+  background: var(--neutral-2);
+  color: var(--neutral-4);
+  box-shadow: inset 0 0 0 2px var(--neutral-3);
+}
+
+.chipButton:hover:not(:disabled) .chip.default {
+  background: var(--neutral-4);
+  color: var(--neutral-6);
+}
+
+.chipButton:active:not(:disabled) .chip.default {
+  background: var(--neutral-5);
+  color: var(--neutral-7);
+}
+
+.chipButton:disabled .chip.default {
+  background: var(--neutral-2);
+  color: var(--neutral-4);
+}
+
+.chipButton:hover:not(:disabled) .chip.ghost {
+  background: var(--neutral-2);
+}
+
+.chipButton:active:not(:disabled) .chip.ghost {
+  background: var(--neutral-4);
+}
+
+.chipButton:disabled .chip.ghost {
+  background: transparent;
+  color: var(--neutral-4);
 }
 
 /* ToggleChip */

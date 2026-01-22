@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { AudioControlsProps } from './type';
 import styles from './audioControlButtons.module.css';
-import { OutlineIconButton } from '@/app/components/shared/icon/IconButton';
+import { IconButtonBase } from '@/app/components/shared/icon/IconButton';
+import { IconVariant } from '@/app/components/shared/icon/type';
 
 export default function AudioControlButtons({
   initialMicState = true,
@@ -26,27 +27,27 @@ export default function AudioControlButtons({
   };
 
   const getMicThemeColor = () => {
-    if (!micState) return speakerState ? 'secondary' : 'error';
-    return 'default';
+    if (!micState) return speakerState ? 'secondary' : 'error-secondary';
+    return 'outline';
   };
 
   const getSpeakerThemeColor = () => {
-    if (!speakerState) return 'error';
-    return 'default';
+    if (!speakerState) return 'error-secondary';
+    return 'outline';
   };
 
   return (
     <div className={styles.audioControls}>
-      <OutlineIconButton
+      <IconButtonBase
         name={micState ? 'mic' : 'micoff'}
         size="small"
-        themeColor={getMicThemeColor()}
+        variant={getMicThemeColor()}
         onClick={handleMicToggle}
       />
-      <OutlineIconButton
+      <IconButtonBase
         name={speakerState ? 'volume' : 'mute'}
         size="small"
-        themeColor={getSpeakerThemeColor()}
+        variant={getSpeakerThemeColor()}
         onClick={handleSpeakerToggle}
       />
     </div>

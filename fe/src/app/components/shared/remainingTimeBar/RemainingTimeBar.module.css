@@ -1,0 +1,33 @@
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.title {
+  font: var(--heading-2);
+  color: var(--primary-6);
+}
+
+.time {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.timeValue {
+  font: var(--large-2);
+  color: var(--neutral-9);
+}
+
+.timeUnit {
+  font: var(--heading-3);
+  color: var(--neutral-5);
+}

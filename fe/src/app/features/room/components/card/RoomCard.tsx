@@ -10,22 +10,27 @@ import TextTooltip from '@/app/components/shared/tooltip/TextTooltip';
 import Icon from '@/app/components/shared/icon/Icon';
 import useNavigation from '@/app/hooks/useNavigation';
 import { authStore } from '@/app/features/user/stores/auth';
+import { roomStore } from '@/app/features/room/stores/room';
 
 function RoomCard({
   id,
-  title,
-  tags,
-  currentParticipants,
-  maxParticipants,
-  isMicAvailable,
-  isPrivate,
+  title = '',
+  tags = [],
+  currentParticipants = 0,
+  maxParticipants = 2,
+  isMicAvailable = true,
+  isPrivate = false,
   participants = [],
 }: RoomCardProps) {
   const { goToRoom } = useNavigation();
   const remainingCount = maxParticipants - currentParticipants;
   const noRemain = remainingCount === 0;
   const isAuthenticated = authStore.getState().isAuthenticated;
-  const profileImages = participants.map((p) => p.profileImage);
+  const profiles = participants.map((p) => ({
+    nickname: p.nickname,
+    profileImage: p.profileImage,
+  }));
+  const roomId = roomStore((state) => state.roomId);
 
   const getStatusChipStatus = (): 'success' | 'warning' | 'error' => {
     if (noRemain) return 'error'; // 풀방
@@ -69,11 +74,11 @@ function RoomCard({
         </div>
       </div>
       <div className={styles.footer}>
-        <Avatars profileImages={profileImages} />
+        <Avatars profiles={profiles} />
         <SecondaryIconButton
           name="open"
           size="small"
-          disabled={noRemain || !isAuthenticated}
+          disabled={!isAuthenticated || (roomId === id && noRemain)}
           onClick={handleJoin}
         />
       </div>

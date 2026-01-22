@@ -1,12 +1,12 @@
 [
-  { "id": "user1", "nickname": "강하늘", "avatar": "https://i.pravatar.cc/150?img=1", "token": "mock_token_1704067200000" },
-  { "id": "user2", "nickname":"김민지", "avatar": "https://i.pravatar.cc/150?img=2", "token": "mock_token_1704067200001" },
-  { "id": "user3", "nickname": "이영희", "avatar": "https://i.pravatar.cc/150?img=3", "token": "mock_token_1704067200002" },
-  { "id": "user4", "nickname": "박철수", "avatar": "https://i.pravatar.cc/150?img=4", "token": "mock_token_1704067200003" },
-  { "id": "user5", "nickname": "최영희", "avatar": "https://i.pravatar.cc/150?img=5", "token": "mock_token_1704067200004" },
-  { "id": "user6", "nickname": "이철수", "avatar": "https://i.pravatar.cc/150?img=6", "token": "mock_token_1704067200005" },
-  { "id": "user7", "nickname": "박영희", "avatar": "https://i.pravatar.cc/150?img=7", "token": "mock_token_1704067200006" },
-  { "id": "user8", "nickname": "최철수", "avatar": "https://i.pravatar.cc/150?img=8", "token": "mock_token_1704067200007" },
-  { "id": "user9", "nickname": "이영희", "avatar": "https://i.pravatar.cc/150?img=9", "token": "mock_token_1704067200008" },
-  { "id": "user10", "nickname": "박철수", "avatar": "https://i.pravatar.cc/150?img=10", "token": "mock_token_1704067200009" }
+  { "id": "user1", "nickname": "강하늘", "token": "mock_token_1704067200000" },
+  { "id": "user2", "nickname":"김민지", "token": "mock_token_1704067200001" },
+  { "id": "user3", "nickname": "이영희", "token": "mock_token_1704067200002" },
+  { "id": "user4", "nickname": "박철수", "token": "mock_token_1704067200003" },
+  { "id": "user5", "nickname": "최영희", "token": "mock_token_1704067200004" },
+  { "id": "user6", "nickname": "이철수", "token": "mock_token_1704067200005" },
+  { "id": "user7", "nickname": "박영희", "token": "mock_token_1704067200006" },
+  { "id": "user8", "nickname": "최철수", "token": "mock_token_1704067200007" },
+  { "id": "user9", "nickname": "이영희", "token": "mock_token_1704067200008" },
+  { "id": "user10", "nickname": "박철수", "token": "mock_token_1704067200009" }
 ]

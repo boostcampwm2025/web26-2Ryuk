@@ -1,4 +1,5 @@
-import { RoomEditData, RoomData } from '../dtos/type';
+import { GamePlayerData } from '@/app/features/game/dtos/data';
+import { RoomEditData, RoomData } from '@/app/features/room/dtos/data';
 
 export interface RoomCardProps extends RoomData {}
 
@@ -32,6 +33,7 @@ export interface RoomInfoProps {
   isMicAvailable: boolean;
   isPrivate: boolean;
   onEditClick?: () => void;
+  isConnected?: boolean;
 }
 
 export interface LeaveRoomButtonProps {
@@ -43,3 +45,6 @@ export interface DeleteRoomButtonProps {
   modalId: string;
   handleClick?: () => void;
 }
+
+export interface MyReadyStatusCardProps extends GamePlayerData {}
+export interface OtherReadyStatusCardProps extends GamePlayerData {}

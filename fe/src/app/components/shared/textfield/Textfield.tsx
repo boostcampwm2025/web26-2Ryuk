@@ -12,6 +12,7 @@ function TextfieldBase({
   value: controlledValue,
   onChange,
   onKeyDown,
+  onBlur,
   onCompositionStart,
   onCompositionEnd,
   hidable = false,
@@ -63,6 +64,7 @@ function TextfieldBase({
         value={value}
         onChange={handleChange}
         onKeyDown={onKeyDown}
+        onBlur={onBlur}
         onCompositionStart={onCompositionStart}
         onCompositionEnd={onCompositionEnd}
         disabled={disabled}

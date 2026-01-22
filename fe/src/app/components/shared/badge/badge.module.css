@@ -1,0 +1,5 @@
+.badge svg {
+  display: flex;
+  align-items: center;
+  color: var(--warning);
+}

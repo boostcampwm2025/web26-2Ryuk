@@ -13,7 +13,7 @@ function TextButtonBase({
   type = 'button',
   modalId,
 }: TextButtonProps) {
-  const className = CSSUtil.buildCls(styles.button, styles[size], styles[variant]);
+  const className = CSSUtil.buildCls(styles.button, styles[size], styles[variant], 'clickable');
 
   return (
     <button
@@ -47,9 +47,43 @@ export function GhostTextButton(props: Omit<TextButtonProps, 'variant'>) {
   return <TextButtonBase {...props} variant="ghost" />;
 }
 
+export function SuccessPrimaryTextButton(props: Omit<TextButtonProps, 'variant'>) {
+  return <TextButtonBase {...props} variant="success-primary" />;
+}
+
+export function SuccessSecondaryTextButton(props: Omit<TextButtonProps, 'variant'>) {
+  return <TextButtonBase {...props} variant="success-secondary" />;
+}
+
+export function WarningPrimaryTextButton(props: Omit<TextButtonProps, 'variant'>) {
+  return <TextButtonBase {...props} variant="warning-primary" />;
+}
+
+export function WarningSecondaryTextButton(props: Omit<TextButtonProps, 'variant'>) {
+  return <TextButtonBase {...props} variant="warning-secondary" />;
+}
+
+export function ErrorPrimaryTextButton(props: Omit<TextButtonProps, 'variant'>) {
+  return <TextButtonBase {...props} variant="error-primary" />;
+}
+
+export function ErrorSecondaryTextButton(props: Omit<TextButtonProps, 'variant'>) {
+  return <TextButtonBase {...props} variant="error-secondary" />;
+}
+
+export function TextButton(props: TextButtonProps) {
+  return <TextButtonBase {...props} />;
+}
+
 export {
   PrimaryTextButton as Primary,
   SecondaryTextButton as Secondary,
   OutlineTextButton as Outline,
   GhostTextButton as Ghost,
+  SuccessPrimaryTextButton as SuccessPrimary,
+  SuccessSecondaryTextButton as SuccessSecondary,
+  WarningPrimaryTextButton as WarningPrimary,
+  WarningSecondaryTextButton as WarningSecondary,
+  ErrorPrimaryTextButton as ErrorPrimary,
+  ErrorSecondaryTextButton as ErrorSecondary,
 } from './TextButton';

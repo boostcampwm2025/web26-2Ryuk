@@ -45,7 +45,38 @@ svg.large {
   color: var(--primary-6);
 }
 
+.success-primary {
+  background: var(--success);
+  color: var(--neutral-1);
+}
+
+.success-secondary {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.warning-primary {
+  background: var(--warning);
+  color: var(--neutral-1);
+}
+
+.warning-secondary {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.error-primary {
+  background: var(--error);
+  color: var(--neutral-1);
+}
+
+.error-secondary {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
 .outline {
+  box-shadow: inset 0 0 0 2px var(--neutral-3);
   background: var(--neutral-1);
   color: var(--secondary);
 }
@@ -55,10 +86,6 @@ svg.large {
   color: var(--secondary);
 }
 
-.outline {
-  border: 2px solid var(--neutral-3);
-}
-
 .button {
   display: inline-flex;
   align-items: center;
@@ -66,55 +93,23 @@ svg.large {
   border: none;
   background: transparent;
   padding: 0;
-  cursor: pointer;
   border-radius: 50%;
-}
-
-.button .circle {
-  transition: all 0.2s ease-in-out;
-}
-
-.button:focus-visible .circle {
-  outline: 2px solid var(--primary-5);
-  outline-offset: 2px;
 }
 
 .button:disabled .circle {
   cursor: not-allowed;
 }
 
-.button:hover .circle.primary {
-  background: var(--primary-7);
-}
-
-.button:active .circle.primary {
-  background: var(--primary-9);
-}
-
-.button:disabled .circle.primary {
-  background: var(--neutral-4);
-  color: var(--neutral-3);
-}
-
-.button:hover .circle.secondary {
-  background: var(--primary-4);
-}
-
-.button:active .circle.secondary {
-  background: var(--primary-5);
-}
-
-.button:disabled .circle.secondary {
+.button:disabled .circle.primary,
+.button:disabled .circle.secondary,
+.button:disabled .circle.success-primary,
+.button:disabled .circle.success-secondary,
+.button:disabled .circle.warning-primary,
+.button:disabled .circle.warning-secondary,
+.button:disabled .circle.error-primary,
+.button:disabled .circle.error-secondary {
   background: var(--neutral-3);
   color: var(--neutral-4);
-}
-
-.button:hover .circle.outline {
-  background: var(--neutral-2);
-}
-
-.button:active .circle.outline {
-  background: var(--neutral-4);
 }
 
 .button:disabled .circle.outline {
@@ -123,80 +118,11 @@ svg.large {
   border-color: var(--neutral-3);
 }
 
-.button:hover .circle.ghost {
-  background: var(--neutral-2);
-}
-
-.button:active .circle.ghost {
-  background: var(--neutral-4);
-}
-
 .button:disabled .circle.ghost {
   background: transparent;
-}
-
-.button:disabled .circle.ghost svg {
   color: var(--neutral-4);
 }
 
 .icon {
   box-sizing: content-box;
-}
-
-
-
-.button.secondary .circle {
-  border: 2px solid var(--secondary-border);
-  background: var(--secondary-bg);
-}
-
-.button.secondary .circle:hover {
-  background: var(--secondary-bg);
-}
-
-.button.secondary svg {
-  color: var(--secondary);
-}
-
-
-.button.success .circle {
-  border: 2px solid var(--success-border);
-  background: var(--success-bg);
-}
-
-.button.success .circle:hover {
-  background: var(--success-bg);
-}
-
-
-.button.success svg {
-  color: var(--success);
-}
-
-
-.button.warning .circle {
-  border: 2px solid var(--warning-border);
-  background: var(--warning-bg);
-}
-
-.button.warning .circle:hover {
-  background: var(--warning-bg);
-}
-
-.button.warning svg {
-  color: var(--warning);
-}
-
-
-.button.error .circle {
-  border: 2px solid var(--error-border);
-  background: var(--error-bg);
-}
-
-.button.error .circle:hover {
-  background: var(--error-bg);
-}
-
-.button.error svg {
-  color: var(--error);
 }

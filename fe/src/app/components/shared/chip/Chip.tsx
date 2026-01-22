@@ -30,9 +30,39 @@ export function DefaultChip(props: Omit<ChipProps, 'variant'>) {
   return <ChipBase {...props} variant="default" />;
 }
 
+export function SuccessPrimaryChip(props: Omit<ChipProps, 'variant'>) {
+  return <ChipBase {...props} variant="success-primary" />;
+}
+
+export function SuccessSecondaryChip(props: Omit<ChipProps, 'variant'>) {
+  return <ChipBase {...props} variant="success-secondary" />;
+}
+
+export function WarningPrimaryChip(props: Omit<ChipProps, 'variant'>) {
+  return <ChipBase {...props} variant="warning-primary" />;
+}
+
+export function WarningSecondaryChip(props: Omit<ChipProps, 'variant'>) {
+  return <ChipBase {...props} variant="warning-secondary" />;
+}
+
+export function ErrorPrimaryChip(props: Omit<ChipProps, 'variant'>) {
+  return <ChipBase {...props} variant="error-primary" />;
+}
+
+export function ErrorSecondaryChip(props: Omit<ChipProps, 'variant'>) {
+  return <ChipBase {...props} variant="error-secondary" />;
+}
+
 export {
   PrimaryChip as Primary,
   SecondaryChip as Secondary,
   OutlineChip as Outline,
   DefaultChip as Default,
+  SuccessPrimaryChip as SuccessPrimary,
+  SuccessSecondaryChip as SuccessSecondary,
+  WarningPrimaryChip as WarningPrimary,
+  WarningSecondaryChip as WarningSecondary,
+  ErrorPrimaryChip as ErrorPrimary,
+  ErrorSecondaryChip as ErrorSecondary,
 } from './Chip';

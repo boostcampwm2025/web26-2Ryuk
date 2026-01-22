@@ -7,6 +7,7 @@ export interface TextfieldProps {
   value?: string;
   onChange?: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onCompositionStart?: (e: React.CompositionEvent<HTMLInputElement>) => void;
   onCompositionEnd?: (e: React.CompositionEvent<HTMLInputElement>) => void;
   hidable?: boolean;

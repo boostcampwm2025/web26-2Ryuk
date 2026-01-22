@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Migration1767837173546 implements MigrationInterface {
-  name = 'Migration1767837173546';
+export class Migration1769058989696 implements MigrationInterface {
+  name = 'Migration1769058989696';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -23,7 +23,7 @@ export class Migration1767837173546 implements MigrationInterface {
       `CREATE TABLE \`chatting_log\` (\`id\` binary(16) NOT NULL, \`room_id\` binary(16) NULL, \`sender_id\` binary(16) NOT NULL, \`content\` text NOT NULL, \`create_date\` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`room_type\` enum ('GLOBAL', 'LOCAL') NOT NULL, INDEX \`IDX_457b253f95425da0bf5339fbf9\` (\`room_id\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
-      `CREATE TABLE \`game\` (\`id\` binary(16) NOT NULL, \`title\` varchar(20) NOT NULL, \`type\` enum ('competition', 'cooperation') NOT NULL, \`max_participants\` int NULL, \`min_participants\` int NULL, \`description\` text NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+      `CREATE TABLE \`game\` (\`id\` binary(16) NOT NULL, \`title\` varchar(20) NOT NULL, \`time\` int NOT NULL, \`type\` enum ('competition', 'cooperation') NOT NULL, \`max_players\` int NULL, \`min_players\` int NULL, \`description\` text NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
       `CREATE TABLE \`game_record\` (\`id\` binary(16) NOT NULL, \`user_id\` binary(16) NOT NULL, \`game_id\` binary(16) NOT NULL, \`score\` int NOT NULL, \`achieve_date\` timestamp NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,

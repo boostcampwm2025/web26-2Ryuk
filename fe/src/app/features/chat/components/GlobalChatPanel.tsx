@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { globalChatService } from '@/app/features/chat/services/GlobalChatService';
-import { ChatReceiveData } from '@/app/features/chat/dtos/type';
+import { ChatReceiveData } from '@/app/features/chat/dtos/data';
 import { authStore, type AuthStore } from '@/app/features/user/stores/auth';
 import ChatPanel from './ChatPanel';
+import { Position } from '@/app/components/shared/floatingWidget/type';
+import { PANEL_CONFIG } from './type';
 
 /**
  * GlobalChat 클라이언트 컴포넌트
@@ -15,13 +17,24 @@ export default function GlobalChatPanel() {
   const [currentParticipants, setCurrentParticipants] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
 
+  const getInitialPosition = (): Position => {
+    if (typeof window === 'undefined') return PANEL_CONFIG.DEFAULT_POSITION;
+    const x = window.innerWidth - PANEL_CONFIG.WIDTH - PANEL_CONFIG.OFFSET;
+    const y =
+      window.innerHeight -
+      PANEL_CONFIG.HEIGHT -
+      PANEL_CONFIG.OFFSET -
+      PANEL_CONFIG.HEIGHT -
+      PANEL_CONFIG.GAP;
+    return { x, y };
+  };
+
+  const [initialPosition] = useState<Position>(getInitialPosition());
+
   // WebSocket 연결 및 구독
   useEffect(() => {
     const subscribe = async () => {
       await globalChatService.subscribe();
-
-      const savedMessages = globalChatService.getMessages();
-      if (savedMessages.length > 0) setChats(savedMessages);
 
       // 구독 완료 후 연결 상태 확인
       setIsConnected(globalChatService.isConnected());
@@ -29,7 +42,10 @@ export default function GlobalChatPanel() {
 
     subscribe();
 
-    // 메시지 수신 콜백 등록
+    // recents 수신 콜백 등록 (초기 메시지 로드 시 배열 교체)
+    const unsubscribeRecents = globalChatService.onRecents((messages) => setChats(messages));
+
+    // 메시지 수신 콜백 등록 (새 메시지만 추가)
     const unsubscribeMessage = globalChatService.onMessage((message) =>
       setChats((prev) => [...prev, message]),
     );
@@ -46,16 +62,17 @@ export default function GlobalChatPanel() {
 
     // 정리 함수
     return () => {
+      unsubscribeRecents();
       unsubscribeMessage();
       unsubscribeConnection();
       unsubscribeParticipants();
-      globalChatService.unsubscribe();
+      globalChatService.unsubscribe().catch(console.error);
     };
   }, []);
 
   // 메시지 전송 핸들러
-  const handleMessageSubmit = useCallback((message: string) => {
-    globalChatService.sendMessage(message);
+  const handleMessageSubmit = useCallback(async (message: string) => {
+    await globalChatService.sendMessage(message);
   }, []);
 
   const isAuthenticated = authStore((state: AuthStore) => state.isAuthenticated);
@@ -69,6 +86,7 @@ export default function GlobalChatPanel() {
       onMessageSubmit={handleMessageSubmit}
       isConnected={isConnected}
       disabled={!isConnected || !isAuthenticated}
+      initialPosition={initialPosition}
     />
   );
 }

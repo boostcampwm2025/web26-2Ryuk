@@ -1,15 +1,49 @@
 .avatar {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-sizing: content-box;
-  color: var(--neutral-9);
-  background: var(--neutral-2);
-  padding: 0.5px;
+  font: var(--heading-2);
+  padding: .5px;
+  outline: 2px solid var(--neutral-1);
+  cursor: default;
+}
+
+.avatar .nickname {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  font: var(--heading-2);
+  line-height: 1;
+  text-align: center;
+}
+
+.avatar.primary .nickname {
+  background: var(--primary-6);
+  color: var(--primary-1);
+}
+
+.avatar.secondary .nickname {
+  background: var(--secondary);
+  color: var(--neutral-1);
+}
+
+.avatar.success .nickname {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.avatar.warning .nickname {
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .avatar img {
@@ -18,7 +52,6 @@
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  outline: 3px solid var(--neutral-1);
   z-index: 1;
 }
 
@@ -31,7 +64,6 @@
   height: 120%;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  padding: 2px;
   z-index: 0;
   background-color: var(--primary-6);
   box-sizing: content-box;
@@ -40,7 +72,6 @@
 .avatar.count {
   background: var(--primary-3);
   padding: 0;
-  outline: 3px solid var(--neutral-1);
 }
 
 .avatar .text {

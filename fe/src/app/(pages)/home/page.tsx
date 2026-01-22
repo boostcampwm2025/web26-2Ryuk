@@ -28,10 +28,8 @@ export default function HomePage() {
           <RealtimeRoomsSection />
         </div>
       </div>
-      <div className={styles.chatContainer}>
-        <GlobalChatPanel />
-        {roomId && isJoined && <LocalChatPanel />}
-      </div>
+      <GlobalChatPanel />
+      {roomId && isJoined && <LocalChatPanel />}
     </div>
   );
 }

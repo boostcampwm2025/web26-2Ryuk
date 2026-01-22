@@ -21,11 +21,24 @@ import Modal from '@/app/components/shared/modal/Modal';
 import GlobalChatPanel from '@/app/features/chat/components/GlobalChatPanel';
 import AudioControlButtons from '@/app/features/voice/components/AudioControlButtons';
 import SpeakerControlButton from '@/app/features/voice/components/SpeakerControlButton';
+import VoiceParticipantCard from '@/app/features/room/components/chat/VoiceParticipantCard';
 import * as TextButton from '@/app/components/shared/button/TextButton';
 import Dialog from '@/app/components/shared/dialog/Dialog';
 import Paths from '@/app/shared/path';
+import GameCard, { EmptyGameCard } from '@/app/features/game/components/GameCard';
+import GameCardGrid from '@/app/features/game/components/GameCardGrid';
+import SelectedGameCard from '@/app/features/game/components/SelectedGameCard';
+import GameReadyModalContent from '@/app/features/room/components/ready/GameReadyModalContent';
+import { GameConverter } from '@/app/features/game/dtos/converter';
+import gamesMock from '@/mocks/data/games.json';
+import MyReadyStatusCard from '@/app/features/room/components/ready/MyReadyStatusCard';
+import OtherReadyStatusCard from '@/app/features/room/components/ready/OtherReadyStatusCard';
+import OtherReadyStatusCardGrid from '@/app/features/room/components/ready/OtherReadyStatusCardGrid';
+import BeakerFillViewShowcase from '@/app/features/game/components/BeakerFillViewShowcase';
 
 export default function FeatureComponents() {
+  const sampleGames = gamesMock.map(GameConverter.toGameData);
+
   return (
     <>
       <section id="chat-bubble" className={styles.section}>
@@ -41,7 +54,6 @@ export default function FeatureComponents() {
                   sender={{
                     role: 'user',
                     nickname: '상대방',
-                    profileImage: 'https://i.pravatar.cc/150?img=1',
                     isMe: false,
                   }}
                   message="Their Message"
@@ -59,7 +71,6 @@ export default function FeatureComponents() {
                   sender={{
                     role: 'user',
                     nickname: '나',
-                    profileImage: 'https://i.pravatar.cc/150?img=2',
                     isMe: true,
                   }}
                   message="My Message"
@@ -132,7 +143,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Both Active</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <AudioControlButtons initialMicState={true} initialSpeakerState={true} />
+                <AudioControlButtons initialMicState initialSpeakerState />
               </Component>
             </div>
           </div>
@@ -140,7 +151,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Mic Muted</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <AudioControlButtons initialMicState={false} initialSpeakerState={true} />
+                <AudioControlButtons initialMicState={false} initialSpeakerState />
               </Component>
             </div>
           </div>
@@ -151,6 +162,31 @@ export default function FeatureComponents() {
                 <AudioControlButtons initialMicState={false} initialSpeakerState={false} />
               </Component>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="voice-participant-card" className={styles.section}>
+        <h2 className={styles.sectionTitle}>VoiceParticipantCard</h2>
+        <ComponentRelations componentId="voice-participant-card" />
+        <div className={styles.showcaseBlock}>
+          <div className={styles.cardRow}>
+            <Component>
+              <VoiceParticipantCard nickname="강하늘" isMe active micOn speakerOn volume={60} />
+            </Component>
+            <Component>
+              <VoiceParticipantCard
+                nickname="박철수"
+                isHost
+                active={false}
+                micOn
+                speakerOn
+                volume={45}
+              />
+            </Component>
+            <Component>
+              <VoiceParticipantCard nickname="김지영" micOn={false} speakerOn volume={20} />
+            </Component>
           </div>
         </div>
       </section>
@@ -316,22 +352,18 @@ export default function FeatureComponents() {
                     {
                       userId: '1',
                       nickname: 'User1',
-                      profileImage: 'https://i.pravatar.cc/150?img=1',
                     },
                     {
                       userId: '2',
                       nickname: 'User2',
-                      profileImage: 'https://i.pravatar.cc/150?img=2',
                     },
                     {
                       userId: '3',
                       nickname: 'User3',
-                      profileImage: 'https://i.pravatar.cc/150?img=3',
                     },
                     {
                       userId: '4',
                       nickname: 'User4',
-                      profileImage: 'https://i.pravatar.cc/150?img=4',
                     },
                   ]}
                 />
@@ -359,9 +391,9 @@ export default function FeatureComponents() {
             <RoomInfo
               title="같이 수다 떨어요~"
               tags={['게임', '친목']}
-              isHost={true}
-              isMicAvailable={true}
-              isPrivate={true}
+              isHost
+              isMicAvailable
+              isPrivate
             />
           </Component>
         </div>
@@ -373,6 +405,147 @@ export default function FeatureComponents() {
         <div className={styles.showcaseBlock}>
           <Component fullWidth>
             <RealtimeRoomsSection />
+          </Component>
+        </div>
+      </section>
+
+      <section id="game-card" className={styles.section}>
+        <h2 className={styles.sectionTitle}>GameCard</h2>
+        <ComponentRelations componentId="game-card" />
+        <div className={styles.chatRow}>
+          <div className={styles.showcaseBlock}>
+            <Component fullWidth>
+              <GameCard
+                id="3f1c8c6a-7a4a-4a6c-9b7e-0b5c7f3a9f21"
+                title="비커 채우기"
+                description="제한 시간 동안 스페이스바를 빠르게 연타하여 비커를 채우세요!"
+                type="competition"
+                minPlayers={1}
+                maxPlayers={10}
+              />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <Component fullWidth>
+              <EmptyGameCard />
+            </Component>
+          </div>
+        </div>
+      </section>
+
+      <section id="selected-game-card" className={styles.section}>
+        <h2 className={styles.sectionTitle}>SelectedGameCard</h2>
+        <ComponentRelations componentId="selected-game-card" />
+        <div className={styles.chatRow}>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Host (with change)</h3>
+            <Component fullWidth>
+              <SelectedGameCard game={sampleGames[0]} isHost />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Participant</h3>
+            <Component fullWidth>
+              <SelectedGameCard game={sampleGames[0]} />
+            </Component>
+          </div>
+        </div>
+        <div className={styles.showcaseBlock}>
+          <h3 className={styles.blockTitle}>Empty</h3>
+          <Component fullWidth>
+            <SelectedGameCard />
+          </Component>
+        </div>
+      </section>
+
+      <section id="my-ready-status-card" className={styles.section}>
+        <h2 className={styles.sectionTitle}>MyReadyStatusCard</h2>
+        <ComponentRelations componentId="my-ready-status-card" />
+        <div className={styles.chatRow}>
+          <Component fullWidth>
+            <MyReadyStatusCard userId="1" nickname="강하늘" isHost isReady={false} />
+          </Component>
+          <Component fullWidth>
+            <MyReadyStatusCard userId="2" nickname="김지영" isHost={false} isReady={false} />
+          </Component>
+          <Component fullWidth>
+            <MyReadyStatusCard userId="3" nickname="박철수" isHost={false} isReady />
+          </Component>
+        </div>
+      </section>
+
+      <section id="other-ready-status-card" className={styles.section}>
+        <h2 className={styles.sectionTitle}>OtherReadyStatusCard</h2>
+        <ComponentRelations componentId="other-ready-status-card" />
+        <div className={styles.chatRow}>
+          <Component fullWidth>
+            <OtherReadyStatusCard userId="1" nickname="강하늘" isHost isReady />
+          </Component>
+          <Component fullWidth>
+            <OtherReadyStatusCard userId="2" nickname="김영희" isHost={false} isReady />
+          </Component>
+          <Component fullWidth>
+            <OtherReadyStatusCard userId="3" nickname="김지영" isHost={false} isReady={false} />
+          </Component>
+        </div>
+      </section>
+
+      <section id="other-ready-status-card-grid" className={styles.section}>
+        <h2 className={styles.sectionTitle}>OtherReadyStatusCardGrid</h2>
+        <ComponentRelations componentId="other-ready-status-card-grid" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <OtherReadyStatusCardGrid
+              players={[
+                { userId: '1', nickname: '강하늘', isHost: true, isReady: true },
+                { userId: '2', nickname: '김영희', isHost: false, isReady: true },
+                { userId: '3', nickname: '김지영', isHost: false, isReady: false },
+              ]}
+            />
+          </Component>
+        </div>
+      </section>
+
+      <section id="game-card-grid" className={styles.section}>
+        <h2 className={styles.sectionTitle}>GameCardGrid</h2>
+        <ComponentRelations componentId="game-card-grid" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <GameCardGrid games={sampleGames} viewRows={2} viewColumns={4} />
+          </Component>
+        </div>
+      </section>
+
+      <section id="beaker-fill-view" className={styles.section}>
+        <h2 className={styles.sectionTitle}>BeakerFillView</h2>
+        <ComponentRelations componentId="beaker-fill-view" />
+        <div className={styles.showcaseBlock}>
+          <BeakerFillViewShowcase />
+        </div>
+      </section>
+
+      <section id="game-ready-modal" className={styles.section}>
+        <h2 className={styles.sectionTitle}>GameReadyModalContent</h2>
+        <ComponentRelations componentId="game-ready-modal" />
+        <div className={styles.showcaseBlock}>
+          <Component>
+            <TextButton.Primary
+              modalId="game-ready-modal"
+              text="게임 준비 모달 열기"
+              size="medium"
+            />
+            <Modal id="game-ready-modal">
+              <GameReadyModalContent
+                myStatus={{ userId: '1', nickname: '강하늘', isHost: true, isReady: false }}
+                players={[
+                  { userId: '1', nickname: '박철수', isHost: false, isReady: true },
+                  { userId: '2', nickname: '김영희', isHost: false, isReady: true },
+                  { userId: '3', nickname: '김지영', isHost: false, isReady: false },
+                ]}
+                selectedGame={sampleGames[0]}
+                maxPlayers={4}
+              />
+            </Modal>
           </Component>
         </div>
       </section>

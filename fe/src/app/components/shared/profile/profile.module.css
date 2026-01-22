@@ -1,7 +1,15 @@
 .profile {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+}
+
+.profile.row {
+  flex-direction: row;
+}
+
+.profile.column {
+  flex-direction: column;
 }
 
 .profile.clickable {

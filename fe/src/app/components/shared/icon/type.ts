@@ -1,6 +1,16 @@
 import { MouseEventHandler } from 'react';
 
-export type IconVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+export type IconVariant =
+  | 'primary'
+  | 'secondary'
+  | 'outline'
+  | 'ghost'
+  | 'success-primary'
+  | 'success-secondary'
+  | 'warning-primary'
+  | 'warning-secondary'
+  | 'error-primary'
+  | 'error-secondary';
 export type IconSize = 'small' | 'medium' | 'large';
 export type ThemeColor = 'default' | 'secondary' | 'success' | 'warning' | 'error';
 

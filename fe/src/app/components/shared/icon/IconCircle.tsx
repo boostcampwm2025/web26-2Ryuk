@@ -27,9 +27,39 @@ export function OutlineIconCircle(props: Omit<IconCircleProps, 'variant'>) {
 export function GhostIconCircle(props: Omit<IconCircleProps, 'variant'>) {
   return <IconCircle {...props} variant="ghost" />;
 }
+
+export function SuccessPrimaryIconCircle(props: Omit<IconCircleProps, 'variant'>) {
+  return <IconCircle {...props} variant="success-primary" />;
+}
+
+export function SuccessSecondaryIconCircle(props: Omit<IconCircleProps, 'variant'>) {
+  return <IconCircle {...props} variant="success-secondary" />;
+}
+
+export function WarningPrimaryIconCircle(props: Omit<IconCircleProps, 'variant'>) {
+  return <IconCircle {...props} variant="warning-primary" />;
+}
+
+export function WarningSecondaryIconCircle(props: Omit<IconCircleProps, 'variant'>) {
+  return <IconCircle {...props} variant="warning-secondary" />;
+}
+
+export function ErrorPrimaryIconCircle(props: Omit<IconCircleProps, 'variant'>) {
+  return <IconCircle {...props} variant="error-primary" />;
+}
+
+export function ErrorSecondaryIconCircle(props: Omit<IconCircleProps, 'variant'>) {
+  return <IconCircle {...props} variant="error-secondary" />;
+}
 export {
   PrimaryIconCircle as Primary,
   SecondaryIconCircle as Secondary,
   OutlineIconCircle as Outline,
   GhostIconCircle as Ghost,
+  SuccessPrimaryIconCircle as SuccessPrimary,
+  SuccessSecondaryIconCircle as SuccessSecondary,
+  WarningPrimaryIconCircle as WarningPrimary,
+  WarningSecondaryIconCircle as WarningSecondary,
+  ErrorPrimaryIconCircle as ErrorPrimary,
+  ErrorSecondaryIconCircle as ErrorSecondary,
 } from './IconCircle';

@@ -202,6 +202,14 @@
   align-items: flex-start;
 }
 
+.cardRow {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
 .circleItem {
   display: flex;
   flex-direction: column;

@@ -24,9 +24,3 @@
   flex-direction: column;
 }
 
-.chatContainer {
-  position: fixed;
-  bottom: 48px;
-  right: 48px;
-  z-index: 1000;
-}

@@ -56,5 +56,7 @@ jobs:
       - name: Build client
         working-directory: fe
         env:
-          NEXT_PUBLIC_API_URL: http://localhost
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+          NEXT_PUBLIC_SITE_URL: https://moolbangwool.duckdns.org
+          NEXT_PUBLIC_API_SERVER_URL: http://server:4000
         run: pnpm build

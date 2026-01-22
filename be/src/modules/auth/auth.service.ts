@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { toUuid } from '@src/common/utils/user-id';
+import { UserInfoResponseDto, UserWithRoleResponseDto } from './dto/auth-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +15,7 @@ export class AuthService {
    * @returns 사용자 정보 (id, nickname, profile_image)
    * @throws NotFoundException 사용자를 찾을 수 없는 경우
    */
-  async getUserById(userId: string): Promise<{ id: string; nickname: string; profile_image: string | null }> {
+  async getUserById(userId: string): Promise<UserInfoResponseDto> {
     const uuid = toUuid(userId);
     const user = await this.userRepository.findOne({
       where: { id: uuid },
@@ -25,11 +26,7 @@ export class AuthService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    return {
-      id: user.id,
-      nickname: user.nickname,
-      profile_image: user.profile_image,
-    };
+    return new UserInfoResponseDto(user);
   }
 
   /**
@@ -39,12 +36,7 @@ export class AuthService {
    * @returns 사용자 정보 (id, nickname, profile_image, role)
    * @throws NotFoundException 사용자를 찾을 수 없는 경우
    */
-  async getUserWithRole(userId: string): Promise<{
-    id: string;
-    nickname: string;
-    profile_image: string | null;
-    role: string;
-  }> {
+  async getUserWithRole(userId: string): Promise<UserWithRoleResponseDto> {
     const uuid = toUuid(userId);
     const user = await this.userRepository.findOne({
       where: { id: uuid },
@@ -55,11 +47,6 @@ export class AuthService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    return {
-      id: user.id,
-      nickname: user.nickname,
-      profile_image: user.profile_image,
-      role: user.role,
-    };
+    return new UserWithRoleResponseDto(user);
   }
 }

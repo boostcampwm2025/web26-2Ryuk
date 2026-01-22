@@ -9,7 +9,15 @@
   overflow: hidden;
   background: var(--neutral-1);
   box-shadow: 0 4px 8px #00000034;
-  transition: all 0.3s cubic-bezier(0.47, 1.4, 0.5, 0.9);
+  transition: all .3s cubic-bezier(0.47, 1.4, 0.5, 0.9);
+}
+
+.chatPanel.headerHover {
+  transform: scale(1.01);
+}
+
+.chatPanel.headerActive {
+  transform: scale(0.98);
 }
 
 .chatPanel.global {
@@ -57,7 +65,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font: var(--body-2);
+  font: var(--body-1);
   color: var(--secondary);
 }
 
@@ -99,6 +107,45 @@
 
 .chatPanel.collapsed > .content {
   opacity: 0;
+}
+
+.panelSection {
+  padding: 12px 20px;
+  background: var(--neutral-1);
+  border-top: 1px solid var(--neutral-3);
+  border-bottom: 1px solid var(--neutral-3);
+  flex-shrink: 0;
+}
+
+.panelSection .sectionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.panelSection .sectionTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panelSection .sectionTitle {
+  font: var(--heading-2);
+  color: var(--secondary);
+}
+
+.panelSection .sectionSubtitle {
+  font: var(--body-3);
+  color: var(--secondary);
+}
+
+.panelSection .sectionAvatars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
 }
 
 .chattingArea {
@@ -145,17 +192,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.participantsAvatars {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: var(--neutral-1);
-  border-top: 1px solid var(--neutral-3);
-  overflow-x: auto;
-  flex-shrink: 0;
 }
 
 

@@ -1,8 +1,10 @@
 import { Metadata } from 'next';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://moolbangwool.duckdns.org';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 const siteName = '물방울톡';
 const defaultDescription = '물방울톡 - 실시간 음성 채팅 및 커뮤니티 플랫폼';
+
+if (!siteUrl) throw Error('환경변수가 없습니다: NEXT_PUBLIC_SITE_URL');
 
 export const metadataConfig: Metadata = {
   metadataBase: new URL(siteUrl),

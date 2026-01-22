@@ -5,4 +5,5 @@ export interface ModalProps {
   children: ReactNode;
   closeOnBackdropClick?: boolean;
   showCloseButton?: boolean;
+  onClose?: () => void;
 }

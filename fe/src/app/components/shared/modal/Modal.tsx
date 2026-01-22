@@ -15,11 +15,13 @@ export default function Modal({
   children,
   closeOnBackdropClick = true,
   showCloseButton = false,
+  onClose,
 }: ModalProps) {
   const openModals = modalStore((state) => state.openModals);
   const closeModal = modalStore((state) => state.closeModal);
   const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [wasOpen, setWasOpen] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -30,12 +32,18 @@ export default function Modal({
     else setIsVisible(false);
   }, [isOpen, mounted]);
 
+  useEffect(() => {
+    if (wasOpen && !isOpen) onClose?.();
+    setWasOpen(isOpen);
+  }, [isOpen, wasOpen, onClose]);
+
   if (!mounted || !isOpen) return null;
 
   const handleContentClick = (e: Event) => e.stopPropagation();
   const handleBackdropClick = (e: Event) => {
     if (!closeOnBackdropClick) return;
     if (e.target === e.currentTarget) closeModal(id);
+    onClose?.();
   };
 
   const handleCloseClick = () => closeModal(id);

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "eslint": "eslint",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "dayjs": "^1.11.19",
+    "mediasoup-client": "^3.18.3",
     "next": "^14.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -21,7 +23,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^20.19.27",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@typescript-eslint/eslint-plugin": "^8.50.0",

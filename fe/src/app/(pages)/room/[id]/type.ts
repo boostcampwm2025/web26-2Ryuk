@@ -1,4 +1,4 @@
-import { RoomData, RoomJoinInfoData } from '@/app/features/room/dtos/type';
+import { RoomData, RoomJoinInfoData } from '@/app/features/room/dtos/data';
 
 export interface RoomPageClientProps {
   roomId: string;

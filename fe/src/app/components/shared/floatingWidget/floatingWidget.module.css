@@ -8,13 +8,17 @@
   transition: none;
 }
 
+.floatingWidget.elevated {
+  z-index: 1001;
+}
+
 .floatingWidget.dragging {
   cursor: grabbing;
   transition: none;
 }
 
 .floatingWidget.transitioning {
-  transition: all .3s ease-out;
+  transition: all .3s ease-in-out;
 }
 
 .floatingWidget * {

@@ -7,7 +7,7 @@ import ParticipantStepper from '@/app/components/shared/stepper/ParticipantStepp
 import TagSelector from '@/app/components/shared/tag/TagSelector';
 import MicSetting from './MicSetting';
 import PasswordSetting from './PasswordSetting';
-import { RoomEditData } from '@/app/features/room/dtos/type';
+import { RoomEditData } from '@/app/features/room/dtos/data';
 import styles from './roomEditForm.module.css';
 import { RoomEditFormProps } from '@/app/features/room/components/type';
 

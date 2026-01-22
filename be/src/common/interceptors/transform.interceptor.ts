@@ -43,15 +43,21 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
         };
       }),
       tap((responseData) => {
-        // data가 객체이고 rooms 배열이 비어있으면 204 No Content 설정
-        if (
-          responseData?.data &&
-          typeof responseData.data === 'object' &&
-          'rooms' in responseData.data &&
-          Array.isArray(responseData.data.rooms) &&
-          responseData.data.rooms.length === 0
-        ) {
-          response.status(HttpStatus.NO_CONTENT);
+        // data가 객체이고 rooms 또는 games 배열이 비어있으면 204 No Content 설정
+        if (responseData?.data && typeof responseData.data === 'object') {
+          const hasEmptyRooms =
+            'rooms' in responseData.data &&
+            Array.isArray(responseData.data.rooms) &&
+            responseData.data.rooms.length === 0;
+
+          const hasEmptyGames =
+            'games' in responseData.data &&
+            Array.isArray(responseData.data.games) &&
+            responseData.data.games.length === 0;
+
+          if (hasEmptyRooms || hasEmptyGames) {
+            response.status(HttpStatus.NO_CONTENT);
+          }
         }
       }),
     );

@@ -11,6 +11,8 @@ export interface FloatingWidgetProps {
   id: string;
   initialPosition?: Position;
   dragHandleId?: string;
+  onActivate?: () => void;
+  elevated?: boolean;
 }
 
 export interface UseFloatingWidgetProps {

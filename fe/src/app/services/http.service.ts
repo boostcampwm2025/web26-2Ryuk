@@ -1,8 +1,7 @@
 import IS from '@/utils/is';
 import { ApiResponse } from '@/app/features/room/services/type';
 import { showErrorToast } from '@/app/components/shared/toast/useToast';
-import useNavigation, { goHome } from '../hooks/useNavigation';
-import { useRouter } from 'next/navigation';
+import { goHome } from '../hooks/useNavigation';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
@@ -65,7 +64,7 @@ export class HttpService {
 
     // 204 No Content 응답 처리
     if (response.status === 204) {
-      return { success: true, message: 'No Content', data: {} } as T;
+      return { success: true, message: 'No Content' } as T;
     }
 
     const contentType = response.headers.get('content-type');

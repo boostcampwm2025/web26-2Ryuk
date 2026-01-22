@@ -1,0 +1,54 @@
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 580px;
+  padding: 52px;
+  background: var(--neutral-1);
+  border-radius: 52px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font: var(--display-1);
+  color: var(--neutral-9);
+}
+
+.subtitle {
+  margin: 0;
+  font: var(--heading-2);
+  color: var(--primary-6);
+}
+
+.section {
+  width: 100%;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.notice {
+  margin: 0;
+  font: var(--body-1);
+  color: var(--neutral-6);
+  text-align: center;
+}

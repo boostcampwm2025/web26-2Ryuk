@@ -21,6 +21,7 @@ export const componentRelations: ComponentRelation[] = [
   { id: 'icon', title: 'Icon', category: 'shared' },
   { id: 'iconcircle', title: 'IconCircle', category: 'shared', children: ['icon'] },
   { id: 'chip', title: 'Chip', category: 'shared', children: ['icon'] },
+  { id: 'chip-button', title: 'ChipButton', category: 'shared', children: ['icon'] },
   { id: 'status-chip', title: 'StatusChip', category: 'shared', children: ['chip'] },
   { id: 'toggle-chip', title: 'ToggleChip', category: 'shared', children: ['chip'] },
   { id: 'textfield', title: 'Textfield', category: 'shared' },
@@ -33,6 +34,13 @@ export const componentRelations: ComponentRelation[] = [
   },
   { id: 'stepper', title: 'Stepper', category: 'shared' },
   { id: 'toggle', title: 'Toggle', category: 'shared' },
+  { id: 'progress-bar', title: 'ProgressBar', category: 'shared' },
+  {
+    id: 'remaining-time-bar',
+    title: 'RemainingTimeBar',
+    category: 'shared',
+    children: ['progress-bar'],
+  },
   {
     id: 'tag-selector',
     title: 'TagSelector',
@@ -159,16 +167,36 @@ export const componentRelations: ComponentRelation[] = [
     children: ['chip', 'icon', 'icon-button'],
   },
   {
+    id: 'voice-participant-card',
+    title: 'VoiceParticipantCard',
+    category: 'feature',
+    children: ['avatar', 'slider', 'chip', 'icon-button'],
+  },
+  {
     id: 'realtime-rooms',
     title: 'RealtimeRoomsSection',
     category: 'feature',
     children: ['room-card', 'search-form', 'iconcircle', 'text-button'],
   },
+  {
+    id: 'game-card',
+    title: 'GameCard',
+    category: 'feature',
+    children: ['icon', 'text-button'],
+  },
+  {
+    id: 'game-card-grid',
+    title: 'GameCardGrid',
+    category: 'feature',
+    children: ['game-card'],
+  },
+  { id: 'beaker-fill-view', title: 'BeakerFillView', category: 'feature' },
 
   // Sprite Components
   { id: 'logo-image', title: 'LogoImage', category: 'sprite' },
   { id: 'logo', title: 'Logo', category: 'sprite', children: ['logo-image'] },
   { id: 'sprite-animation', title: 'SpriteAnimation', category: 'sprite' },
+  { id: 'water-drop', title: 'WaterDrop', category: 'sprite' },
 ];
 
 export function getComponentRelation(id: string): ComponentRelation | undefined {
@@ -208,12 +236,15 @@ export const sharedSections = [
   { id: 'icon-button', title: 'IconButton' },
   { id: 'text-button', title: 'TextButton' },
   { id: 'text-button-icon', title: 'TextButton w/ Icon' },
+  { id: 'chip-button', title: 'ChipButton' },
   { id: 'go-back-button', title: 'GoBackButton' },
   { id: 'text-field', title: 'Textfield' },
   { id: 'search-form', title: 'SearchForm' },
   { id: 'message-form', title: 'MessageForm' },
   { id: 'toggle', title: 'Toggle' },
   { id: 'slider', title: 'Slider' },
+  { id: 'progress-bar', title: 'ProgressBar' },
+  { id: 'remaining-time-bar', title: 'RemainingTimeBar' },
   { id: 'chip', title: 'Chip' },
   { id: 'toggle-chip', title: 'ToggleChip' },
   { id: 'status-chip', title: 'StatusChip' },
@@ -251,11 +282,16 @@ export const featureSections = [
   { id: 'room-update-modal', title: 'RoomUpdateModal' },
   { id: 'room-card', title: 'RoomCard' },
   { id: 'room-info', title: 'RoomInfo' },
+  { id: 'voice-participant-card', title: 'VoiceParticipantCard' },
   { id: 'realtime-rooms', title: 'RealtimeRoomsSection' },
+  { id: 'game-card', title: 'GameCard' },
+  { id: 'game-card-grid', title: 'GameCardGrid' },
+  { id: 'beaker-fill-view', title: 'BeakerFillView' },
 ];
 
 export const spriteSections = [
   { id: 'logo-image', title: 'LogoImage' },
   { id: 'logo', title: 'Logo' },
   { id: 'sprite-animation', title: 'SpriteAnimation' },
+  { id: 'water-drop', title: 'WaterDrop' },
 ];

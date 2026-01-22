@@ -71,7 +71,7 @@
 }
 
 .roomVoiceChat .title {
-  font: var(--heading-1);
+  font: var(--title-1);
   color: var(--neutral-9);
   margin: 0;
 }
@@ -111,28 +111,101 @@
 .roomVoiceChat .participantsList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  padding: 12px;
+  gap: 24px;
 }
 
-.roomVoiceChat .participantItem {
+.participantCard {
+  display: flex;
+  min-width: 320px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 28px;
+  border-radius: 32px;
+  border: 1px solid var(--neutral-3);
+  background: var(--neutral-1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all .2s ease-in-out;
+}
+
+.participantCard.me {
+  background: var(--primary-1);
+  border-color: var(--primary-3);
+}
+
+.participantCard.speaking {
+  box-shadow: 0 0 0 2px var(--primary-4);
+}
+
+.cardTop {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px;
-  border-radius: 12px;
-  transition: background-color 0.2s;
 }
 
-.roomVoiceChat .participantItem:hover {
-  background-color: var(--neutral-2);
+.avatarWrapper {
+  flex-shrink: 0;
 }
 
-
-.roomVoiceChat .nickname {
-  font: var(--body-1);
-  color: var(--neutral-9);
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.participantName {
+  font: var(--title-1);
+  color: var(--neutral-9);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--secondary);
+  font: var(--label-2);
+}
+
+.statusText {
+  color: var(--secondary);
+}
+
+.speaking .statusText {
+  color: var(--primary-6);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sliderRow svg {
+  color: var(--secondary);
+}
+
+.sliderRow input[type='range'] {
+  flex: 1;
+}
+
+.me .sliderRow svg {
+  color: var(--primary-6);
 }

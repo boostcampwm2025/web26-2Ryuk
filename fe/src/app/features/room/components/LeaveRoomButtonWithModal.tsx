@@ -22,9 +22,9 @@ export default function LeaveRoomButtonWithModal() {
 
   const handleGoBackClick = () => openModal(modalId);
   const handleCancel = () => closeModal(modalId);
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (roomId && userId) {
-      roomChatService.unsubscribe();
+      await roomChatService.unsubscribe();
       closeModal(modalId);
       showSuccessToast('퇴장했습니다.');
     }

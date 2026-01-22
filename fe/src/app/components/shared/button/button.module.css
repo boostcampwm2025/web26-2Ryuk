@@ -4,10 +4,12 @@
   justify-content: center;
   border: none;
   border-radius: 50px;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
   box-sizing: border-box;
   white-space: nowrap;
+}
+
+.button:disabled {
+  cursor: not-allowed;
 }
 
 .button.large {
@@ -47,30 +49,31 @@
   height: 16px;
 }
 
-.button:focus-visible {
-  outline: 2px solid var(--primary-5);
-  outline-offset: 2px;
-}
-
-.button:disabled {
-  cursor: not-allowed;
-}
-
 /* Variant - Primary */
 .primary {
   background: var(--primary-6);
   color: var(--primary-1);
 }
 
-.button:hover:not(:disabled).primary {
-  background: var(--primary-7);
+.success-primary {
+  background: var(--success);
+  color: var(--neutral-1);
 }
 
-.button:active:not(:disabled).primary {
-  background: var(--primary-9);
+.warning-primary {
+  background: var(--warning);
+  color: var(--neutral-1);
 }
 
-.button:disabled.primary {
+.error-primary {
+  background: var(--error);
+  color: var(--neutral-1);
+}
+
+.button:disabled.primary,
+.button:disabled.success-primary,
+.button:disabled.warning-primary,
+.button:disabled.error-primary {
   background: var(--neutral-4);
   color: var(--neutral-3);
 }
@@ -81,15 +84,25 @@
   color: var(--primary-6);
 }
 
-.button:hover:not(:disabled).secondary {
-  background: var(--primary-4);
+.success-secondary {
+  background: var(--success-bg);
+  color: var(--success);
 }
 
-.button:active:not(:disabled).secondary {
-  background: var(--primary-5);
+.warning-secondary {
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
-.button:disabled.secondary {
+.error-secondary {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.button:disabled.secondary,
+.button:disabled.success-secondary,
+.button:disabled.warning-secondary,
+.button:disabled.error-secondary {
   background: var(--neutral-3);
   color: var(--neutral-4);
 }
@@ -99,14 +112,6 @@
   background: var(--neutral-1);
   color: var(--secondary);
   box-shadow: inset 0 0 0 2px var(--neutral-3);
-}
-
-.button:hover:not(:disabled).outline {
-  background: var(--neutral-2);
-}
-
-.button:active:not(:disabled).outline {
-  background: var(--neutral-4);
 }
 
 .button:disabled.outline {
@@ -119,14 +124,6 @@
 .ghost {
   background: transparent;
   color: var(--secondary);
-}
-
-.button:hover:not(:disabled).ghost {
-  background: var(--neutral-2);
-}
-
-.button:active:not(:disabled).ghost {
-  background: var(--neutral-4);
 }
 
 .button:disabled.ghost {
