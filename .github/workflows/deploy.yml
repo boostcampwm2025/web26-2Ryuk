@@ -21,23 +21,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 레포지토리 코드 체크아웃
+      # 1️⃣ 레포지토리 체크아웃 (infra 파일 최신화 목적)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 이미지 태그 결정 (입력값 or 기본 latest)
-      - name: Set image tag
+      # 2️⃣ 이미지 태그 결정
+      - name: Resolve image tag
         id: tag
         run: |
-          if [ -z "${{ inputs.image_tag }}" ]; then
-            echo "IMAGE_TAG=latest" >> $GITHUB_OUTPUT
-          else
-            echo "IMAGE_TAG=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          TAG="${{ inputs.image_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="latest"
           fi
-          echo "Selected image tag: ${{ inputs.image_tag }}"
+          echo "IMAGE_TAG=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Using image tag: $TAG"
 
-      # 3️⃣ 서버로 최신 설정 파일 전송 (SCP)
-      # docker-compose.yml과 nginx/ 설정을 서버의 최신 상태로 유지
+      # 3️⃣ 서버로 docker-compose / infra / nginx 전송
       - name: Copy infra files to NCP
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -47,32 +46,46 @@ jobs:
           port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
           command_timeout: 300s
-          source: 'docker-compose.yml,infra/,nginx/'
+          source: docker-compose.yml,infra/,nginx/
           target: ${{ env.DEPLOY_PATH }}
           overwrite: true
-          debug: true
 
-      # 4️⃣ SSH 접속 및 배포 스크립트 실행
+      # 4️⃣ SSH 접속 후 deploy.sh 실행
       - name: SSH into NCP and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.NCP_HOST }}
           username: ${{ secrets.NCP_USERNAME }}
           key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.NCP_SSH_PORT}}
+          port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
           command_timeout: 300s
-          # 셸 환경변수로 필요한 데이터 전달
-          envs: DOCKER_USERNAME,DOCKER_PASSWORD,DOCKER_IMAGE_BACKEND,DOCKER_IMAGE_FRONTEND,DOCKER_IMAGE_TAG,DEPLOY_PATH,API_PORT
           script_stop: true
+
+          # deploy.sh 에 전달될 환경변수
+          envs: >
+            DOCKER_USERNAME,
+            DOCKER_PASSWORD,
+            DOCKER_IMAGE_BACKEND,
+            DOCKER_IMAGE_FRONTEND,
+            DOCKER_IMAGE_TAG,
+            DEPLOY_PATH,
+            API_PORT
+
           script: |
             set -e
-            echo "[INFO] Connecting to server..."
-            cd ${DEPLOY_PATH:-~/project} || exit 1
-            export DOCKER_IMAGE_TAG=${{ steps.tag.outputs.IMAGE_TAG }}
-            chmod +x ./infra/deploy.sh
-            echo "[INFO] Running deploy.sh..."
-            ./infra/deploy.sh
+            echo "[INFO] Connected to server"
+
+            cd "${DEPLOY_PATH:-~/project}"
+
+            export DOCKER_IMAGE_TAG="${{ steps.tag.outputs.IMAGE_TAG }}"
+
+            echo "[INFO] Deploy path: $(pwd)"
+            echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
+
+            chmod +x infra/deploy.sh
+            infra/deploy.sh
+
         env:
           DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ env.DOCKER_PASSWORD }}
@@ -86,16 +99,16 @@ jobs:
       - name: Notify Success
         if: success()
         run: |
-          echo "✅ 배포 성공"
+          echo "✅ Deploy succeeded"
           echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
-          echo "Repository: ${{ github.repository }}"
+          echo "Repo: ${{ github.repository }}"
           echo "Commit: ${{ github.sha }}"
 
       # 6️⃣ 실패 로그
       - name: Notify Failure
         if: failure()
         run: |
-          echo "❌ 배포 실패"
+          echo "❌ Deploy failed"
           echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
-          echo "Repository: ${{ github.repository }}"
+          echo "Repo: ${{ github.repository }}"
           echo "Commit: ${{ github.sha }}"

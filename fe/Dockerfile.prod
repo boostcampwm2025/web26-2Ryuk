@@ -7,18 +7,18 @@ RUN npm install -g pnpm@9.12.0
 # Set working directory
 WORKDIR /app
 
-# Copy workspace manifests
+# 1. Copy workspace manifests (dependency cache layer)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY fe/package.json ./fe/
 
-# Install dependencies for frontend workspace
-# --ignore-scripts: prepare 스크립트(husky) 실행 건너뛰기 (Docker 빌드에서는 불필요)
+# 2. Install dependencies for frontend workspace
+# --ignore-scripts: prepare 스크립트(husky) 실행 건너뛰기
 RUN pnpm install --frozen-lockfile --prod=false --ignore-scripts --filter fe...
 
-# Copy source code
+# 3. Copy frontend source code (이 지점부터 캐시가 깨져야 정상)
 COPY fe ./fe
 
-# Build application
+# 4. Build-time environment variables
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL
 ARG NEXT_PUBLIC_API_SERVER_URL
@@ -27,8 +27,15 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 ENV NEXT_PUBLIC_API_SERVER_URL=${NEXT_PUBLIC_API_SERVER_URL}
 
+# 5. Cache breaker (프론트는 항상 새로 빌드되도록)
+ARG BUILD_TIME
+ENV BUILD_TIME=${BUILD_TIME}
+
+# 6. Build application
 WORKDIR /app/fe
 RUN pnpm build
+
+
 
 # Production stage with Node.js (Next.js server)
 FROM node:22-alpine AS production
@@ -38,28 +45,28 @@ RUN npm install -g pnpm@9.12.0
 
 WORKDIR /app
 
-# Copy workspace manifests
+# 7. Copy workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY fe/package.json ./fe/
 
-# Install production dependencies only for frontend workspace
-# --ignore-scripts: prepare 스크립트(husky) 실행 건너뛰기 (프로덕션 빌드에서는 불필요)
+# 8. Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts --filter fe...
 
-# Copy built application from builder
+# 9. Copy built artifacts from build stage
 COPY --from=base /app/fe/.next ./fe/.next
 COPY --from=base /app/fe/public ./fe/public
 COPY --from=base /app/fe/next.config.mjs ./fe/next.config.mjs
 COPY --from=base /app/fe/package.json ./fe/package.json
 
-# Set environment variables
+# 10. Runtime environment variables
 ARG NODE_ENV=production
 ARG VERSION=latest
 ENV NODE_ENV=${NODE_ENV}
 ENV VERSION=${VERSION}
+
 # NEXT_PUBLIC_* 변수는 빌드 시점에만 사용되므로 런타임 설정 불필요
 
-# Expose port (Next.js default port is 3000)
+# Expose port (Next.js default port)
 EXPOSE 3000
 
 # Start Next.js server
