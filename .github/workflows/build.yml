@@ -115,13 +115,13 @@ jobs:
           echo "🌐 Building Frontend Image: $VERSION"
 
           docker build \
+            --no-cache \
+            --build-arg BUILD_TIME=$(date +%s) \
             --build-arg NODE_ENV=production \
             --build-arg VERSION=$VERSION \
             --build-arg NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
             --build-arg NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
             --build-arg NEXT_PUBLIC_API_SERVER_URL=$NEXT_PUBLIC_API_SERVER_URL \
-            --cache-from=type=registry,ref=$DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:latest \
-            --cache-to=type=inline \
             -t $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:$VERSION \
             -t $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:latest \
             -f fe/Dockerfile.prod \
