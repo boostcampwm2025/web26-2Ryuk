@@ -42,10 +42,10 @@ export default function GlobalChatPanel() {
 
     subscribe();
 
-    // recents 수신 콜백 등록 (초기 메시지 로드 시 배열 교체)
+    // recents 수신 콜백 등록
     const unsubscribeRecents = globalChatService.onRecents((messages) => setChats(messages));
 
-    // 메시지 수신 콜백 등록 (새 메시지만 추가)
+    // 메시지 수신 콜백 등록
     const unsubscribeMessage = globalChatService.onMessage((message) =>
       setChats((prev) => [...prev, message]),
     );
@@ -55,7 +55,7 @@ export default function GlobalChatPanel() {
       setIsConnected(connected),
     );
 
-    // 참여자 수 변경 콜백 등록 (브로드캐스트 받은 데이터로 업데이트)
+    // 참여자 수 변경 콜백 등록
     const unsubscribeParticipants = globalChatService.onParticipantsChange((count) =>
       setCurrentParticipants(count),
     );

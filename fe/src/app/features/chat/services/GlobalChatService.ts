@@ -12,7 +12,7 @@ import { ChatConverter } from '@/app/features/chat/dtos/converter';
 import { WS_EVENTS } from '@/app/services/events';
 import { WebSocketService } from '@/app/services/websocket.service';
 import { authStore } from '@/app/features/user/stores/auth';
-import { roomStore } from '@/app/features/room/stores/room';
+
 import {
   ChatChannel,
   MessageCallback,
@@ -127,7 +127,7 @@ export class GlobalChatService implements ChatChannel {
 
   private handleGlobalMessage(dto: ChatGlobalNewMessageDto): void {
     const chatData = ChatConverter.toGlobalNewMessageData(dto);
-    this.messages.push(chatData);
+    this.messages = [...this.messages, chatData];
     this.notifyMessage(chatData);
   }
 
@@ -175,7 +175,7 @@ export class GlobalChatService implements ChatChannel {
     const ackData = ChatConverter.toGlobalSendAckData(ackDto);
 
     // 변환된 Data를 로직에서 사용
-    this.messages.push(ackData);
+    this.messages = [...this.messages, ackData];
     this.notifyMessage(ackData);
   }
 
