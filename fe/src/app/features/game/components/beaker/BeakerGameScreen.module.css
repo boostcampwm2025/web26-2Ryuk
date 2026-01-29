@@ -1,0 +1,96 @@
+.screen {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.timerWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timerLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.rankingWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: center;
+}
+
+.rankingLabel {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.rankingValue {
+  font: var(--heading-1);
+  color: var(--primary-6);
+}
+
+.statsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.stageNote {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--secondary);
+}
+
+.stageBadge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.stageDescription {
+  font-size: 0.95rem;
+  color: var(--on-surface, #1f2a44);
+  margin: 0;
+}
+
+.gameContent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.beakerGroup {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 80px;
+  padding: 0 12px;
+}
+
+@media (max-width: 768px) {
+  .beakerGroup {
+    gap: 40px;
+  }
+
+  .screen {
+    gap: 24px;
+  }
+}

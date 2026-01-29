@@ -1,22 +1,8 @@
 import IS from '@/utils/is';
 import { ApiResponse } from '@/app/features/room/services/type';
-import { showErrorToast } from '@/app/components/shared/toast/useToast';
-import { goHome } from '../hooks/useNavigation';
+import { toastStore } from '@/app/components/shared/toast/toast.store';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-const UUID_PATTERN = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-
-const MSW_HANDLED_PATHS: string[] = ['/api/posts/popular', '/api/users/:userId/profile'];
-
-function isMswHandled(path: string): boolean {
-  if (MSW_HANDLED_PATHS.includes(path)) return true;
-
-  return MSW_HANDLED_PATHS.some((pattern) => {
-    const regexPattern = pattern.replace(/:id/g, UUID_PATTERN).replace(/:[^/]+/g, '[^/]+');
-    const regex = new RegExp(`^${regexPattern}$`);
-    return regex.test(path);
-  });
-}
 
 export function isApiResponse(value: unknown): value is ApiResponse {
   return (
@@ -29,25 +15,8 @@ export function isApiResponse(value: unknown): value is ApiResponse {
 }
 
 export class HttpService {
-  private static getBaseUrl(url: string): string {
-    // 1. 서버 컴포넌트
-    if (typeof window === 'undefined') return 'http://server:4000';
-
-    // 2. 클라이언트 + MSW
-    if (isMswHandled(url)) return '';
-
-    // 3. 클라이언트 + 실제 API (rewrites)
-    return '';
-  }
-
-  private static async request<T>(
-    url: string,
-    method: HttpMethod,
-    body?: unknown,
-    token?: string,
-  ): Promise<T> {
+  private static async request<T>(url: string, method: HttpMethod, body?: unknown): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const requestInit: RequestInit = {
       method,
@@ -56,11 +25,7 @@ export class HttpService {
     };
 
     if (!IS.nil(body)) requestInit.body = JSON.stringify(body);
-
-    const baseUrl = this.getBaseUrl(url);
-    const fullUrl = baseUrl ? baseUrl + url : url;
-
-    const response = await fetch(fullUrl, requestInit);
+    const response = await fetch(url, requestInit);
 
     // 204 No Content 응답 처리
     if (response.status === 204) {
@@ -76,8 +41,7 @@ export class HttpService {
       // ApiResponse 형식이고 success가 false 이면 Toast 표시
       if (!response.ok && isApiResponse(parsed) && !parsed.success) {
         const errorMessage = parsed.message || '요청에 실패했습니다.';
-        showErrorToast(errorMessage);
-        goHome();
+        toastStore.getState().showErrorToast(errorMessage);
         throw new Error(errorMessage);
       }
 
@@ -87,23 +51,23 @@ export class HttpService {
     return response.text() as T;
   }
 
-  static async get<T>(url: string, token?: string): Promise<T> {
-    return this.request<T>(url, 'GET', undefined, token);
+  static async get<T>(url: string): Promise<T> {
+    return this.request<T>(url, 'GET');
   }
 
-  static async post<T>(url: string, data?: unknown, token?: string): Promise<T> {
-    return this.request<T>(url, 'POST', data, token);
+  static async post<T>(url: string, data?: unknown): Promise<T> {
+    return this.request<T>(url, 'POST', data);
   }
 
-  static async put<T>(url: string, data?: unknown, token?: string): Promise<T> {
-    return this.request<T>(url, 'PUT', data, token);
+  static async put<T>(url: string, data?: unknown): Promise<T> {
+    return this.request<T>(url, 'PUT', data);
   }
 
-  static async patch<T>(url: string, data?: unknown, token?: string): Promise<T> {
-    return this.request<T>(url, 'PATCH', data, token);
+  static async patch<T>(url: string, data?: unknown): Promise<T> {
+    return this.request<T>(url, 'PATCH', data);
   }
 
-  static async delete<T>(url: string, token?: string): Promise<T> {
-    return this.request<T>(url, 'DELETE', undefined, token);
+  static async delete<T>(url: string): Promise<T> {
+    return this.request<T>(url, 'DELETE');
   }
 }

@@ -1,23 +1,32 @@
+import { INestApplicationContext, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import { ServerOptions, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { RedisClientType } from 'redis';
-import type { ExtendedError } from 'socket.io/dist/namespace';
+import { AuthService } from '@src/modules/auth/auth.service';
 import { MockAuthService } from '@src/modules/auth/mock-auth.service';
-import { toUuid } from '@src/common/utils/user-id';
+import { parse } from 'cookie';
+import { RedisClientType } from 'redis';
+import { ServerOptions, Socket } from 'socket.io';
+import type { ExtendedError } from 'socket.io/dist/namespace';
 
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
   private pubClient: RedisClientType;
   private subClient: RedisClientType;
-
-  // TODO: MockAuthService를 JWT 인증 서비스로 교체
+  private jwtService: JwtService;
   private mockAuthService: MockAuthService;
+  private authService: AuthService;
+  private readonly logger = new Logger(RedisIoAdapter.name);
 
-  constructor(app: any) {
+  constructor(app: INestApplicationContext) {
     super(app);
-    // TODO: JWT 인증 서비스로 교체
-    this.mockAuthService = new MockAuthService();
+    // JWT 인증 서비스
+    this.jwtService = app.get(JwtService);
+    this.authService = app.get(AuthService);
+    // 개발 환경: Mock 인증
+    if (process.env.NODE_ENV !== 'production') {
+      this.mockAuthService = new MockAuthService();
+    }
   }
 
   async connectToRedis(pubClient: RedisClientType): Promise<void> {
@@ -49,88 +58,90 @@ export class RedisIoAdapter extends IoAdapter {
 
     /**
      * WebSocket 인증 미들웨어
-     *
-     * TODO: Mock 인증을 JWT 인증으로 교체
      */
     server.use(async (socket: Socket, next: (err?: ExtendedError) => void) => {
-      const authResult = this.authenticateSocket(socket);
+      try {
+        const authResult = await this.authenticateSocket(socket);
 
-      if (!authResult.isAuthenticated || !authResult.userId) {
-        socket.data.authenticated = false;
-        return next();
+        // 인증 성공 시
+        if (authResult.isAuthenticated && authResult.userId) {
+          // DB 사용자 존재 여부 확인
+          await this.authService.getUserById(authResult.userId);
+          // 세션 처리
+          await this.handleAuthenticatedSession(server, socket, authResult.userId, authResult.originalUserId);
+        } else {
+          // 인증 실패 시 (비로그인 사용자)
+          socket.data.authenticated = false;
+        }
+
+        // 모든 경우에 연결을 허용
+        next();
+      } catch (error) {
+        // DB 조회 실패 등 예상치 못한 오류 발생 시에만 연결 거부
+        this.logger.error(`웹소켓 인증 미들웨어 오류 (socket ${socket.id}): ${error.message}`, error.stack);
+        next(new Error('인증 처리 중 오류가 발생했습니다.'));
       }
-
-      // UUID 형식의 userId와 원본 ID를 모두 저장 (로그용)
-      await this.handleAuthenticatedSession(server, socket, authResult.userId, authResult.originalUserId);
-      next();
     });
 
     return server;
   }
 
   /**
-   * 소켓 인증 처리
-   *
-   * TODO: Mock 토큰 검증 로직을 JWT 토큰 검증으로 교체
-   *
-   * 반환값: 원본 ID('J001')를 UUID로 변환하여 반환
-   * - MySQL과 Redis 모두 UUID 형식 사용
-   * - 로그에는 원본 ID 표시 (별도 처리)
+   * 소켓 인증 처리 (JWT)
    */
-  private authenticateSocket(socket: Socket): {
+  private async authenticateSocket(socket: Socket): Promise<{
     userId: string | null;
     isAuthenticated: boolean;
     originalUserId?: string; // 로그용 원본 ID
-  } {
-    // TODO: query.userId 방식 제거 (개발 편의용)
-    const queryUserId = socket.handshake.query.userId as string;
+  }> {
+    let token: string | null = null;
 
-    // 토큰을 여러 소스에서 확인
-    // 1. Socket.io auth 객체 (연결 시 auth 옵션)
-    const authToken = socket.handshake.auth?.token as string;
-
-    // 2. HTTP 헤더 (Postman 등에서 헤더로 보낼 경우)
-    const headerAuth = socket.handshake.headers.authorization as string;
-    const headerAuthentication = socket.handshake.headers.authentication as string;
-
-    // 헤더에서 Bearer 토큰 형식 제거 (Bearer token 또는 직접 token)
-    const getTokenFromHeader = (header: string | undefined): string | null => {
-      if (!header) return null;
-      // "Bearer token" 형식이면 "Bearer " 제거
-      return header.startsWith('Bearer ') ? header.substring(7) : header;
-    };
-
-    // 토큰 우선순위: auth.token > Authorization 헤더 > Authentication 헤더
-    const token = authToken || getTokenFromHeader(headerAuth) || getTokenFromHeader(headerAuthentication);
-
-    // TODO: Mock 토큰 검증을 JWT 토큰 검증으로 교체
-    if (token && !queryUserId) {
-      const payload = this.mockAuthService.verifyMockToken(token);
-      if (payload) {
-        // 원본 ID를 UUID로 변환
-        const originalUserId = payload.userId;
-        const uuid = toUuid(originalUserId);
-        return { userId: uuid, isAuthenticated: true, originalUserId };
-      }
+    // 1. httpOnly 쿠키에서 토큰 추출 (가장 먼저 확인)
+    const cookieHeader = socket.handshake.headers.cookie;
+    if (cookieHeader) {
+      const cookies = parse(cookieHeader);
+      // 'accessToken' 쿠키가 undefined일 경우 null로 할당하여 타입 오류 방지
+      token = cookies.accessToken || null;
     }
 
-    // TODO: query.userId 방식 제거 (개발 편의용)
-    // OAuth 환경에서는 이 부분이 제거되고, 토큰 방식만 사용됩니다.
-    // 개발 편의를 위해 Mock 사용자 목록에서 확인 (MySQL 조회 불필요)
-    if (queryUserId) {
-      const user = this.mockAuthService.getMockUserById(queryUserId);
-      if (user) {
-        // 원본 ID를 UUID로 변환
-        const originalUserId = queryUserId;
-        const uuid = toUuid(originalUserId);
-        return { userId: uuid, isAuthenticated: true, originalUserId };
-      }
+    // 토큰을 여러 소스에서 확인 (쿠키에 토큰이 없는 경우)
+    if (!token) {
+      // 2. Socket.io auth 객체 (연결 시 auth 옵션)
+      const authToken = socket.handshake.auth?.token as string;
+
+      // 3. HTTP 헤더 (Postman 등에서 헤더로 보낼 경우)
+      const headerAuth = socket.handshake.headers.authorization as string;
+      const headerAuthentication = socket.handshake.headers.authentication as string;
+
+      // 헤더에서 Bearer 토큰 형식 제거 (Bearer token 또는 직접 token)
+      const getTokenFromHeader = (header: string | undefined): string | null => {
+        if (!header) return null;
+        // "Bearer token" 형식이면 "Bearer " 제거
+        return header.startsWith('Bearer ') ? header.substring(7) : header;
+      };
+
+      // 토큰 우선순위: auth.token > Authorization 헤더 > Authentication 헤더
+      token = authToken || getTokenFromHeader(headerAuth) || getTokenFromHeader(headerAuthentication);
     }
 
-    return {
-      userId: null,
-      isAuthenticated: false,
-    };
+    if (!token) {
+      return { userId: null, isAuthenticated: false };
+    }
+
+    // 토큰이 있는 경우, JWT 검증을 시도
+    try {
+      const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET as string });
+      if (payload?.sub) {
+        return { userId: payload.sub, isAuthenticated: true, originalUserId: payload.sub };
+      }
+    } catch (error) {
+      // JWT 검증에 실패하면(만료, 서명 오류 등), 바로 인증 실패로 간주
+      this.logger.warn(`JWT 검증 실패 (socket ${socket.id}): ${error.message}. 토큰: ${token?.substring(0, 10)}...`);
+      return { userId: null, isAuthenticated: false };
+    }
+
+    // 유효한 payload 구조가 아닌 경우
+    return { userId: null, isAuthenticated: false };
   }
 
   /**
@@ -149,6 +160,7 @@ export class RedisIoAdapter extends IoAdapter {
 
     // 동일 아이디로 다른 소켓이 연결되어 있다면 기존 연결 끊기
     if (existingSocketId && existingSocketId !== socket.id) {
+      this.logger.warn(`기존 소켓 연결(${existingSocketId})을 끊고 새 연결(${socket.id}) 허용 (userId: ${userId})`);
       const existingSocket = server.sockets.sockets.get(existingSocketId);
       if (existingSocket) existingSocket.disconnect(true);
     }
@@ -172,9 +184,18 @@ export class RedisIoAdapter extends IoAdapter {
    * 소켓 disconnect 시 세션 정리 핸들러 설정
    */
   private setupDisconnectHandler(socket: Socket, sessionKey: string): void {
+    // 1. 이미 등록된 리스너 개수 확인
+    const disconnectCount = socket.listenerCount('disconnect');
+
+    // 2. 만약 이미 리스너가 있다면, 새로 등록하지 않고 탈출
+    if (disconnectCount > 0) return;
+
     socket.on('disconnect', async () => {
       const currentId = await this.pubClient.get(sessionKey);
-      if (currentId === socket.id) await this.pubClient.del(sessionKey);
+      if (currentId === socket.id) {
+        await this.pubClient.del(sessionKey);
+      } else {
+      }
     });
   }
 }

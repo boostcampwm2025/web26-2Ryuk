@@ -50,13 +50,13 @@
 }
 
 .title {
-  font: var(--large-1);
+  font: var(--large-2);
   color: var(--neutral-1);
   margin: 0;
 }
 
 .subtitle {
-  font: var(--large-2);
+  font: var(--large-3);
   color: var(--neutral-1);
   margin: 0;
 }

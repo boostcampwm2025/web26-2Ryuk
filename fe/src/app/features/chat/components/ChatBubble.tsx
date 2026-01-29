@@ -9,7 +9,11 @@ import Rules from '@/app/shared/rule';
 import { useEffect, useState } from 'react';
 
 function ChatBubble({ id, message, sender, timestamp }: ChatBubbleProps) {
-  const className = CSSUtil.buildCls(styles.chatBubble, sender.isMe && styles.isMe);
+  const className = CSSUtil.buildCls(
+    styles.chatBubble,
+    sender.isMe && styles.isMe,
+    sender.role === 'ADMIN' && styles.admin,
+  );
   const displayAuthor = sender.isMe ? `나(${sender.nickname})` : sender.nickname;
   const [time, setTime] = useState('');
 
@@ -28,7 +32,11 @@ function ChatBubble({ id, message, sender, timestamp }: ChatBubbleProps) {
           <span className={styles.time}>{time}</span>
         </div>
         <div className={styles.messageBubble}>
-          <div className={styles.message}>{message}</div>
+          <div
+            className={CSSUtil.buildCls(styles.message, sender.role === 'ADMIN' && styles.admin)}
+          >
+            {message}
+          </div>
         </div>
       </div>
     </div>

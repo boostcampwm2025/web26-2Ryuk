@@ -1,8 +1,11 @@
 # Backend Production Dockerfile
-FROM node:22-alpine AS base
+FROM node:22-alpine AS builder
 
 # Install pnpm
 RUN npm install -g pnpm@9.12.0
+
+# mediasoup 빌드를 위한 필수 도구 설치
+RUN apk add --no-cache python3 py3-pip make g++ gcc linux-headers
 
 # Set working directory
 WORKDIR /app
@@ -12,8 +15,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY be/package.json ./be/
 
 # Install dependencies for backend workspace
-# --ignore-scripts: prepare 스크립트(husky) 실행 건너뛰기 (Docker 빌드에서는 불필요)
-RUN pnpm install --frozen-lockfile --prod=false --ignore-scripts --filter be...
+# --ignore-scripts 항목 삭제: mediasoup post install 스크립트 실행이 막힘
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY be ./be
@@ -30,18 +33,15 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm@9.12.0
 
-# Copy workspace manifests
+# 수정사항: 빌드 단계에서 이미 완성된 node_modules와 dist를 통째로 복사
+# install 과정이 불필요해짐
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/be/node_modules ./be/node_modules
+COPY --from=builder /app/be/dist ./be/dist
+
+# 설정 및 환경 파일 복사
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY be/package.json ./be/
-
-# Install production dependencies only for backend workspace
-# --ignore-scripts: prepare 스크립트(husky) 실행 건너뛰기 (프로덕션 빌드에서는 불필요)
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts --filter be...
-
-# Copy built application from builder
-COPY --from=base /app/be/dist/ ./be/dist/
-
-# Copy production environment file (GitHub Actions에서 생성됨)
 COPY be/.env.production ./be/.env.production
 
 # Set environment variables

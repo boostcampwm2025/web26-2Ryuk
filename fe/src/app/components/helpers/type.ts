@@ -55,6 +55,7 @@ export const componentRelations: ComponentRelation[] = [
     category: 'shared',
     children: ['text-button', 'modal'],
   },
+  { id: 'dropdown', title: 'Dropdown', category: 'shared', children: ['icon'] },
 
   // Layout Components (components/layout/)
   {
@@ -253,6 +254,7 @@ export const sharedSections = [
   { id: 'text-tooltip', title: 'TextTooltip' },
   { id: 'radio-button', title: 'RadioButton' },
   { id: 'dialog', title: 'Dialog' },
+  { id: 'dropdown', title: 'Dropdown' },
   { id: 'avatar', title: 'Avatar' },
   { id: 'avatars', title: 'Avatars' },
   { id: 'profile', title: 'Profile' },

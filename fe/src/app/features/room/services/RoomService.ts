@@ -8,7 +8,6 @@ import {
   RoomListDto,
 } from '@/app/features/room/dtos/dto';
 import { RoomValidateJoinRequestData } from '@/app/features/room/dtos/data';
-import { authStore } from '@/app/features/user/stores/auth';
 import { ApiResponse, IdDto } from './type';
 
 export class RoomService {
@@ -28,12 +27,11 @@ export class RoomService {
     return response.data;
   }
 
-  async getMyCurrentRoom(): Promise<{ roomId: string | null }> {
+  async getMyCurrentRoom(): Promise<{ roomId?: string }> {
     const uri = '/api/rooms/me';
-    const token = authStore.getState().token || undefined;
-    const response = await HttpService.get<ApiResponse<{ roomId: string | null }>>(uri, token);
+    const response = await HttpService.get<ApiResponse<{ roomId: string | null }>>(uri);
     if (!response.success) throw new Error(response.message);
-    return { roomId: response.data?.roomId ?? null };
+    return { roomId: response.data?.roomId ?? undefined };
   }
 
   async getRoom(roomId: string): Promise<RoomDto> {
@@ -45,44 +43,35 @@ export class RoomService {
 
   async getRoomJoinInfo(roomId: string): Promise<RoomJoinInfoDto> {
     const uri = `/api/rooms/${roomId}/join`;
-    const token = authStore.getState().token || undefined;
-    const response = await HttpService.get<ApiResponse<RoomJoinInfoDto>>(uri, token);
+    const response = await HttpService.get<ApiResponse<RoomJoinInfoDto>>(uri);
     if (!response.success || !response.data) throw new Error(response.message);
     return response.data;
   }
 
   async createRoom(data: RoomCreateRequestDto): Promise<RoomDto> {
     const uri = '/api/rooms';
-    const token = authStore.getState().token || undefined;
-    const response = await HttpService.post<ApiResponse<RoomDto>>(uri, data, token);
+    const response = await HttpService.post<ApiResponse<RoomDto>>(uri, data);
     if (!response.success || !response.data) throw new Error(response.message);
     return response.data;
   }
 
   async updateRoom(roomId: string, data: RoomUpdateRequestDto): Promise<RoomDto> {
     const uri = `/api/rooms/${roomId}`;
-    const token = authStore.getState().token || undefined;
-    const response = await HttpService.patch<ApiResponse<RoomDto>>(uri, data, token);
+    const response = await HttpService.patch<ApiResponse<RoomDto>>(uri, data);
     if (!response.success || !response.data) throw new Error(response.message);
     return response.data;
   }
 
   async deleteRoom(roomId: string): Promise<void> {
     const uri = `/api/rooms/${roomId}`;
-    const token = authStore.getState().token || undefined;
-    const response = await HttpService.delete<ApiResponse<IdDto>>(uri, token);
+    const response = await HttpService.delete<ApiResponse<IdDto>>(uri);
     if (!response.success) throw new Error(response.message);
   }
 
   async validateJoin(roomId: string, password: string = ''): Promise<RoomValidateJoinResponseDto> {
     const uri = `/api/rooms/${roomId}/validate-join`;
     const data: RoomValidateJoinRequestData = { password };
-    const token = authStore.getState().token || undefined;
-    const response = await HttpService.post<ApiResponse<RoomValidateJoinResponseDto>>(
-      uri,
-      data,
-      token,
-    );
+    const response = await HttpService.post<ApiResponse<RoomValidateJoinResponseDto>>(uri, data);
     if (!response.success || !response.data) throw new Error(response.message);
     return response.data;
   }

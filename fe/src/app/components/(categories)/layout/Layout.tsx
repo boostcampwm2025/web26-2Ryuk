@@ -6,6 +6,7 @@ import {
   PageTitleSection,
   BoardPageTitleSection,
   GamePageTitleSection,
+  RankingPageTitleSection,
 } from '@/app/components/layout/pageTitleSection/PageTitleSection';
 import ComponentRelations from '@/app/components/helpers/ComponentRelations';
 
@@ -58,6 +59,16 @@ export default function LayoutComponents() {
         <div className={styles.showcaseBlock}>
           <Component fullWidth>
             <GamePageTitleSection />
+          </Component>
+        </div>
+      </section>
+
+      <section id="ranking-page-title-section" className={styles.section}>
+        <h2 className={styles.sectionTitle}>RankingPageTitleSection</h2>
+        <ComponentRelations componentId="ranking-page-title-section" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <RankingPageTitleSection />
           </Component>
         </div>
       </section>

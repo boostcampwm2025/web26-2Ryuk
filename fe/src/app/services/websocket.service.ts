@@ -1,9 +1,8 @@
-import IS from '@/utils/is';
 import { io, Socket } from 'socket.io-client';
 
 export class WebSocketService {
-  private static socket: Socket | null = null;
-  private static connectPromise: Promise<void> | null = null;
+  private static socket?: Socket;
+  private static connectPromise?: Promise<void>;
   private static connectResolvers: Set<() => void> = new Set();
 
   /**
@@ -15,7 +14,6 @@ export class WebSocketService {
    */
   static connect(
     url: string,
-    userId?: string,
     onMessage?: (data: unknown) => void,
     onError?: (error: Error) => void,
   ): void {
@@ -30,14 +28,6 @@ export class WebSocketService {
       reconnectionAttempts: 10,
       timeout: 5000,
     };
-
-    // Mock 인증: query.userId 또는 auth.token 사용
-    if (userId) {
-      connectionOptions.query = { userId };
-    } else {
-      const mockToken = this.getMockToken();
-      if (mockToken) connectionOptions.auth = { token: mockToken };
-    }
 
     this.socket = io(url, connectionOptions);
 
@@ -63,7 +53,7 @@ export class WebSocketService {
 
     this.socket.on('disconnect', (reason: string) => {
       console.warn('[WebSocket] 연결 해제:', reason);
-      this.connectPromise = null;
+      this.connectPromise = undefined;
     });
 
     // 모든 이벤트를 onMessage로 전달
@@ -77,7 +67,7 @@ export class WebSocketService {
   /**
    * Socket 인스턴스 가져오기
    */
-  static getSocket(): Socket | null {
+  static getSocket(): Socket | undefined {
     return this.socket;
   }
 
@@ -87,8 +77,8 @@ export class WebSocketService {
   static disconnect(): void {
     if (!this.socket) return;
     this.socket.disconnect();
-    this.socket = null;
-    this.connectPromise = null;
+    this.socket = undefined;
+    this.connectPromise = undefined;
     this.connectResolvers.clear();
   }
 
@@ -157,28 +147,6 @@ export class WebSocketService {
   }
 
   /**
-   * Mock 토큰 가져오기
-   */
-  private static getMockToken(): string | null {
-    if (IS.undefined(window)) return null;
-    try {
-      const { authStore } = require('@/app/features/user/stores/auth');
-      const token = authStore.getState().token;
-      return token || localStorage.getItem('mock_token');
-    } catch {
-      return localStorage.getItem('mock_token');
-    }
-  }
-
-  /**
-   * Mock 토큰 저장
-   */
-  static setMockToken(token: string): void {
-    if (IS.undefined(window)) return;
-    localStorage.setItem('mock_token', token);
-  }
-
-  /**
    * 특정 이벤트 리스너 등록
    */
   static on(event: string, callback: (...args: any[]) => void): void {
@@ -188,13 +156,9 @@ export class WebSocketService {
         let attempts = 0;
         const checkAndRegister = () => {
           attempts++;
-          if (this.socket) {
-            registerListener();
-          } else if (attempts < 50) {
-            setTimeout(checkAndRegister, 100);
-          } else {
-            console.error('[WebSocket] 리스너 등록 실패: Socket 인스턴스가 존재하지 않습니다.');
-          }
+          if (this.socket) registerListener();
+          else if (attempts < 50) setTimeout(checkAndRegister, 100);
+          else console.error('[WebSocket] 리스너 등록 실패: Socket 인스턴스가 존재하지 않습니다.');
         };
         checkAndRegister();
         return;

@@ -1,0 +1,116 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  display: flex;
+  flex-direction: column;
+  border-radius: 52px;
+  overflow: hidden;
+  background: var(--neutral-1);
+}
+
+.header {
+  display: flex;
+  gap: 32px;
+  font: var(--heading-3);
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--neutral-3);
+  padding: 24px 40px;
+}
+
+.headerCell {
+  font: var(--title-1);
+  color: var(--secondary);
+  letter-spacing: 0.05em;
+  justify-content: center;
+  text-align: center;
+}
+
+.headerCellAuto {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 12px 40px;
+  border-bottom: 2px solid var(--neutral-3);
+  background: var(--neutral-1);
+  cursor: default;
+}
+
+.row.highlight {
+  background: var(--primary-2) !important;
+  color: var(--primary-6);
+}
+
+.row.highlight .cell {
+  color: var(--primary-6);
+}
+
+.row[data-row-rank='1'],
+.row[data-row-rank='2'],
+.row[data-row-rank='3'] {
+  background: var(--neutral-2);
+}
+
+.row[data-row-rank='1'] .scoreCell {
+  color: var(--gold);
+}
+
+.row[data-row-rank='2'] .scoreCell {
+  color: var(--silver);
+}
+
+.row[data-row-rank='3'] .scoreCell {
+  color: var(--bronze);
+}
+
+.cell {
+  flex: var(--table-col-flex, 0);
+  width: var(--table-col-width, auto);
+  min-width: var(--table-col-min-width, auto);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alignLeft {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.rankCell {
+  font: var(--heading-3);
+  color: var(--neutral-6);
+  justify-content: center;
+}
+
+.profileCell {
+  justify-content: center;
+}
+
+.nicknameCell {
+  font: var(--label-1);
+  color: var(--secondary);
+  justify-content: flex-start;
+}
+
+.scoreCell {
+  font: var(--heading-2);
+  color: var(--secondary);
+  justify-content: center;
+}
+
+.achieveDateCell {
+  font: var(--body-2);
+  color: var(--secondary);
+  justify-content: center;
+}

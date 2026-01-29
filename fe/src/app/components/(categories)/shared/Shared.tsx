@@ -1,5 +1,7 @@
+'use client';
+
+import { useState } from 'react';
 import styles from '@/app/components/helpers/components.module.css';
-import IconUtil from '@/utils/icon';
 import Icon from '@/app/components/shared/icon/Icon';
 import IconCircleDefault from '@/app/components/shared/icon/IconCircle';
 import * as IconCircle from '@/app/components/shared/icon/IconCircle';
@@ -20,9 +22,10 @@ import Component from '@/app/components/helpers/Component';
 import SearchForm from '@/app/components/shared/form/search/SearchForm';
 import MessageForm from '@/app/components/shared/form/message/MessageForm';
 import ParticipantStepper from '@/app/components/shared/stepper/ParticipantStepper';
-import TextTooltip from '@/app/components/shared/tooltip/TextTooltip';
+import { TextTooltip } from '@/app/components/shared/tooltip/TextTooltip';
 import GoBackButton from '@/app/components/shared/button/GoBackButton';
 import RadioButton from '@/app/components/shared/radioButton/RadioButton';
+import Dropdown from '@/app/components/shared/dropdown/Dropdown';
 import ComponentRelations from '@/app/components/helpers/ComponentRelations';
 import Avatar from '@/app/components/shared/profile/Avatar';
 import AvatarCount from '@/app/components/shared/profile/AvatarCount';
@@ -30,9 +33,50 @@ import { ProfileRow, ProfileColumn } from '@/app/components/shared/profile/Profi
 import Avatars from '@/app/components/shared/profile/Avatars';
 import profilesMock from '@/mocks/data/profiles.json';
 import Paths from '@/app/shared/path';
+import Table from '@/app/components/table/Table';
+import { RankCoin } from '@/app/components/shared/coin';
+import type { TableColumn } from '@/app/components/table/types';
+import type { GamePlayerResultItemData } from '@/app/features/game/dtos/data';
+import { GameConverter } from '@/app/features/game/dtos/converter';
+import resultsMock from '@/mocks/data/results.json';
 
-export default function SharedComponents() {
-  const iconList = IconUtil.extractNames('icons.svg');
+const sharedTableColumns: TableColumn<GamePlayerResultItemData>[] = [
+  {
+    key: 'rank',
+    header: '순위',
+    width: 80,
+    render: (row) => <RankCoin rank={row.rank} />,
+  },
+  {
+    key: 'player',
+    header: '프로필',
+    width: 200,
+    render: (row) => <span>{row.nickname}</span>,
+  },
+  {
+    key: 'score',
+    header: '점수',
+    width: 120,
+    render: (row) => <span>{Number(row.score).toLocaleString()}</span>,
+  },
+  {
+    key: 'id',
+    header: '아이디',
+    width: 'auto',
+    render: (row) => <span>{row.playerId.slice(0, 8)}</span>,
+  },
+];
+
+interface SharedComponentsProps {
+  iconList: string[];
+}
+
+export default function SharedComponents({ iconList }: SharedComponentsProps) {
+  const sharedResultData = GameConverter.toGamePlayerRecordsData(resultsMock);
+  const sharedTableData = sharedResultData.rankings;
+  const sharedGetRowKey = (row: GamePlayerResultItemData) => row.playerId;
+  const sharedHighlightRow = (row: GamePlayerResultItemData) => row.rank === 1;
+  const [selectedDropdownValue, setSelectedDropdownValue] = useState('item2');
 
   return (
     <>
@@ -663,13 +707,13 @@ export default function SharedComponents() {
           <div className={styles.iconRow}>
             <div className={styles.circleItem}>
               <Component>
-                <Slider.Primary />
+                <Slider.Primary value={0.5} />
               </Component>
               <span className={styles.iconLabel}>Primary</span>
             </div>
             <div className={styles.circleItem}>
               <Component>
-                <Slider.Primary disabled />
+                <Slider.Primary value={0.5} disabled />
               </Component>
               <span className={styles.iconLabel}>Primary Disabled</span>
             </div>
@@ -680,13 +724,13 @@ export default function SharedComponents() {
           <div className={styles.iconRow}>
             <div className={styles.circleItem}>
               <Component>
-                <Slider.Secondary />
+                <Slider.Secondary value={0.5} />
               </Component>
               <span className={styles.iconLabel}>Secondary</span>
             </div>
             <div className={styles.circleItem}>
               <Component>
-                <Slider.Secondary disabled />
+                <Slider.Secondary value={0.5} disabled />
               </Component>
               <span className={styles.iconLabel}>Secondary Disabled</span>
             </div>
@@ -697,26 +741,29 @@ export default function SharedComponents() {
       <section id="progress-bar" className={styles.section}>
         <h2 className={styles.sectionTitle}>ProgressBar</h2>
         <div className={styles.showcaseBlock}>
-          <h3 className={styles.blockTitle}>Static Values</h3>
+          <h3 className={styles.blockTitle}>Primary</h3>
           <div className={styles.iconRow}>
-            <div className={styles.circleItem}>
-              <Component fullWidth>
-                <ProgressBar value={0} />
-              </Component>
-              <span className={styles.iconLabel}>0%</span>
-            </div>
-            <div className={styles.circleItem}>
-              <Component fullWidth>
-                <ProgressBar value={0.35} />
-              </Component>
-              <span className={styles.iconLabel}>35%</span>
-            </div>
-            <div className={styles.circleItem}>
-              <Component fullWidth>
-                <ProgressBar value={0.75} />
-              </Component>
-              <span className={styles.iconLabel}>75%</span>
-            </div>
+            {[0, 0.35, 0.75].map((value) => (
+              <div key={`primary-${value}`} className={styles.circleItem}>
+                <Component fullWidth>
+                  <ProgressBar value={value} variant="primary" />
+                </Component>
+                <span className={styles.iconLabel}>{String(value * 100)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={styles.showcaseBlock}>
+          <h3 className={styles.blockTitle}>Secondary</h3>
+          <div className={styles.iconRow}>
+            {[0, 0.35, 0.75].map((value) => (
+              <div key={`secondary-${value}`} className={styles.circleItem}>
+                <Component fullWidth>
+                  <ProgressBar value={value} variant="secondary" />
+                </Component>
+                <span className={styles.iconLabel}>{String(value * 100)}%</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -726,7 +773,10 @@ export default function SharedComponents() {
         <div className={styles.showcaseBlock}>
           <h3 className={styles.blockTitle}>10초 카운트다운</h3>
           <Component fullWidth>
-            <RemainingTimeBar durationMs={10000} />
+            <RemainingTimeBar totalDurationMs={10000} remainingMs={10000} variant="primary" />
+          </Component>
+          <Component fullWidth>
+            <RemainingTimeBar totalDurationMs={3000} remainingMs={3000} variant="secondary" />
           </Component>
         </div>
       </section>
@@ -1550,6 +1600,56 @@ export default function SharedComponents() {
         </div>
       </section>
 
+      <section id="dropdown" className={styles.section}>
+        <h2 className={styles.sectionTitle}>Dropdown</h2>
+        <ComponentRelations componentId="dropdown" />
+        <div className={styles.dropdownShowcaseRow}>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Default</h3>
+            <Component fullWidth>
+              <Dropdown
+                items={[
+                  { label: 'Item 1', value: 'item1' },
+                  { label: 'Item 2', value: 'item2' },
+                  { label: 'Item 3', value: 'item3' },
+                ]}
+                placeholder="Dropdown"
+              />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>With Selected Value</h3>
+            <Component fullWidth>
+              <Dropdown
+                items={[
+                  { label: 'Item 1', value: 'item1' },
+                  { label: 'Item 2', value: 'item2' },
+                  { label: 'Item 3', value: 'item3' },
+                ]}
+                value={selectedDropdownValue}
+                onChange={setSelectedDropdownValue}
+                placeholder="Dropdown"
+              />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Disabled</h3>
+            <Component fullWidth>
+              <Dropdown
+                items={[
+                  { label: 'Item 1', value: 'item1' },
+                  { label: 'Item 2', value: 'item2' },
+                  { label: 'Item 3', value: 'item3' },
+                ]}
+                value="item1"
+                placeholder="Dropdown"
+                disabled
+              />
+            </Component>
+          </div>
+        </div>
+      </section>
+
       <section id="avatar" className={styles.section}>
         <h2 className={styles.sectionTitle}>Avatar</h2>
         <ComponentRelations componentId="avatar" />
@@ -1593,6 +1693,21 @@ export default function SharedComponents() {
             </Component>
             <span className={styles.iconLabel}>Avatars</span>
           </div>
+        </div>
+      </section>
+
+      <section id="shared-table" className={styles.section}>
+        <h2 className={styles.sectionTitle}>Shared Table</h2>
+        <ComponentRelations componentId="shared-table" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <Table
+              columns={sharedTableColumns}
+              data={sharedTableData}
+              getRowKey={sharedGetRowKey}
+              highlightRow={sharedHighlightRow}
+            />
+          </Component>
         </div>
       </section>
 

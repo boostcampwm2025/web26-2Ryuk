@@ -1,43 +1,52 @@
-import styles from '@/app/components/helpers/components.module.css';
-import { ChatBubbles, ChatConverter } from '@/app/features/chat';
-import ChatBubble from '@/app/features/chat/components/ChatBubble';
-import PopularPosts from '@/app/features/post/components/PopularPosts';
-import PostListRow from '@/app/features/post/components/PostListRow';
-import PostListItem from '@/app/features/post/components/PostListItem';
 import Component from '@/app/components/helpers/Component';
 import ComponentRelations from '@/app/components/helpers/ComponentRelations';
-import globalChatMock from '@/mocks/data/globalChat.json';
-import postListCardMock from '@/mocks/data/postListCard.json';
-import { PostConverter } from '@/app/features/post/dtos/Post';
+import styles from '@/app/components/helpers/components.module.css';
+import * as TextButton from '@/app/components/shared/button/TextButton';
+import Dialog from '@/app/components/shared/dialog/Dialog';
+import Modal from '@/app/components/shared/modal/Modal';
+import { ChatBubbles, ChatConverter } from '@/app/features/chat';
+import ChatBubble from '@/app/features/chat/components/ChatBubble';
+import GlobalChatPanel from '@/app/features/chat/components/GlobalChatPanel';
 import RoomChatPanel from '@/app/features/chat/components/LocalChatPanel';
+import GameCard, { EmptyGameCard } from '@/app/features/game/components/GameCard';
+import GameCardGrid from '@/app/features/game/components/GameCardGrid';
+import GameResultPodium from '@/app/features/game/components/podium/GameResultPodium';
+import PodiumRankItem from '@/app/features/game/components/podium/PodiumRankItem';
+import RankingTable from '@/app/features/game/components/ranking/RankingTable';
+import SelectedGameCard from '@/app/features/game/components/SelectedGameCard';
+import { GameConverter } from '@/app/features/game/dtos/converter';
+import PopularPosts from '@/app/features/post/components/PopularPosts';
+import PostListItem from '@/app/features/post/components/PostListItem';
+import PostListRow from '@/app/features/post/components/PostListRow';
+import { PostConverter } from '@/app/features/post/dtos/Post';
+import RoomCard from '@/app/features/room/components/card/RoomCard';
+import VoiceParticipantCard from '@/app/features/room/components/chat/VoiceParticipantCard';
 import MicSetting from '@/app/features/room/components/creation/MicSetting';
 import PasswordSetting from '@/app/features/room/components/creation/PasswordSetting';
 import RoomCreateModalContent from '@/app/features/room/components/creation/RoomCreateModalContent';
 import RoomUpdateModalContent from '@/app/features/room/components/creation/RoomUpdateModalContent';
-import RealtimeRoomsSection from '@/app/features/room/components/RealtimeRoomsSection';
-import RoomCard from '@/app/features/room/components/card/RoomCard';
 import RoomInfo from '@/app/features/room/components/info/RoomInfo';
-import Modal from '@/app/components/shared/modal/Modal';
-import GlobalChatPanel from '@/app/features/chat/components/GlobalChatPanel';
-import AudioControlButtons from '@/app/features/voice/components/AudioControlButtons';
-import SpeakerControlButton from '@/app/features/voice/components/SpeakerControlButton';
-import VoiceParticipantCard from '@/app/features/room/components/chat/VoiceParticipantCard';
-import * as TextButton from '@/app/components/shared/button/TextButton';
-import Dialog from '@/app/components/shared/dialog/Dialog';
-import Paths from '@/app/shared/path';
-import GameCard, { EmptyGameCard } from '@/app/features/game/components/GameCard';
-import GameCardGrid from '@/app/features/game/components/GameCardGrid';
-import SelectedGameCard from '@/app/features/game/components/SelectedGameCard';
 import GameReadyModalContent from '@/app/features/room/components/ready/GameReadyModalContent';
-import { GameConverter } from '@/app/features/game/dtos/converter';
-import gamesMock from '@/mocks/data/games.json';
 import MyReadyStatusCard from '@/app/features/room/components/ready/MyReadyStatusCard';
 import OtherReadyStatusCard from '@/app/features/room/components/ready/OtherReadyStatusCard';
 import OtherReadyStatusCardGrid from '@/app/features/room/components/ready/OtherReadyStatusCardGrid';
-import BeakerFillViewShowcase from '@/app/features/game/components/BeakerFillViewShowcase';
+import BeakerFillViewShowcase from '@/app/features/game/components/beaker/BeakerFillViewShowcase';
+import ReactionTargetView from '@/app/features/game/components/reflex/ReactionTargetView';
+import ReactionTargetCard from '@/app/features/game/components/reflex/ReactionTargetCard';
+import RealtimeRoomsSection from '@/app/features/room/components/RealtimeRoomsSection';
+import AudioControlButtons from '@/app/features/voice/components/AudioControlButtons';
+import SpeakerControlButton from '@/app/features/voice/components/SpeakerControlButton';
+import Paths from '@/app/shared/path';
+import gamesMock from '@/mocks/data/games.json';
+import globalChatMock from '@/mocks/data/globalChat.json';
+import postListCardMock from '@/mocks/data/postListCard.json';
+import resultsMock from '@/mocks/data/results.json';
 
 export default function FeatureComponents() {
   const sampleGames = gamesMock.map(GameConverter.toGameData);
+  const rankingSampleData = GameConverter.toGamePlayerRecordsData(resultsMock);
+  const podiumResultPlayers = rankingSampleData.podium;
+  const podiumShowcaseItems = podiumResultPlayers.filter((player) => player.rank <= 3);
 
   return (
     <>
@@ -120,7 +129,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Active</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <SpeakerControlButton initialState={true} />
+                <SpeakerControlButton speakerOn={true} />
               </Component>
             </div>
           </div>
@@ -128,7 +137,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Muted</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <SpeakerControlButton initialState={false} />
+                <SpeakerControlButton speakerOn={false} />
               </Component>
             </div>
           </div>
@@ -143,7 +152,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Both Active</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <AudioControlButtons initialMicState initialSpeakerState />
+                <AudioControlButtons micOn speakerOn />
               </Component>
             </div>
           </div>
@@ -151,7 +160,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Mic Muted</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <AudioControlButtons initialMicState={false} initialSpeakerState />
+                <AudioControlButtons micOn={false} speakerOn />
               </Component>
             </div>
           </div>
@@ -159,7 +168,7 @@ export default function FeatureComponents() {
             <h3 className={styles.blockTitle}>Both Muted</h3>
             <div className={styles.buttonColumn}>
               <Component>
-                <AudioControlButtons initialMicState={false} initialSpeakerState={false} />
+                <AudioControlButtons micOn={false} speakerOn={false} />
               </Component>
             </div>
           </div>
@@ -172,20 +181,35 @@ export default function FeatureComponents() {
         <div className={styles.showcaseBlock}>
           <div className={styles.cardRow}>
             <Component>
-              <VoiceParticipantCard nickname="강하늘" isMe active micOn speakerOn volume={60} />
+              <VoiceParticipantCard
+                userId="1111"
+                nickname="강하늘"
+                isMe
+                active
+                micOn
+                speakerOn
+                volume={0.6}
+              />
             </Component>
             <Component>
               <VoiceParticipantCard
+                userId="2222"
                 nickname="박철수"
                 isHost
                 active={false}
                 micOn
                 speakerOn
-                volume={45}
+                volume={0.45}
               />
             </Component>
             <Component>
-              <VoiceParticipantCard nickname="김지영" micOn={false} speakerOn volume={20} />
+              <VoiceParticipantCard
+                userId="3333"
+                nickname="김지영"
+                micOn={false}
+                speakerOn
+                volume={0.2}
+              />
             </Component>
           </div>
         </div>
@@ -416,12 +440,13 @@ export default function FeatureComponents() {
           <div className={styles.showcaseBlock}>
             <Component fullWidth>
               <GameCard
-                id="3f1c8c6a-7a4a-4a6c-9b7e-0b5c7f3a9f21"
+                id="5373d4b3-abcc-68a1-9e50-8eb662b38201"
                 title="비커 채우기"
                 description="제한 시간 동안 스페이스바를 빠르게 연타하여 비커를 채우세요!"
                 type="competition"
                 minPlayers={1}
                 maxPlayers={10}
+                time={30000}
               />
             </Component>
           </div>
@@ -463,13 +488,13 @@ export default function FeatureComponents() {
         <ComponentRelations componentId="my-ready-status-card" />
         <div className={styles.chatRow}>
           <Component fullWidth>
-            <MyReadyStatusCard userId="1" nickname="강하늘" isHost isReady={false} />
+            <MyReadyStatusCard playerId="1" nickname="강하늘" isHost isReady={false} />
           </Component>
           <Component fullWidth>
-            <MyReadyStatusCard userId="2" nickname="김지영" isHost={false} isReady={false} />
+            <MyReadyStatusCard playerId="2" nickname="김지영" isHost={false} isReady={false} />
           </Component>
           <Component fullWidth>
-            <MyReadyStatusCard userId="3" nickname="박철수" isHost={false} isReady />
+            <MyReadyStatusCard playerId="3" nickname="박철수" isHost={false} isReady />
           </Component>
         </div>
       </section>
@@ -479,13 +504,13 @@ export default function FeatureComponents() {
         <ComponentRelations componentId="other-ready-status-card" />
         <div className={styles.chatRow}>
           <Component fullWidth>
-            <OtherReadyStatusCard userId="1" nickname="강하늘" isHost isReady />
+            <OtherReadyStatusCard playerId="1" nickname="강하늘" isHost isReady />
           </Component>
           <Component fullWidth>
-            <OtherReadyStatusCard userId="2" nickname="김영희" isHost={false} isReady />
+            <OtherReadyStatusCard playerId="2" nickname="김영희" isHost={false} isReady />
           </Component>
           <Component fullWidth>
-            <OtherReadyStatusCard userId="3" nickname="김지영" isHost={false} isReady={false} />
+            <OtherReadyStatusCard playerId="3" nickname="김지영" isHost={false} isReady={false} />
           </Component>
         </div>
       </section>
@@ -497,9 +522,9 @@ export default function FeatureComponents() {
           <Component fullWidth>
             <OtherReadyStatusCardGrid
               players={[
-                { userId: '1', nickname: '강하늘', isHost: true, isReady: true },
-                { userId: '2', nickname: '김영희', isHost: false, isReady: true },
-                { userId: '3', nickname: '김지영', isHost: false, isReady: false },
+                { playerId: '1', nickname: '강하늘', isHost: true, isReady: true },
+                { playerId: '2', nickname: '김영희', isHost: false, isReady: true },
+                { playerId: '3', nickname: '김지영', isHost: false, isReady: false },
               ]}
             />
           </Component>
@@ -524,6 +549,69 @@ export default function FeatureComponents() {
         </div>
       </section>
 
+      <section id="reaction-target-view" className={styles.section}>
+        <h2 className={styles.sectionTitle}>ReactionTargetView</h2>
+        <ComponentRelations componentId="reaction-target-view" />
+        <div className={styles.cardRow}>
+          {(['idle', 'ready', 'active', 'missed', 'success', 'finished'] as const).map(
+            (variant) => (
+              <Component key={variant}>
+                <ReactionTargetView text={variant.toUpperCase()} variant={variant} />
+              </Component>
+            ),
+          )}
+        </div>
+      </section>
+
+      <section id="reaction-target-card" className={styles.section}>
+        <h2 className={styles.sectionTitle}>ReactionTargetCard</h2>
+        <ComponentRelations componentId="reaction-target-card" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <ReactionTargetCard />
+          </Component>
+        </div>
+      </section>
+
+      <section id="podium-rank-item" className={styles.section}>
+        <h2 className={styles.sectionTitle}>PodiumRankItem</h2>
+        <ComponentRelations componentId="podium-rank-item" />
+        <div className={styles.showcaseBlock}>
+          <div className={styles.cardRow}>
+            {podiumShowcaseItems.map((item) => (
+              <Component key={`${item.nickname}-${item.rank}`}>
+                <PodiumRankItem
+                  rank={item.rank as 1 | 2 | 3}
+                  nickname={item.nickname}
+                  profileImage={item.profileImage}
+                  score={item.score}
+                />
+              </Component>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="game-result-podium" className={styles.section}>
+        <h2 className={styles.sectionTitle}>GameResultPodium</h2>
+        <ComponentRelations componentId="game-result-podium" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <GameResultPodium players={podiumResultPlayers} />
+          </Component>
+        </div>
+      </section>
+
+      <section id="ranking-table" className={styles.section}>
+        <h2 className={styles.sectionTitle}>RankingTable</h2>
+        <ComponentRelations componentId="ranking-table" />
+        <div className={styles.showcaseBlock}>
+          <Component fullWidth>
+            <RankingTable data={rankingSampleData.rankings} />
+          </Component>
+        </div>
+      </section>
+
       <section id="game-ready-modal" className={styles.section}>
         <h2 className={styles.sectionTitle}>GameReadyModalContent</h2>
         <ComponentRelations componentId="game-ready-modal" />
@@ -536,11 +624,11 @@ export default function FeatureComponents() {
             />
             <Modal id="game-ready-modal">
               <GameReadyModalContent
-                myStatus={{ userId: '1', nickname: '강하늘', isHost: true, isReady: false }}
+                myStatus={{ playerId: '1', nickname: '강하늘', isHost: true, isReady: false }}
                 players={[
-                  { userId: '1', nickname: '박철수', isHost: false, isReady: true },
-                  { userId: '2', nickname: '김영희', isHost: false, isReady: true },
-                  { userId: '3', nickname: '김지영', isHost: false, isReady: false },
+                  { playerId: '1', nickname: '박철수', isHost: false, isReady: true },
+                  { playerId: '2', nickname: '김영희', isHost: false, isReady: true },
+                  { playerId: '3', nickname: '김지영', isHost: false, isReady: false },
                 ]}
                 selectedGame={sampleGames[0]}
                 maxPlayers={4}

@@ -110,7 +110,7 @@ export class RoomGateway {
       const existingLocalRoom = await this.roomService.getUserLocalRoom(userId);
       if (existingLocalRoom && existingLocalRoom !== dto.room_id) {
         logMessage(this.logger, LOG.ROOM.JOIN_SWITCH(userId, existingLocalRoom, dto.room_id));
-        await this.leaveRoomProcess(client, userId, existingLocalRoom);
+        await this.roomService.leaveRoomProcess(this.server, userId, existingLocalRoom, client);
       }
 
       // 논리적 상태 변경: 방에 참여
@@ -189,7 +189,7 @@ export class RoomGateway {
       }
 
       // 공통 퇴장 처리
-      await this.leaveRoomProcess(client, userId, dto.room_id);
+      await this.roomService.leaveRoomProcess(this.server, userId, dto.room_id, client);
 
       logMessage(this.logger, LOG.ROOM.LEAVE(userId, dto.room_id));
       // 클라이언트에 퇴장 성공 알림 (ACK)
@@ -208,23 +208,5 @@ export class RoomGateway {
         this.logger.warn('에러 메시지 전송 실패', emitError);
       }
     }
-  }
-
-  /**
-   * 공통 방 퇴장 처리 로직
-   * Redis 상태 변경, 소켓 룸 탈퇴, 브로드캐스트 수행
-   */
-  private async leaveRoomProcess(client: Socket, userId: string, roomId: string) {
-    // Redis에서 제거
-    await this.roomService.leaveRoom(this.server, userId, roomId);
-
-    // 소켓 room 탈퇴
-    void client.leave(roomId);
-
-    // 퇴장 후 참여자 수 조회
-    const currentParticipants = await this.roomService.getCurrentParticipants(roomId);
-
-    // 다른 참여자에게 알림
-    await this.roomService.notifyUserLeft(this.server, roomId, userId, currentParticipants);
   }
 }

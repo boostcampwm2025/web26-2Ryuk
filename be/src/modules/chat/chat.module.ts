@@ -3,9 +3,10 @@ import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import { RoomModule } from '@src/modules/room/room.module';
 import { AuthModule } from '@src/modules/auth/auth.module';
+import { CurseWordModule } from '@src/modules/curse-word/curse-word.module';
 
 @Module({
-  imports: [forwardRef(() => RoomModule), AuthModule],
+  imports: [forwardRef(() => RoomModule), AuthModule, CurseWordModule],
   providers: [ChatService, ChatGateway],
   exports: [ChatService],
 })

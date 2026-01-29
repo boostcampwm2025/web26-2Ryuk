@@ -1,0 +1,116 @@
+{
+  "success": true,
+  "message": "랭킹이 성공적으로 조회되었습니다.",
+  "data": {
+    "total": 1000,
+    "page": 10,
+    "podium": [
+      {
+        "player_id": "8f6c9d1b-2a8c-4c6f-9a12-2c1b3d4e5f6a",
+        "nickname": "강하늘",
+        "profile_image": "",
+        "score": "1230",
+        "rank": "1",
+        "achieve_date": 1767970800000
+      },
+      {
+        "player_id": "1f2b0d7c-3c4e-4c0a-9d2b-9b3c1d2e3f4a",
+        "nickname": "최민지",
+        "profile_image": "",
+        "score": "1100",
+        "rank": "2",
+        "achieve_date": 1767884400000
+      },
+      {
+        "player_id": "2c3d4e5f-6a7b-48c9-9d0e-1f2a3b4c5d6e",
+        "nickname": "박철수",
+        "profile_image": "",
+        "score": "980",
+        "rank": "3",
+        "achieve_date": 1767798000000
+      }
+    ],
+    "rankings": [
+      {
+        "player_id": "8f6c9d1b-2a8c-4c6f-9a12-2c1b3d4e5f6a",
+        "nickname": "강하늘",
+        "profile_image": "",
+        "score": "1230",
+        "rank": "1",
+        "achieve_date": 1767970800000
+      },
+      {
+        "player_id": "1f2b0d7c-3c4e-4c0a-9d2b-9b3c1d2e3f4a",
+        "nickname": "최민지",
+        "profile_image": "",
+        "score": "1100",
+        "rank": "2",
+        "achieve_date": 1767884400000
+      },
+      {
+        "player_id": "2c3d4e5f-6a7b-48c9-9d0e-1f2a3b4c5d6e",
+        "nickname": "박철수",
+        "profile_image": "",
+        "score": "980",
+        "rank": "3",
+        "achieve_date": 1767798000000
+      },
+      {
+        "player_id": "3d4e5f6a-7b8c-49d0-9e1f-2a3b4c5d6e7f",
+        "nickname": "이수영",
+        "profile_image": "",
+        "score": "910",
+        "rank": "4",
+        "achieve_date": 1767711600000
+      },
+      {
+        "player_id": "4a1b2c3d-5e6f-47a9-b0c1-d2e3f4a5b6c7",
+        "nickname": "김지영",
+        "profile_image": "",
+        "score": "860",
+        "rank": "5",
+        "achieve_date": 1767625200000
+      },
+      {
+        "player_id": "5b2c3d4e-6f7a-48b0-c1d2-e3f4a5b6c7d8",
+        "nickname": "오태현",
+        "profile_image": "",
+        "score": "830",
+        "rank": "6",
+        "achieve_date": 1767538800000
+      },
+      {
+        "player_id": "6c3d4e5f-7a8b-49c0-d1e2-f3a4b5c6d7e8",
+        "nickname": "한지은",
+        "profile_image": "",
+        "score": "800",
+        "rank": "7",
+        "achieve_date": 1767452400000
+      },
+      {
+        "player_id": "7d4e5f6a-8b9c-40d1-e2f3-a4b5c6d7e8f9",
+        "nickname": "정민석",
+        "profile_image": "",
+        "score": "770",
+        "rank": "8",
+        "achieve_date": 1767366000000
+      },
+      {
+        "player_id": "8e5f6a7b-9c0d-41e2-f3a4-b5c6d7e8f901",
+        "nickname": "김소연",
+        "profile_image": "",
+        "score": "740",
+        "rank": "9",
+        "achieve_date": 1767279600000
+      },
+      {
+        "player_id": "9f6a7b8c-0d1e-42f3-a4b5-c6d7e8f90123",
+        "nickname": "노태웅",
+        "profile_image": "",
+        "score": "710",
+        "rank": "10",
+        "achieve_date": 1767193200000
+      }
+    ]
+  }
+}

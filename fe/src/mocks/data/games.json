@@ -1,18 +1,20 @@
 [
   {
-    "id": "3f1c8c6a-7a4a-4a6c-9b7e-0b5c7f3a9f21",
+    "id": "550e8400-e29b-41d4-a716-446655440001",
     "title": "비커 채우기",
     "type": "competition",
     "description": "제한 시간 동안 스페이스바를 빠르게 연타하여 비커를 채우세요!",
     "min_players": 1,
-    "max_players": 10
+    "max_players": 10,
+    "time": 30000
   },
   {
-    "id": "3f1c8c6a-7a4a-4a6c-9b7e-0b5f73489s1",
+    "id": "550e8400-e29b-41d4-a716-446655440002",
     "title": "반응 속도 테스트",
     "type": "competition",
     "description": "물방울이 터지는 순간을 포착하세요! 망설이는 순간, 기회는 사라집니다.",
     "min_players": 1,
-    "max_players": 10
+    "max_players": 10,
+    "time": 30000
   }
 ]

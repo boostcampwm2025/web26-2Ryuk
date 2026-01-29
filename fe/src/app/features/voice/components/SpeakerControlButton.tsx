@@ -1,25 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { SpeakerControlButtonProps } from './type';
 import { OutlineIconButton } from '@/app/components/shared/icon/IconButton';
+import { SpeakerControlButtonProps } from './type';
 
-export default function SpeakerControlButton({
-  initialState = false,
-  onChange,
-}: SpeakerControlButtonProps) {
-  const [state, setState] = useState(initialState);
-
+export default function SpeakerControlButton({ speakerOn, onChange }: SpeakerControlButtonProps) {
   const handleStateChange = () => {
-    setState((prev) => !prev);
-    onChange?.(state);
+    onChange?.(!speakerOn);
   };
 
   return (
     <OutlineIconButton
-      name={state ? 'volume' : 'mute'}
+      name={speakerOn ? 'volume' : 'mute'}
       size="small"
-      themeColor={state ? 'default' : 'secondary'}
+      themeColor={speakerOn ? 'default' : 'secondary'}
       onClick={handleStateChange}
     />
   );

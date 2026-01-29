@@ -3,23 +3,22 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { UserService, User } from '../services/UserService';
-import IS from '@/utils/is';
 import { globalChatService } from '@/app/features/chat/services/GlobalChatService';
+import { HttpService } from '@/app/services/http.service';
 
 /* ================== Types ================== */
 
 interface AuthState {
   isAuthenticated: boolean;
-  userId: string | null;
-  token: string | null;
-  user: User | null;
+  userId?: string;
+  user?: User;
   hasHydrated: boolean;
 }
 
 interface AuthActions {
   initialize: () => Promise<void>;
   login: (userId: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -31,38 +30,21 @@ export const authStore = create<AuthStore>()(
     (set, get) => ({
       /* ---------- state ---------- */
       isAuthenticated: false,
-      userId: null,
-      token: null,
-      user: null,
+      userId: undefined,
+      user: undefined,
       hasHydrated: false,
 
       /* ---------- initialize ---------- */
       initialize: async () => {
-        const { hasHydrated, token, userId } = get();
-        if (!hasHydrated) return;
-
-        if (!token || !userId) {
-          set({
-            isAuthenticated: false,
-            userId: null,
-            user: null,
-          });
-          return;
-        }
+        const { hasHydrated, isAuthenticated } = get();
+        if (!hasHydrated || !isAuthenticated) return;
 
         try {
-          const data = await UserService.mockLogin(userId);
-
-          const user: User = {
-            id: data.user.id,
-            nickname: data.user.nickname,
-            profileImage: data.user.profile_image ?? undefined,
-          };
+          const user = await UserService.getMe();
 
           set({
             isAuthenticated: true,
-            userId: data.userId,
-            token: data.token,
+            userId: user.id,
             user,
           });
 
@@ -72,7 +54,7 @@ export const authStore = create<AuthStore>()(
           }
         } catch (e) {
           console.warn('[Auth] initialize failed', e);
-          set({ isAuthenticated: false, user: null });
+          set({ isAuthenticated: false, userId: undefined, user: undefined });
         }
       },
 
@@ -89,7 +71,7 @@ export const authStore = create<AuthStore>()(
         set({
           isAuthenticated: true,
           userId: data.userId,
-          token: data.token,
+          // token: data.token, // token is not needed anymore
           user,
         });
 
@@ -102,15 +84,24 @@ export const authStore = create<AuthStore>()(
       },
 
       /* ---------- logout ---------- */
-      logout: () => {
+      logout: async () => {
+        if (typeof window === 'undefined') return;
+
+        try {
+          // 백엔드 로그아웃 엔드포인트 호출
+          await HttpService.post('/api/auth/logout');
+        } catch (error) {
+          console.error('Logout API call failed:', error);
+          // API 호출 실패하더라도 로컬 상태는 계속 지움
+        }
+
         set({
           isAuthenticated: false,
-          userId: null,
-          token: null,
-          user: null,
+          userId: undefined,
+          // token: undefined,
+          user: undefined,
         });
 
-        if (typeof window === 'undefined') return;
         // 로그아웃 시 글로벌 채팅 참가자 수 낙관적 -1
         globalChatService.decrementParticipantsOptimistic();
         globalChatService.notifyLogout();
@@ -121,7 +112,7 @@ export const authStore = create<AuthStore>()(
       storage: createJSONStorage(() => localStorage),
 
       partialize: (state) => ({
-        token: state.token,
+        // token: state.token,
         userId: state.userId,
         isAuthenticated: state.isAuthenticated,
       }),
@@ -139,18 +130,18 @@ export const authStore = create<AuthStore>()(
           const parsed = e.newValue ? JSON.parse(e.newValue) : null;
           const next = parsed?.state;
 
-          if (!next?.token) return authStore.getState().logout();
+          if (!next?.isAuthenticated) return authStore.getState().logout();
 
-          if (next.token !== authStore.getState().token) {
+          if (next.userId !== authStore.getState().userId) {
             authStore.setState({
-              token: next.token,
+              // token: next.token,
               userId: next.userId,
               isAuthenticated: true,
             });
 
             try {
-              const user = await UserService.getMe(next.token);
-              authStore.setState({ user });
+              const user = await UserService.getMe();
+              authStore.setState({ user, isAuthenticated: true, userId: user.id });
             } catch {
               authStore.getState().logout();
             }

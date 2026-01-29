@@ -60,6 +60,7 @@ jobs:
           port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
           command_timeout: 300s
+          # 셸 환경변수로 필요한 데이터 전달
           script_stop: true
 
           # deploy.sh 에 전달될 환경변수
@@ -70,7 +71,18 @@ jobs:
             DOCKER_IMAGE_FRONTEND,
             DOCKER_IMAGE_TAG,
             DEPLOY_PATH,
-            API_PORT
+            API_PORT,
+            MEDIASOUP_ANNOUNCED_IP,
+            MEDIASOUP_RTC_MIN_PORT,
+            MEDIASOUP_RTC_MAX_PORT,
+            MEDIASOUP_LISTEN_IP,
+            GITHUB_CLIENT_ID,
+            GITHUB_CLIENT_SECRET,
+            JWT_SECRET,
+            JWT_EXPIRATION_TIME,
+            BACKEND_BASE_URL,
+            GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET
 
           script: |
             set -e
@@ -94,6 +106,18 @@ jobs:
           DOCKER_IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
           DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
           API_PORT: ${{ env.API_PORT }}
+          MEDIASOUP_ANNOUNCED_IP: ${{ secrets.NCP_HOST }}
+          MEDIASOUP_RTC_MIN_PORT: ${{ secrets.MEDIASOUP_RTC_MIN_PORT }}
+          MEDIASOUP_RTC_MAX_PORT: ${{ secrets.MEDIASOUP_RTC_MAX_PORT }}
+          MEDIASOUP_LISTEN_IP: '0.0.0.0'
+          GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID}}
+          GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION_TIME: ${{ secrets.JWT_EXPIRATION_TIME }}
+          BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL}}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+
 
       # 5️⃣ 성공 로그
       - name: Notify Success

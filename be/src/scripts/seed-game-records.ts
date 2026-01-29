@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 
-import { GameRecord } from '@src/modules/game/game-record.entity';
+import { GameRecord } from '@src/modules/game-record/game-record.entity';
 import { Game } from '@src/modules/game/game.entity';
 import { User } from '@src/modules/user/user.entity';
 import databaseConfig from '@src/providers/database/database.config';

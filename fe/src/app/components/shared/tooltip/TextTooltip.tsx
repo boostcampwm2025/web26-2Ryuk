@@ -1,49 +1,75 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
 import styles from './textTooltip.module.css';
 import { TextTooltipProps } from './type';
-import type { TextTooltipPosition } from './type';
+import type { TextTooltipPosition, TooltipTriggerProps } from './type';
 import CSSUtil from '@/utils/css';
 
-export default function TextTooltip({ text, anchorId }: TextTooltipProps) {
+export function TextTooltip({ text, anchorId }: TextTooltipProps) {
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState<TextTooltipPosition>('center');
 
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+
   useEffect(() => {
-    const anchor = document.querySelector(`[data-anchor="${anchorId}"]`);
+    const anchor = document.querySelector<HTMLElement>(`[data-anchor="${anchorId}"]`);
     if (!anchor || !tooltipRef.current) return;
 
     const updatePosition = () => {
       const anchorRect = anchor.getBoundingClientRect();
       const tooltipRect = tooltipRef.current!.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
 
-      // 툴팁이 중앙 정렬되었을 때의 위치 계산
-      const tooltipCenterX = anchorRect.left + anchorRect.width / 2;
-      const tooltipLeft = tooltipCenterX - tooltipRect.width / 2;
-      const tooltipRight = tooltipCenterX + tooltipRect.width / 2;
+      const gap = 8;
 
-      // 화면 밖으로 나가는지 확인
-      if (tooltipLeft < 0) setPosition('left');
-      else if (tooltipRight > viewportWidth) setPosition('right');
+      const rawTop = anchorRect.top - tooltipRect.height - gap;
+      const rawLeft = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
+
+      // 좌우 화면 충돌 보정 (JS가 전담)
+      const minLeft = 8;
+      const maxLeft = window.innerWidth - tooltipRect.width - 8;
+      const clampedLeft = Math.min(Math.max(rawLeft, minLeft), maxLeft);
+
+      setCoords({ top: rawTop, left: clampedLeft });
+
+      if (rawLeft < minLeft) setPosition('left');
+      else if (rawLeft > maxLeft) setPosition('right');
       else setPosition('center');
     };
 
-    const handleMouseEnter = () => setTimeout(updatePosition, 0);
+    const handleEnter = () => {
+      setVisible(true);
+      requestAnimationFrame(updatePosition);
+    };
 
-    anchor.addEventListener('mouseenter', handleMouseEnter);
+    const handleLeave = () => {
+      setVisible(false);
+    };
+
+    anchor.addEventListener('mouseenter', handleEnter);
+    anchor.addEventListener('mouseleave', handleLeave);
 
     return () => {
-      anchor.removeEventListener('mouseenter', handleMouseEnter);
+      anchor.removeEventListener('mouseenter', handleEnter);
+      anchor.removeEventListener('mouseleave', handleLeave);
     };
   }, [anchorId]);
 
-  const className = CSSUtil.buildCls(styles.tooltip, styles[position]);
+  const style = {
+    '--tooltip-top': `${coords.top}px`,
+    '--tooltip-left': `${coords.left}px`,
+  } as CSSProperties;
+
+  const className = CSSUtil.buildCls(styles.tooltip, styles[position], visible && styles.visible);
 
   return (
-    <div ref={tooltipRef} className={className} data-tooltip={anchorId}>
+    <div ref={tooltipRef} className={className} style={style}>
       {text}
     </div>
   );
+}
+
+export function TooltipTrigger({ dataAnchor, children }: TooltipTriggerProps) {
+  return <div data-anchor={dataAnchor}>{children}</div>;
 }

@@ -6,11 +6,15 @@ import useResponsive from '@/app/hooks/useResponsive';
 import {
   BoardPageTitleSectionProps,
   GamePageTitleSectionProps,
+  GameListPageTitleSectionProps,
   PageTitleSectionProps,
+  RankingPageTitleSectionProps,
 } from './type';
-import { PrimaryTextButton } from '../../shared/button/TextButton';
-import SearchForm from '../../shared/form/search/SearchForm';
-import RadioButton from '../../shared/radioButton/RadioButton';
+import { PrimaryTextButton } from '@/app/components/shared/button/TextButton';
+import SearchForm from '@/app/components/shared/form/search/SearchForm';
+import RadioButton from '@/app/components/shared/radioButton/RadioButton';
+import { GAME_IDS } from '@/app/shared/constant';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function PageTitleSection({ label, title, description, children }: PageTitleSectionProps) {
   const { status } = useResponsive();
@@ -38,7 +42,7 @@ export function BoardPageTitleSection({ onSearch, onCreate }: BoardPageTitleSect
   );
 }
 
-export function GamePageTitleSection({ onSearch }: GamePageTitleSectionProps) {
+export function GameListPageTitleSection({ onSearch }: GameListPageTitleSectionProps) {
   return (
     <PageTitleSection
       label="MINIGAMES"
@@ -47,6 +51,68 @@ export function GamePageTitleSection({ onSearch }: GamePageTitleSectionProps) {
     >
       <SearchForm placeholder="게임 검색" onSubmit={onSearch} />
       <RadioButton name="game-filter" values={['전체', '경쟁', '협동']} />
+    </PageTitleSection>
+  );
+}
+
+export function GamePageTitleSection({ gameId }: GamePageTitleSectionProps) {
+  switch (gameId) {
+    case GAME_IDS.BEAKER:
+      return (
+        <PageTitleSection
+          label="MINIGAMES"
+          title="비커 채우기"
+          description="제한시간 동안 스페이스바를 빠르게 눌러 비커를 채워보세요."
+        />
+      );
+  }
+  return null;
+}
+type RankingView = 'group' | 'all';
+
+const rankingViews: { value: RankingView; label: string }[] = [
+  { value: 'group', label: '그룹' },
+  { value: 'all', label: '전체' },
+];
+
+export function RankingPageTitleSection({
+  onChange,
+  view = 'group',
+}: RankingPageTitleSectionProps) {
+  const [selectedView, setSelectedView] = useState<RankingView>(view);
+
+  useEffect(() => {
+    setSelectedView(view);
+  }, [view]);
+
+  const handleSelectView = useCallback(
+    (index: number) => {
+      const next = rankingViews[index];
+      if (!next || selectedView === next.value) return;
+      setSelectedView(next.value);
+      onChange?.(next.value);
+    },
+    [onChange, selectedView],
+  );
+
+  const selectedIndex = useMemo(
+    () => rankingViews.findIndex((item) => item.value === selectedView),
+    [selectedView],
+  );
+
+  return (
+    <PageTitleSection
+      label="RANKINGS"
+      title="게임 랭킹"
+      description="지금, 더 나은 기록에 도전해보세요!"
+    >
+      <RadioButton
+        key={selectedView}
+        name="ranking-view"
+        values={rankingViews.map((item) => item.label)}
+        initialSelected={Math.max(selectedIndex, 0)}
+        onChange={handleSelectView}
+      />
     </PageTitleSection>
   );
 }

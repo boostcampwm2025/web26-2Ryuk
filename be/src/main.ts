@@ -3,17 +3,23 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { RedisIoAdapter } from './providers/redis/redis-io.adapter';
 import { REDIS_CLIENT } from './providers/redis/redis.provider';
-import { loadEnv } from './config/env';
-
-loadEnv();
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  });
 
   // 상태 체크 엔드포인트
   app.getHttpAdapter().get('/health', (_, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  // cookie-parser 미들웨어 등록
+  app.use(cookieParser());
 
   // 전역 파이프 설정 (DTO 유효성 검사)
   app.useGlobalPipes(

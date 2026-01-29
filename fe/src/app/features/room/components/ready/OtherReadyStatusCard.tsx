@@ -6,7 +6,6 @@ import { OtherReadyStatusCardProps } from '@/app/features/room/components/type';
 import * as Chip from '@/app/components/shared/chip/Chip';
 import { ProfileColumn } from '@/app/components/shared/profile/Profile';
 import HostBadge from '@/app/components/shared/badge/HostBadge';
-import Image from 'next/image';
 import Paths from '@/app/shared/path';
 import Avatar from '@/app/components/shared/profile/Avatar';
 

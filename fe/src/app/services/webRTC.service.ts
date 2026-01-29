@@ -2,18 +2,21 @@ import { Device, Transport, Producer, Consumer } from 'mediasoup-client/types';
 import * as mediasoupClient from 'mediasoup-client';
 
 export class WebRtcService {
-  private device: Device | null = null;
-  private sendTransport: Transport | null = null;
-  private recvTransport: Transport | null = null;
+  private device?: Device;
+  private _sendTransport?: Transport;
+  private _recvTransport?: Transport;
 
   /**
    * 1. 로컬 디바이스 초기화
    * 서버의 rtpCapabilities를 받아 브라우저가 통신 가능한지 확인합니다.
    */
-  async initDevice(routerRtpCapabilities: any): Promise<void> {
+  async initDevice(data: any): Promise<void> {
     try {
+      const finalCaps = data.rtpCapabilities ? data.rtpCapabilities : data;
+
       this.device = new mediasoupClient.Device();
-      await this.device.load({ routerRtpCapabilities });
+
+      await this.device.load({ routerRtpCapabilities: finalCaps });
     } catch (error) {
       throw error;
     }
@@ -34,8 +37,8 @@ export class WebRtcService {
     // [중요] transport.on('connect') 이벤트는 VoiceService(지휘자)에서
     // WebSocketService를 통해 서버에 'voice:transport:connect'를 보내도록 구현해야 합니다.
 
-    if (direction === 'send') this.sendTransport = transport;
-    else this.recvTransport = transport;
+    if (direction === 'send') this._sendTransport = transport;
+    else this._recvTransport = transport;
 
     return transport;
   }
@@ -44,10 +47,10 @@ export class WebRtcService {
    * 3. 마이크 스트림 송출 (Producer)
    */
   async produceAudio(track: MediaStreamTrack): Promise<Producer> {
-    if (!this.sendTransport) throw new Error('Send Transport 를 찾을 수 없습니다.');
+    if (!this._sendTransport) throw new Error('Send Transport 를 찾을 수 없습니다.');
 
     // 서버에 'voice:producer:create'를 보내기 위한 파라미터를 생성합니다.
-    const producer = await this.sendTransport.produce({
+    const producer = await this._sendTransport.produce({
       track,
     });
 
@@ -58,9 +61,9 @@ export class WebRtcService {
    * 4. 상대방 스트림 수신 (Consumer)
    */
   async consumeAudio(consumerOptions: any): Promise<Consumer> {
-    if (!this.recvTransport) throw new Error('Recv Transport 를 찾을 수 없습니다.');
+    if (!this._recvTransport) throw new Error('Recv Transport 를 찾을 수 없습니다.');
 
-    const consumer = await this.recvTransport.consume(consumerOptions);
+    const consumer = await this._recvTransport.consume(consumerOptions);
 
     // 필요하다면 여기서 바로 resume 처리를 하거나, 트랙을 리턴합니다.
     return consumer;
@@ -70,11 +73,11 @@ export class WebRtcService {
    * 5. 리소스 정리 (Cleanup)
    */
   cleanup() {
-    this.sendTransport?.close();
-    this.recvTransport?.close();
-    this.sendTransport = null;
-    this.recvTransport = null;
-    this.device = null;
+    this._sendTransport?.close();
+    this._recvTransport?.close();
+    this._sendTransport = undefined;
+    this._recvTransport = undefined;
+    this.device = undefined;
   }
 
   // Getters
@@ -83,6 +86,10 @@ export class WebRtcService {
   }
 
   get recvTransportId() {
-    return this.recvTransport?.id;
+    return this._recvTransport?.id;
+  }
+
+  get recvTransport() {
+    return this._recvTransport;
   }
 }

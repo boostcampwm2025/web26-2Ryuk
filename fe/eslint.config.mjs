@@ -24,7 +24,13 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
-        ...globals.es2023,
+        ...globals.es2023,          
+        RequestInit: 'readonly',
+        NodeJS: 'readonly',
+        React: true,
+        MediaTrackConstraints: 'readonly', 
+        MediaStream: 'readonly',
+        MediaStreamTrack: 'readonly',
       },
     },
     plugins: {

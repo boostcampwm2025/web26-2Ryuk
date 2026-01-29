@@ -1,0 +1,47 @@
+.root {
+  border: 2px dashed transparent;
+  border-radius: 24px;
+  padding: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 720px;
+  min-height: 400px;
+  font: var(--large-1);
+}
+
+.label {
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.idle,
+.finished {
+  background-color: var(--neutral-4);
+  border-color: var(--neutral-6);
+  color: var(--neutral-6);
+}
+
+.ready {
+  background-color: var(--primary-4);
+  border-color: var(--primary-6);
+  color: var(--primary-6);
+}
+
+.active {
+  background-color: var(--warning-bg);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.missed {
+  background-color: var(--error-bg);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.success {
+  background-color: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}

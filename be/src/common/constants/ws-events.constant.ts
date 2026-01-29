@@ -28,6 +28,7 @@ export const WS_EVENTS_ROOM = {
   // 수신 이벤트
   JOIN: 'room:join',
   LEAVE: 'room:leave',
+  BAN: 'room:ban',
 
   // 송신 이벤트
   PARTICIPANT_JOIN: 'room:participant:join',

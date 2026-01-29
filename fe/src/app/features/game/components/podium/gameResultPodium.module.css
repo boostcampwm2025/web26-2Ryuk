@@ -1,0 +1,60 @@
+.podium {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.podiumSlot {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.podiumItem {
+  width: 100%;
+  border-radius: 40px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid transparent;
+  background-color: var(--neutral-1);
+  color: var(--neutral-9);
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.profileWrapper {
+  flex: 1;
+}
+
+.score {
+  font: var(--heading-1);
+  font-weight: 700;
+}
+
+.podiumItem.gold {
+  background-color: var(--gold-bg);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+.podiumItem.silver {
+  background-color: var(--silver-bg);
+  color: var(--silver);
+  border: 1px solid var(--silver-border);
+}
+
+.podiumItem.bronze {
+  background-color: var(--bronze-bg);
+  color: var(--bronze);
+  border: 1px solid var(--bronze-border);
+}

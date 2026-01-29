@@ -1,5 +1,5 @@
-import { Catch, ArgumentsHost, HttpException, Logger } from '@nestjs/common';
-import { BaseWsExceptionFilter, WsException } from '@nestjs/websockets';
+import { Catch, ArgumentsHost, Logger } from '@nestjs/common';
+import { BaseWsExceptionFilter } from '@nestjs/websockets';
 import { createWsErrorResponse } from '@src/common/utils/ws-error-code';
 
 @Catch() // 모든 예외를 잡음

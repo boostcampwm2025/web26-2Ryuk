@@ -9,8 +9,15 @@
 .progress {
   width: var(--progress-width, 0%);
   height: 100%;
-  background: var(--primary-6);
   border-radius: 52px;
   transition: width 0.2s linear;
   overflow: hidden;
+}
+
+.primary .progress {
+  background: var(--primary-6);
+}
+
+.secondary .progress {
+  background: var(--secondary);
 }

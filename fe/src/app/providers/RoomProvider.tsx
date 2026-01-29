@@ -1,5 +1,6 @@
 'use client';
 
+import { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
 import { roomStore } from '@/app/features/room/stores/room';
 import { roomChatService } from '@/app/features/chat/services/RoomChatService';
@@ -7,7 +8,7 @@ import { authStore } from '@/app/features/user/stores/auth';
 import roomService from '@/app/features/room/services/RoomService';
 
 interface RoomProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function RoomProvider({ children }: RoomProviderProps) {
@@ -31,7 +32,8 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       hasRestored.current = true;
 
       // BE 상태 먼저 확인
-      let beRoomId: string | null = null;
+      let beRoomId;
+
       try {
         const { roomId } = await roomService.getMyCurrentRoom();
         beRoomId = roomId;
@@ -41,7 +43,7 @@ export default function RoomProvider({ children }: RoomProviderProps) {
         return;
       }
 
-      if (beRoomId === null) {
+      if (!beRoomId) {
         roomStore.getState().leaveRoom();
         roomChatService.clearSubscriptionOnly();
         return;

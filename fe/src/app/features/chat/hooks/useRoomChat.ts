@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { roomChatService } from '../services/RoomChatService';
 import { ChatReceiveData } from '../dtos/data';
 
-export function useRoomChat(roomId: string | null, isJoined: boolean) {
+export function useRoomChat(roomId?: string, isJoined?: boolean) {
   const [chats, setChats] = useState<ChatReceiveData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 

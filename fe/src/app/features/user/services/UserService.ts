@@ -10,7 +10,6 @@ export interface User {
 interface MockLoginResponse {
   success: boolean;
   message?: string;
-  token: string;
   userId: string;
   user: {
     id: string;
@@ -25,10 +24,21 @@ export class UserService {
   /**
    * 현재 인증된 사용자 정보 조회
    * GET /api/auth/me
-   * @param token 인증 토큰 (authStore에서 전달)
    */
-  static async getMe(token: string): Promise<User> {
-    return HttpService.get<User>('/api/auth/me', token);
+  static async getMe(): Promise<User> {
+    const response =
+      await HttpService.get<ApiResponse<{ id: string; nickname: string; avatar: string | null }>>(
+        '/api/auth/me',
+      ); // 백엔드 응답 타입 명시
+    if (!response.success || !response.data) {
+      throw new Error(response.message || '사용자 정보 조회에 실패했습니다.');
+    }
+    // 필드명 매핑
+    return {
+      id: response.data.id,
+      nickname: response.data.nickname,
+      profileImage: response.data.avatar ?? undefined,
+    };
   }
 
   /**

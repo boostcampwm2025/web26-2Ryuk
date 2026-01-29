@@ -24,7 +24,7 @@ import {
 import { RoomService } from './room.service';
 import { RoomGateway } from './room.gateway';
 import { ApiResponseMessage } from '@src/common/decorators/api-response-message.decorator';
-import { AuthGuard } from '@src/modules/auth/auth.guard';
+import { JwtAuthGuard } from '@src/modules/auth/jwt-auth.guard';
 
 @Controller('rooms')
 export class RoomController {
@@ -39,7 +39,7 @@ export class RoomController {
    * 대화방 생성
    */
   @Post()
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('대화방이 성공적으로 생성되었습니다.')
   async createRoom(@Req() req, @Body() dto: RoomRequestDto): Promise<RoomCreateResponseDto> {
     const userId = req.user.id;
@@ -51,7 +51,7 @@ export class RoomController {
    * 대화방 수정
    */
   @Patch(':roomId')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('대화방이 성공적으로 수정되었습니다.')
   async updateRoom(
     @Req() req,
@@ -67,7 +67,7 @@ export class RoomController {
    * 대화방 삭제
    */
   @Delete(':roomId')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('대화방이 성공적으로 삭제되었습니다.')
   async deleteRoom(@Req() req, @Param('roomId') roomId: string): Promise<RoomDeleteResponseDto> {
     const userId = req.user.id;
@@ -98,7 +98,7 @@ export class RoomController {
    * GET /api/rooms/me
    */
   @Get('me')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('참여 중인 방 조회에 성공 했습니다.')
   async getMyCurrentRoom(@Req() req): Promise<{ roomId: string | null }> {
     const userId = req.user.id;
@@ -119,7 +119,7 @@ export class RoomController {
    * 대화방 입장 정보 조회
    */
   @Get(':id/join')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('방 입장 정보 조회에 성공 했습니다.')
   async getRoomJoinInfo(@Req() req, @Param('id') roomId: string): Promise<RoomJoinInfoResponseDto> {
     const userId = req.user.id;
@@ -139,7 +139,7 @@ export class RoomController {
    * 방 입장 가능 여부 검증
    */
   @Post(':id/validate-join')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('입장 가능한 방입니다.')
   async validateJoin(@Req() req, @Param('id') roomId: string, @Body() dto: JoinRoomRequestDto): Promise<RoomJoinDto> {
     const userId = req.user.id;

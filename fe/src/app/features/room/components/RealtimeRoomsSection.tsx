@@ -17,16 +17,18 @@ import { useModal } from '@/app/components/shared/modal/useModal';
 import { roomStore, RoomStore } from '../stores/room';
 import { useEffect, useState } from 'react';
 import { authStore, AuthStore } from '@/app/features/user/stores/auth';
-import { roomChatService } from '@/app/features/chat/services/RoomChatService';
 import { loadingStore } from '@/app/features/loading/stores/loading';
+import { useToast } from '@/app/components/shared/toast/useToast';
+import { TextTooltip, TooltipTrigger } from '@/app/components/shared/tooltip/TextTooltip';
 
 export default function RealtimeRoomsSection() {
   const { isDesktop } = useResponsive();
-  const { goToRoom } = useNavigation();
+  const { gotoRoom } = useNavigation();
   const { closeModal } = useModal();
   const [rooms, setRooms] = useState<RoomData[]>([]);
   const { setRoom, setRoomData } = roomStore();
   const className = CSSUtil.buildCls(styles.headerDesktop, !isDesktop && styles.headerTablet);
+  const { showSuccessToast } = useToast();
   const roomId = roomStore((state: RoomStore) => state.roomId);
   const isAuthenticated = authStore((state: AuthStore) => state.isAuthenticated);
   const { show, hide } = loadingStore();
@@ -48,19 +50,17 @@ export default function RealtimeRoomsSection() {
   const handleSubmit = async (data: RoomEditData) => {
     const roomDto = RoomConverter.toEditDto(data);
     show();
-    try {
-      const createdRoom = await roomService.createRoom(roomDto);
-      closeModal('room-creation');
 
-      // 호스트가 방을 만든 직후 Socket.io room에 참여하도록 구독
-      await roomChatService.subscribe(createdRoom.id);
+    const createdRoom = await roomService.createRoom(roomDto);
+    closeModal('room-creation');
 
-      goToRoom(createdRoom.id);
-      setRoom(createdRoom.id);
-      setRoomData(RoomConverter.toData(createdRoom));
-    } finally {
-      hide();
-    }
+    gotoRoom(createdRoom.id);
+    setRoom(createdRoom.id);
+    setRoomData(RoomConverter.toData(createdRoom));
+
+    showSuccessToast('방을 생성했습니다!');
+
+    hide();
   };
 
   return (
@@ -76,13 +76,24 @@ export default function RealtimeRoomsSection() {
               <SearchForm placeholder="제목, 내용, 작성자 검색" onSubmit={handleSearch} />
             </div>
             <div className={styles.createRoom}>
-              <TextButton.Primary
-                text="방 만들기"
-                size="medium"
-                iconName="add"
-                modalId="room-creation"
-                disabled={!!roomId || !isAuthenticated}
-              />
+              <TooltipTrigger dataAnchor="create-room-button">
+                <TextButton.Primary
+                  text="방 만들기"
+                  size="medium"
+                  iconName="add"
+                  modalId="room-creation"
+                  disabled={!!roomId || !isAuthenticated}
+                />
+              </TooltipTrigger>
+              {!isAuthenticated && (
+                <TextTooltip text="먼저 로그인을 해주세요!" anchorId="create-room-button" />
+              )}
+              {roomId && (
+                <TextTooltip
+                  text="소속된 방이 있으면 방을 생성할 수 없어요"
+                  anchorId="create-room-button"
+                />
+              )}
             </div>
           </div>
         </div>

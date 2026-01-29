@@ -1,51 +1,44 @@
 'use client';
 
-import { useState } from 'react';
 import { AudioControlsProps } from './type';
 import styles from './audioControlButtons.module.css';
 import { IconButtonBase } from '@/app/components/shared/icon/IconButton';
-import { IconVariant } from '@/app/components/shared/icon/type';
 
 export default function AudioControlButtons({
-  initialMicState = true,
-  initialSpeakerState = true,
-  onMicChange,
+  micOn, // 현재 마이크 상태 (true/false)
+  speakerOn, // 현재 스피커 상태
+  onMicChange, // 상태 변경 핸들러
   onSpeakerChange,
 }: AudioControlsProps) {
-  const [micState, setMicState] = useState(initialMicState);
-  const [speakerState, setSpeakerState] = useState(initialSpeakerState);
-
   const handleMicToggle = () => {
-    setMicState((prev) => !prev);
-    onMicChange?.(micState);
+    onMicChange?.(!micOn);
   };
 
   const handleSpeakerToggle = () => {
-    if (micState) setMicState(false);
-    setSpeakerState((prev) => !prev);
-    onSpeakerChange?.(speakerState);
+    onSpeakerChange?.(!speakerOn);
   };
 
+  // 로직도 props인 micOn, speakerOn을 기준으로 판단합니다.
   const getMicThemeColor = () => {
-    if (!micState) return speakerState ? 'secondary' : 'error-secondary';
+    if (!micOn) return speakerOn ? 'secondary' : 'error-secondary';
     return 'outline';
   };
 
   const getSpeakerThemeColor = () => {
-    if (!speakerState) return 'error-secondary';
+    if (!speakerOn) return 'error-secondary';
     return 'outline';
   };
 
   return (
     <div className={styles.audioControls}>
       <IconButtonBase
-        name={micState ? 'mic' : 'micoff'}
+        name={micOn ? 'mic' : 'micoff'}
         size="small"
         variant={getMicThemeColor()}
         onClick={handleMicToggle}
       />
       <IconButtonBase
-        name={speakerState ? 'volume' : 'mute'}
+        name={speakerOn ? 'volume' : 'mute'}
         size="small"
         variant={getSpeakerThemeColor()}
         onClick={handleSpeakerToggle}

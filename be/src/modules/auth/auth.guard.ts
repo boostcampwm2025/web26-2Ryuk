@@ -27,8 +27,6 @@ export class AuthGuard implements CanActivate {
   }
 
   validateRequest(request: any): boolean {
-    // 여기에 실제 인증 로직을 구현하세요.
-    // 예: 토큰 검증, 세션 확인 등
     const authToken = request.headers['authorization'];
     if (authToken && authToken === 'valid-token') {
       return true;

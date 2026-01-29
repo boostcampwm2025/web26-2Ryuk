@@ -1,6 +1,5 @@
 'use client';
 
-import Icon from '@/app/components/shared/icon/Icon';
 import styles from './gameStartButton.module.css';
 import { PrimaryTextButton } from '@/app/components/shared/button/TextButton';
 

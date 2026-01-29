@@ -1,0 +1,68 @@
+.screen {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.timerWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.rankingWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: center;
+}
+
+.rankingLabel {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.rankingValue {
+  font: var(--heading-1);
+  color: var(--primary-6);
+}
+
+.scoreWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  justify-content: center;
+}
+
+.scoreLabel {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.scoreValue {
+  font: var(--heading-1);
+  color: var(--primary-6);
+}
+
+.scoreGap {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.gameContent {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}

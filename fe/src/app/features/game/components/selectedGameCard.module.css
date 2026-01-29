@@ -88,6 +88,10 @@
   color: var(--neutral-4) !important;
 }
 
+.selectionButton.disabled {
+  cursor: not-allowed;
+}
+
 .selectionButton .title {
   font: var(--title-2);
 }

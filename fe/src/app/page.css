@@ -1,8 +1,18 @@
+:root {
+  --page-header-height: 64px;
+  --page-vertical-padding: 160px;
+  --room-body-max-height: max(
+    0px,
+    calc(100vh - var(--page-header-height) - var(--page-vertical-padding))
+  );
+}
+
 .page {
   display: flex;
   justify-content: center;
   flex: 1;
   padding: 80px 0;
+  min-height: calc(100vh - var(--page-header-height));
   background: var(--primary-3);
 }
 
@@ -10,6 +20,9 @@
   width: 90vw;
   max-width: 1200px;
   margin: 0 60px;
+  height: var(--room-body-max-height);
+  min-height: var(--room-body-max-height);
+  max-height: var(--room-body-max-height);
 }
 
 .page .go-back {

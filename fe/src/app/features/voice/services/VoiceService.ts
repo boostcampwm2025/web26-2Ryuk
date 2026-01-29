@@ -1,6 +1,7 @@
-import { WebSocketService } from '@/app/services/websocket.service';
+import { authStore } from '@/app/features/user/stores/auth';
 import { WebRtcService } from '@/app/services/webRTC.service';
-import { Producer, Consumer } from 'mediasoup-client/types';
+import { WebSocketService } from '@/app/services/websocket.service';
+import { Consumer, Producer } from 'mediasoup-client/types';
 
 type VoiceStatusPayload = {
   userId: string;
@@ -9,20 +10,29 @@ type VoiceStatusPayload = {
   action: 'add' | 'remove' | 'update';
 };
 
+interface ExtendedAudioConstraints extends MediaTrackConstraints {
+  highpassFilter?: boolean;
+  googHighpassFilter?: boolean;
+  googNoiseSuppression?: boolean;
+  googAutoGainControl?: boolean;
+}
+
 export class VoiceService {
   private static isInitialized = false;
   private static webRtc = new WebRtcService();
-  private static roomId: string | null = null;
+  private static roomId?: string;
 
-  private static myProducer: Producer | null = null;
+  private static myProducer?: Producer;
   private static consumers: Map<string, Consumer> = new Map(); // Key: remoteProducerId
 
   private static statusListeners: Set<(payload: VoiceStatusPayload) => void> = new Set();
 
-  private static init() {
+  private static async init() {
     if (this.isInitialized) return;
 
-    WebSocketService.on('voice:new-producer', (data) => this.handleNewProducer(data));
+    await WebSocketService.ensureConnected();
+
+    WebSocketService.on('voice:producer:new', (data) => this.handleNewProducer(data));
     WebSocketService.on('voice:producer:update', (data) => this.handleProducerUpdate(data));
     WebSocketService.on('voice:producer:closed', (data) => this.handleProducerClosed(data));
 
@@ -44,7 +54,7 @@ export class VoiceService {
    * 1. 음성 채널 입장 및 초기화
    */
   static async joinVoiceChannel(roomId: string) {
-    this.init();
+    await this.init();
     this.roomId = roomId;
 
     try {
@@ -61,11 +71,8 @@ export class VoiceService {
 
       // (4) 수신용(Recv) Transport 생성
       await this.setupTransport(roomId, false);
-
-      // (5) 서버의 기존 참여자들 확인을 위한 리스너 등록은 WebSocketService에서 처리
-      console.log('음성 채널 연결 준비 완료');
-    } catch (error) {
-      console.error('채널 입장 실패:', error);
+    } catch (error: any) {
+      throw new Error('음성 채널 입장 실패: ' + (error.message || JSON.stringify(error)));
     }
   }
 
@@ -107,7 +114,7 @@ export class VoiceService {
             kind,
             rtp_parameters: rtpParameters,
           });
-          callback({ id: data.id });
+          callback({ id: data.producer_id });
         } catch (err: any) {
           errback(err);
         }
@@ -119,8 +126,16 @@ export class VoiceService {
    * 3. 내 마이크 켜기 (Producer 생성)
    */
   static async startMic() {
+    const audioConstraints: ExtendedAudioConstraints = {
+      echoCancellation: true, //에코제거
+      noiseSuppression: false, //소음 억제
+      autoGainControl: true, // 자동 볼륨 조절
+      highpassFilter: true, //고역 필터
+      googHighpassFilter: true, //고역 필터 (크롬 전용)
+    };
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       const track = stream.getAudioTracks()[0];
 
       this.myProducer = await this.webRtc.produceAudio(track);
@@ -135,13 +150,22 @@ export class VoiceService {
   }
 
   static async stopMic() {
-    if (!this.myProducer) return;
-    await WebSocketService.request('voice:producer:close', {
-      room_id: this.roomId,
-      producer_id: this.myProducer.id,
-    });
-    this.myProducer.close();
-    this.myProducer = null;
+    const producer = this.myProducer;
+    if (!producer) return;
+
+    if (producer.track) producer.track.stop();
+
+    try {
+      // 3. 서버에 알림
+      await WebSocketService.request('voice:producer:close', {
+        room_id: this.roomId,
+        producer_id: producer.id,
+      });
+    } finally {
+      // 4. 어떤 상황에서도 로컬 객체는 정리
+      producer.close();
+      this.myProducer = undefined;
+    }
   }
 
   /**
@@ -151,25 +175,54 @@ export class VoiceService {
     try {
       const recvTransportId = this.webRtc.recvTransportId;
 
-      if (!recvTransportId) {
-        throw new Error('수신용 트랜스포트가 준비되지 않았습니다.');
+      if (!recvTransportId) throw new Error('수신용 트랜스포트 ID를 찾을 수 없습니다.');
+
+      const transport = this.webRtc.recvTransport;
+
+      if (!transport) throw new Error('수신용 트랜스포트가 준비되지 않았습니다.');
+
+      if (transport.connectionState !== 'connected') {
+        await new Promise<void>((resolve) => {
+          if (transport.connectionState === 'connected') return resolve();
+
+          // 5초 지나면 그냥 진행하거나 에러를 던짐
+          const timer = setTimeout(() => {
+            console.warn('[Voice] 연결 대기 타임아웃 - 시도 계속');
+            resolve();
+          }, 5000);
+
+          const checkState = () => {
+            if (transport.connectionState === 'connected') {
+              transport.off('connectionstatechange', checkState); // 리스너 제거
+              clearTimeout(timer);
+              resolve();
+            }
+          };
+          transport.on('connectionstatechange', checkState);
+        });
       }
 
-      const consumerOptions = await WebSocketService.request('voice:consumer:create', {
+      const response = await WebSocketService.request('voice:consumer:create', {
         transport_id: recvTransportId,
         producer_id: remoteProducerId,
         rtp_capabilities: this.webRtc.rtpCapabilities, // 내 사양 전달
       });
 
       const consumer = await this.webRtc.consumeAudio({
-        ...consumerOptions,
+        id: response.id,
+        producerId: response.producer_id,
+        kind: response.kind,
+        rtpParameters: response.rtp_parameters,
         appData: { userId: remoteUserId }, //유저 구분 용
       });
 
       this.consumers.set(remoteProducerId, consumer);
 
       // 명세에 따라 수신 재개 요청
-      await WebSocketService.request('voice:consumer:resume', { consumer_id: consumer.id });
+      await WebSocketService.request('voice:consumer:resume', {
+        room_id: this.roomId,
+        consumer_id: consumer.id,
+      });
 
       // 실제 오디오 재생 로직 (예: 오디오 태그 연결)
       const stream = new MediaStream([consumer.track]);
@@ -186,17 +239,29 @@ export class VoiceService {
     if (!this.myProducer) return;
 
     const event = pause ? 'voice:producer:pause' : 'voice:producer:resume';
-    await WebSocketService.request(event, { producer_id: this.myProducer.id });
 
-    if (pause) this.myProducer.pause();
-    else this.myProducer.resume();
+    try {
+      await WebSocketService.request(event, {
+        room_id: this.roomId,
+        producer_id: this.myProducer.id,
+      });
+
+      if (pause) {
+        this.myProducer.pause();
+        if (this.myProducer.track) this.myProducer.track.enabled = false;
+      } else {
+        this.myProducer.resume();
+        if (this.myProducer.track) this.myProducer.track.enabled = true;
+      }
+    } catch (error) {
+      console.error('마이크 토글 실패:', error);
+    }
   }
 
   /**
    * 6. 특정 유저의 소리 수신 상태 제어 (Pause/Resume)
    */
-  static async toggleConsumer(remoteProducerId: string, pause: boolean) {
-    const consumer = this.consumers.get(remoteProducerId);
+  static async toggleConsumer(consumer: Consumer, pause: boolean) {
     if (!consumer) return;
 
     const event = pause ? 'voice:consumer:pause' : 'voice:consumer:resume';
@@ -204,6 +269,7 @@ export class VoiceService {
     try {
       // 1. 서버에 요청 (서버가 나에게 보내는 패킷 밸브를 잠그거나 염)
       await WebSocketService.request(event, {
+        room_id: this.roomId,
         consumer_id: consumer.id,
       });
 
@@ -211,9 +277,26 @@ export class VoiceService {
       if (pause) consumer.pause();
       else consumer.resume();
 
-      console.log(`[수신 ${pause ? '중지' : '재개'}] 유저 ID: ${remoteProducerId}`);
+      console.log(`[수신 ${pause ? '중지' : '재개'}] 유저 ID: ${consumer.appData.userId}`);
     } catch (error) {
       console.error('컨슈머 상태 변경 실패:', error);
+    }
+  }
+
+  static async getProducerList() {
+    const response = await WebSocketService.request('voice:room:producers', {
+      room_id: this.roomId,
+    });
+
+    if (response.producers && Array.isArray(response.producers) && this.roomId) {
+      // 순차적으로 구독 (병렬로 하면 브라우저 부하가 올 수 있으니 순차 처리)
+      for (const p of response.producers) {
+        await this.handleNewProducer({
+          room_id: this.roomId,
+          user_id: p.user_id,
+          producer_id: p.producer_id,
+        });
+      }
     }
   }
 
@@ -223,11 +306,23 @@ export class VoiceService {
   static async leaveChannel() {
     if (!this.roomId) return;
 
+    // 모든 상대방 스트림 트랙 정지
+    this.consumers.forEach((consumer) => {
+      consumer.track.stop();
+      consumer.close();
+    });
+
+    // 내 마이크 트랙 정지
+    if (this.myProducer && this.myProducer.track) {
+      this.myProducer.track.stop();
+      this.myProducer.close();
+    }
+
     await WebSocketService.request('voice:room:leave', { room_id: this.roomId });
     this.webRtc.cleanup();
     this.consumers.clear();
-    this.myProducer = null;
-    this.roomId = null;
+    this.myProducer = undefined;
+    this.roomId = undefined;
   }
 
   /**
@@ -238,13 +333,21 @@ export class VoiceService {
     user_id: string;
     producer_id: string;
   }) {
-    // 검증 1: 내가 현재 어느 방에도 참여 중이 아닐 때 무시
     if (!this.roomId) return;
 
-    // 검증 2: 이벤트가 발생한 방과 내가 있는 방이 다를 때 무시
     if (data.room_id !== this.roomId) return;
 
+    if (this.myProducer && !this.myProducer.paused) {
+      await this.myProducer.resume();
+    }
+
+    const myId = authStore.getState().userId;
+
+    // 2. 내 목소리라면 즉시 종료
+    if (data.user_id === myId) return;
+
     const stream = await this.consumeUser(data.user_id, data.producer_id);
+    console.log(`[Voice] 새로운 컨슈머 추가 완료: ${data.producer_id}`);
     if (stream) {
       this.notify({ userId: data.user_id, isMicOn: true, stream, action: 'add' });
     }
@@ -257,11 +360,12 @@ export class VoiceService {
     room_id: string;
     user_id: string;
     is_mic_on: boolean;
+    producer_id: string;
   }) {
     // 검증: 방 체크
     if (!this.roomId || data.room_id !== this.roomId) return;
 
-    const consumer = this.getConsumerByUserId(data.user_id);
+    const consumer = this.consumers.get(data.producer_id);
     if (!consumer) return;
 
     // 상태에 따라 수신 트래픽 제어
@@ -284,9 +388,9 @@ export class VoiceService {
 
     const consumer = this.consumers.get(data.producer_id);
     if (consumer) {
+      consumer.track.stop();
       consumer.close();
       this.consumers.delete(data.producer_id);
-      console.log(`[Voice] 컨슈머 제거 완료: ${data.producer_id}`);
       this.notify({ userId: consumer.appData.userId as string, isMicOn: false, action: 'remove' });
     }
   }

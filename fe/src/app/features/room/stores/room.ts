@@ -2,19 +2,21 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { RoomData, ParticipantData } from '@/app/features/room/dtos/data';
+import { RoomData, RoomParticipantData as PData } from '@/app/features/room/dtos/data';
 
 interface RoomState {
-  roomId: string | null;
+  roomId?: string;
   isJoined: boolean;
-  roomData: RoomData | null;
+  roomData?: RoomData;
+  isGameRecruiting: boolean;
 }
 
 interface RoomActions {
-  setRoom: (roomId: string | null) => void;
-  setRoomData: (roomData: RoomData | null) => void;
+  setRoom: (roomId?: string) => void;
+  setRoomData: (roomData?: RoomData) => void;
   updateRoomData: (updates: Partial<RoomData>) => void;
-  addParticipant: (participant: ParticipantData) => void;
+  setIsGameRecruiting: (isGameRecruiting: boolean) => void;
+  addParticipant: (participant: PData) => void;
   removeParticipant: (userId: string) => void;
   setJoined: (isJoined: boolean) => void;
   leaveRoom: () => void;
@@ -25,19 +27,20 @@ export type RoomStore = RoomState & RoomActions;
 export const roomStore = create<RoomStore>()(
   persist(
     (set) => ({
-      roomId: null,
+      roomId: undefined,
       isJoined: false,
-      roomData: null,
+      roomData: undefined,
+      isGameRecruiting: false,
 
-      setRoom: (roomId: string | null) =>
+      setRoom: (roomId?: string) =>
         set((state) => {
-          const roomData = state.roomData?.id === roomId ? state.roomData : null;
-          return { roomId, isJoined: false, roomData };
+          const roomData = state.roomData?.id === roomId ? state.roomData : undefined;
+          return { roomId, isJoined: false, roomData, isGameRecruiting: false };
         }),
 
-      setRoomData: (roomData: RoomData | null) => {
-        const roomId = roomData?.id || null;
-        set({ roomData, roomId });
+      setRoomData: (roomData?: RoomData) => {
+        const roomId = roomData?.id;
+        set({ roomData, roomId, isGameRecruiting: roomData?.isGameRecruiting ?? false });
       },
 
       updateRoomData: (updates: Partial<RoomData>) =>
@@ -58,10 +61,15 @@ export const roomStore = create<RoomStore>()(
               isPrivate: updates.isPrivate ?? false,
             };
           }
+          if (typeof updates.isGameRecruiting === 'boolean') {
+            next.isGameRecruiting = updates.isGameRecruiting;
+          }
           return next;
         }),
 
-      addParticipant: (participant: ParticipantData) =>
+      setIsGameRecruiting: (isGameRecruiting: boolean) => set({ isGameRecruiting }),
+
+      addParticipant: (participant: PData) =>
         set((state) => {
           if (!state.roomData) return state;
           const exists = state.roomData.participants.some((p) => p.userId === participant.userId);
@@ -79,7 +87,8 @@ export const roomStore = create<RoomStore>()(
 
       setJoined: (isJoined: boolean) => set({ isJoined }),
 
-      leaveRoom: () => set({ roomId: null, isJoined: false, roomData: null }),
+      leaveRoom: () =>
+        set({ roomId: undefined, isJoined: false, roomData: undefined, isGameRecruiting: false }),
     }),
     {
       name: 'room-storage',

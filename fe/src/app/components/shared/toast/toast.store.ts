@@ -25,33 +25,43 @@ interface ToastActions {
 
 type ToastStore = ToastState & ToastActions;
 
-export const toastStore = create<ToastStore>((set) => ({
+export const toastStore = create<ToastStore>((set, get) => ({
   toasts: [],
 
   showToast: (message: string, type: ToastType = 'info', duration = 3000) => {
+    const exists = get().toasts.some((t) => t.message === message);
+    if (exists) return;
+
     const id = `toast-${Date.now()}-${Math.random()}`;
-    set((state) => ({ toasts: [...state.toasts, { id, message, type, duration }] }));
+
+    set((state) => ({
+      toasts: [...state.toasts, { id, message, type, duration }],
+    }));
 
     if (duration > 0) {
       setTimeout(() => {
-        set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
+        set((state) => ({
+          toasts: state.toasts.filter((t) => t.id !== id),
+        }));
       }, duration);
     }
   },
 
   showSuccessToast: (message: string) => {
-    toastStore.getState().showToast(message, 'success');
+    get().showToast(message, 'success');
   },
 
   showErrorToast: (message: string) => {
-    toastStore.getState().showToast(message, 'error');
+    get().showToast(message, 'error');
   },
 
   showInfoToast: (message: string) => {
-    toastStore.getState().showToast(message, 'info');
+    get().showToast(message, 'info');
   },
 
   removeToast: (id: string) => {
-    set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
+    set((state) => ({
+      toasts: state.toasts.filter((t) => t.id !== id),
+    }));
   },
 }));

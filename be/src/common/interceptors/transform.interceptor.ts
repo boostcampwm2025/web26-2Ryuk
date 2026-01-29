@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { API_RESPONSE_MESSAGE_KEY } from '../decorators/api-response-message.decorator';
+import { BYPASS_TRANSFORM_KEY } from '../decorators/bypass-transform.decorator';
 
 export interface Response<T> {
   success: boolean;
@@ -19,7 +20,16 @@ export interface Response<T> {
 export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
   constructor(private reflector: Reflector) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const shouldBypass = this.reflector.getAllAndOverride<boolean>(BYPASS_TRANSFORM_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (shouldBypass) {
+      return next.handle();
+    }
+
     const response = context.switchToHttp().getResponse();
 
     return next.handle().pipe(

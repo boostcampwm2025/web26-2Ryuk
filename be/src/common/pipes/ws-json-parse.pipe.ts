@@ -6,13 +6,13 @@ import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
  */
 @Injectable()
 export class WsJsonParsePipe implements PipeTransform {
-  transform(value: any, metadata: ArgumentMetadata) {
+  transform(value: any, _metadata: ArgumentMetadata) {
     // 문자열인 경우 JSON 파싱 시도
     if (typeof value === 'string') {
       try {
         const parsed = JSON.parse(value);
         return parsed;
-      } catch (e) {
+      } catch {
         // JSON 파싱 실패 시 원본 반환 (ValidationPipe가 에러 처리)
         return value;
       }
@@ -24,7 +24,7 @@ export class WsJsonParsePipe implements PipeTransform {
       if (typeof first === 'string') {
         try {
           return JSON.parse(first);
-        } catch (e) {
+        } catch {
           return first;
         }
       }

@@ -30,12 +30,21 @@ export default function GameReadyModalContent({
   const currentPlayers = players.length + 1;
   const title = myStatus.isHost ? '게임 참가자 모집 중' : '게임에 참가하시겠어요?';
 
-  const gridPlayers = players.filter((p) => p.userId !== myStatus.userId);
+  const gridPlayers = players.filter((p) => p.playerId !== myStatus.playerId);
 
   const handleReadyChange = (isReady: boolean) => {
     if (myStatus.isHost) return;
     onReadyChange?.(isReady);
   };
+
+  // 게임 시작 버튼 활성화 조건
+  const allPlayers = [myStatus, ...players];
+  const readyPlayers = allPlayers.filter((p) => p.isReady);
+  const readyCount = readyPlayers.length;
+  const isGameStartEnabled =
+    selectedGame !== undefined &&
+    readyCount >= selectedGame.minPlayers &&
+    readyCount <= selectedGame.maxPlayers;
 
   return (
     <div className={styles.modal}>
@@ -59,7 +68,13 @@ export default function GameReadyModalContent({
       </div>
       <div className={styles.footer}>
         {myStatus.isHost && (
-          <TextButton.Primary text="게임 시작" iconName="play" size="medium" onClick={onStart} />
+          <TextButton.Primary
+            text="게임 시작"
+            iconName="play"
+            size="medium"
+            onClick={onStart}
+            disabled={!isGameStartEnabled}
+          />
         )}
         {!myStatus.isHost && myStatus.isReady && (
           <TextButton.SuccessSecondary

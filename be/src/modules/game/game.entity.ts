@@ -1,5 +1,6 @@
 import { Entity, Column } from 'typeorm';
 import { PrimaryUuidColumn } from '@src/common/decorators/primary-uuid-column.decorator';
+import { v4 as uuidv4 } from 'uuid';
 
 export enum GameType {
   COMPETITION = 'competition',
@@ -9,7 +10,7 @@ export enum GameType {
 @Entity('game')
 export class Game {
   @PrimaryUuidColumn()
-  id: string;
+  id: string = uuidv4();
 
   @Column({ type: 'varchar', length: 20 })
   title: string;

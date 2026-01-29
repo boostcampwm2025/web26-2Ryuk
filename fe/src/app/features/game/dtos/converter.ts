@@ -1,6 +1,5 @@
 import {
   GameCloseDto,
-  GameItemDto,
   GameListResponseDto,
   GameJoinAckDto,
   GameJoinDto,
@@ -12,7 +11,9 @@ import {
   GamePlayerReadyDto,
   GamePlayerRealtimeDto,
   GamePlayerRecruitDto,
-  GamePlayerResultDto,
+  GamePlayerResultBroadcastDto,
+  GamePlayerResultItemDto,
+  GamePlayerRecordsResponseDto,
   GamePlayerSelectDto,
   GamePlayerStartDto,
   GamePlayerUnreadyDto,
@@ -26,7 +27,6 @@ import {
   GameDto,
 } from './dto';
 import {
-  GameItemData,
   GameListResponseData,
   GameCloseData,
   GameJoinAckData,
@@ -41,6 +41,8 @@ import {
   GamePlayerRealtimeData,
   GamePlayerRecruitData,
   GamePlayerResultData,
+  GamePlayerResultItemData,
+  GamePlayerRecordsData,
   GamePlayerSelectData,
   GamePlayerStartData,
   GamePlayerUnreadyData,
@@ -53,22 +55,24 @@ import {
   GameUnreadyData,
 } from './data';
 
-export const toGameData = (dto: GameItemDto): GameItemData => ({
+export const toGameData = (dto: GameDto): GameData => ({
   id: dto.id,
   title: dto.title,
   type: dto.type,
   description: dto.description,
   minPlayers: dto.min_players,
   maxPlayers: dto.max_players,
+  time: dto.time,
 });
 
-export const toGameDto = (data: GameItemData): GameItemDto => ({
+export const toGameDto = (data: GameData): GameDto => ({
   id: data.id,
   title: data.title,
   type: data.type,
   description: data.description,
   min_players: data.minPlayers,
   max_players: data.maxPlayers,
+  time: data.time,
 });
 
 export const toGameListData = (dto: GameListResponseDto): GameListResponseData => ({
@@ -82,10 +86,11 @@ const toGamePayloadData = (game: GameDto): GameData => ({
   type: game.type,
   minPlayers: Number(game.min_players),
   maxPlayers: Number(game.max_players),
+  time: Number(game.time),
 });
 
 const toGamePlayerData = (player: GamePlayerDto): GamePlayerData => ({
-  userId: player.user_id,
+  playerId: player.player_id,
   nickname: player.nickname,
   profileImage: player.profile_image ?? undefined,
   isReady: player.is_ready,
@@ -114,8 +119,8 @@ export const toGameJoinAckData = (dto: GameJoinAckDto): GameJoinAckData => ({
   host: { ...toGamePlayerData(dto.host), isHost: true },
   players: dto.players.map((p) => {
     const data = toGamePlayerData(p);
-    const hostId = dto.host.user_id;
-    const playerId = p.user_id;
+    const hostId = dto.host.player_id;
+    const playerId = p.player_id;
     return { ...data, isHost: playerId === hostId };
   }),
   game: dto.game ? toGamePayloadData(dto.game) : undefined,
@@ -168,6 +173,8 @@ export const toGameStartDto = (data: GameStartData): GameStartDto => ({
 
 export const toGamePlayerStartData = (dto: GamePlayerStartDto): GamePlayerStartData => ({
   startTime: new Date(dto.start_time),
+  playDurationMs: dto.play_duration_ms,
+  delayMs: dto.delay_ms,
 });
 
 export const toGameCloseDto = (data: GameCloseData): GameCloseDto => ({
@@ -189,14 +196,31 @@ export const toGamePlayerRealtimeData = (dto: GamePlayerRealtimeDto): GamePlayer
   ranks: dto.ranks,
 });
 
-export const toGamePlayerResultData = (dto: GamePlayerResultDto): GamePlayerResultData => ({
-  results: dto.results.map((result) => ({
-    userId: result.user_id,
-    nickname: result.nickname,
-    profileImage: result.profile_image,
-    isReady: result.is_ready,
-    score: Number(result.score),
-  })),
+const mapResultItem = (result: GamePlayerResultItemDto): GamePlayerResultItemData => ({
+  playerId: result.player_id,
+  nickname: result.nickname,
+  profileImage: result.profile_image,
+  score: Number(result.score),
+  rank: Number(result.rank),
+  achieveDate: new Date(result.achieve_date),
+});
+
+const normalizeResults = (items?: GamePlayerResultItemDto[]): GamePlayerResultItemData[] =>
+  (items ?? []).map(mapResultItem).sort((a, b) => a.rank - b.rank);
+
+export const toGamePlayerResultBroadcastData = (
+  dto: GamePlayerResultBroadcastDto,
+): GamePlayerResultData => ({
+  results: normalizeResults(dto.results),
+});
+
+export const toGamePlayerRecordsData = (
+  dto: GamePlayerRecordsResponseDto,
+): GamePlayerRecordsData => ({
+  total: dto.data.total,
+  page: dto.data.page,
+  podium: normalizeResults(dto.data.podium),
+  rankings: normalizeResults(dto.data.rankings),
 });
 
 export const GameConverter = {
@@ -223,5 +247,6 @@ export const GameConverter = {
   toGamePlayerCloseData,
   toGameRealtimeDto,
   toGamePlayerRealtimeData,
-  toGamePlayerResultData,
+  toGamePlayerResultBroadcastData,
+  toGamePlayerRecordsData,
 };

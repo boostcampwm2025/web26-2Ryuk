@@ -1,13 +1,13 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Server } from 'socket.io';
 import { RedisClientType } from 'redis';
 import { RoomService } from '@src/modules/room/room.service';
 import { LOG, logMessage } from '@src/common/utils/log-messages';
 import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import { Game } from './game.entity';
-import { GameRecord } from './game-record.entity';
+import { GameRecord } from '../game-record/game-record.entity';
 import {
   GameListResponseDto,
   GameParticipantDto,
@@ -28,7 +28,7 @@ import { WS_EVENTS_GAME } from '@src/common/constants/ws-events.constant';
 @Injectable()
 export class GameService {
   private readonly logger = new Logger(GameService.name);
-  private readonly GAME_START_DELAY_MS = 3000;
+  private readonly GAME_START_DELAY_MS = 5000;
   private readonly REALTIME_BROADCAST_INTERVAL_MS = 300; // 300ms 주기로 상태 브로드캐스트
   private realtimeBroadcastTimers: Map<string, NodeJS.Timeout> = new Map(); // 방별 브로드캐스트 타이머
   private readonly gameEndTimers: Map<string, NodeJS.Timeout> = new Map(); // 방별 게임 종료 타이머
@@ -116,18 +116,18 @@ export class GameService {
     // 게임 참가자 명단에 추가. 새로 추가된 경우는 true 반환, 기존에 존재했으면 false 반환
     const wasAdded = await this.addParticipant(roomId, userId);
 
-    const [roomInfo, participants, selectedGame] = await Promise.all([
+    const [roomInfo, players, selectedGame] = await Promise.all([
       this.roomService.getRoom(roomId),
-      this.getGameParticipants(roomId),
+      this.getGamePlayers(roomId),
       this.getSelectedGame(roomId),
     ]);
 
-    const currentPlayers = participants.length;
+    const currentPlayers = players.length;
 
-    const hostProfile = this.extractHostProfile(roomInfo.host_id, participants, roomInfo.participants);
+    const hostProfile = this.extractHostProfile(roomInfo.host_id, players, roomInfo.players);
 
-    const players: GamePlayerDto[] = participants.map((participant) => ({
-      user_id: participant.user_id,
+    const mappedPlayers: GamePlayerDto[] = players.map((participant) => ({
+      player_id: participant.player_id,
       nickname: participant.nickname,
       profile_image: participant.profile_image,
       is_ready: participant.is_ready,
@@ -136,11 +136,11 @@ export class GameService {
     // max_players는 선택된 게임의 최대 인원을 우선 사용, 없으면 방 최대 인원으로 대체
     const maxPlayers = selectedGame?.max_players ?? roomInfo.max_participants;
 
-    const ackPayload = new GameJoinAckResponseDto(currentPlayers, maxPlayers, hostProfile, players, selectedGame);
+    const ackPayload = new GameJoinAckResponseDto(currentPlayers, maxPlayers, hostProfile, mappedPlayers, selectedGame);
 
     // 새로 추가된 경우에만 브로드캐스트
     if (wasAdded) {
-      await this.broadcastGameJoin(server, roomId, userId, currentPlayers, participants);
+      await this.broadcastGameJoin(server, roomId, userId, currentPlayers, mappedPlayers);
     }
 
     logMessage(this.logger, LOG.GAME.JOIN_REQUEST(roomId, userId));
@@ -310,9 +310,7 @@ export class GameService {
     // 참가자 명단 삭제
     const pattern = `room:${roomId}:game:players:*`;
     const keys = await this.redisClient.keys(pattern);
-    if (keys.length > 0) {
-      await this.redisClient.del(keys);
-    }
+    if (keys.length > 0) await this.redisClient.del(keys);
 
     // 해당 방의 모든 참여자에게 브로드캐스트
     server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_CLOSE, new GameCloseBroadcastDto(false));
@@ -321,9 +319,55 @@ export class GameService {
   }
 
   /**
+   * 방장이 연결 해제 시 게임 모집 종료 처리 (예외 없이 조용히 처리)
+   */
+  async closeGameOnDisconnect(server: Server, roomId: string, userId: string): Promise<void> {
+    try {
+      // 방 존재 여부 확인
+      const roomExists = await this.roomService.roomExists(roomId);
+      if (!roomExists) return;
+
+      // 방장인지 확인
+      const isHost = await this.roomService.isHost(userId, roomId);
+      if (!isHost) return;
+
+      // 게임 모집 중인지 확인
+      const isRecruiting = await this.isGameRecruiting(roomId);
+      if (!isRecruiting) return;
+
+      // 게임 시작 후에는 게임 닫기 불가능
+      const gameKey = this.getGameKey(roomId);
+      const startTime = await this.redisClient.hGet(gameKey, 'start_time');
+      if (startTime) return;
+
+      // Redis에서 게임 모집 상태를 0으로 변경
+      await this.redisClient.hSet(gameKey, 'is_recruiting', '0');
+
+      // 게임 정보 삭제
+      await this.redisClient.del(gameKey);
+      await this.redisClient.del(this.getScoreKey(roomId));
+      // 참가자 명단 삭제
+      const pattern = `room:${roomId}:game:players:*`;
+      const keys = await this.redisClient.keys(pattern);
+      if (keys.length > 0) {
+        await this.redisClient.del(keys);
+      }
+
+      // 해당 방의 모든 참여자에게 브로드캐스트
+      server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_CLOSE, new GameCloseBroadcastDto(false));
+
+      logMessage(this.logger, LOG.GAME.CLOSE(roomId, userId));
+    } catch (error) {
+      // 예외 발생 시 조용히 처리 (로그만 남김)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`게임 모집 종료 처리 중 오류 발생: ${errorMessage}`);
+    }
+  }
+
+  /**
    * 게임 시작 (3초 지연 시작 시간 전달)
    */
-  async startGame(server: Server, roomId: string, userId: string): Promise<string> {
+  async startGame(server: Server, roomId: string, userId: string): Promise<number> {
     const roomExists = await this.roomService.roomExists(roomId);
     if (!roomExists) {
       throw new NotFoundException('존재하지 않는 방입니다.');
@@ -351,11 +395,10 @@ export class GameService {
       throw new ForbiddenException('게임 최소 인원 조건을 충족하지 못했습니다.');
     }
 
-    const startTime = this.clientStartTimeIso();
+    const startTimeMs = this.clientStartTimeMs();
 
-    // 시작 시각 및 모집 상태 캐싱 + 더 이상 게임 참가 불가
     await this.redisClient.hSet(this.getGameKey(roomId), {
-      start_time: startTime,
+      start_time: startTimeMs.toString(),
       is_recruiting: '0',
     });
 
@@ -374,18 +417,23 @@ export class GameService {
       await this.redisClient.zAdd(this.getScoreKey(roomId), scoreEntries);
     }
 
-    const broadcast: GameStartBroadcastDto = { start_time: startTime };
+    // 게임 자동 종료 타이머 스케줄링 (start_time + time 기준)
+    const playDurationMs = selectedGame.time;
+
+    const broadcast: GameStartBroadcastDto = {
+      start_time: startTimeMs,
+      delay_ms: this.GAME_START_DELAY_MS,
+      play_duration_ms: playDurationMs,
+    };
     server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_START, broadcast);
 
-    logMessage(this.logger, LOG.GAME.START(roomId, userId, startTime));
+    logMessage(this.logger, LOG.GAME.START(roomId, userId, new Date(startTimeMs).toUTCString()));
 
-    // 게임 자동 종료 타이머 스케줄링 (start_time + time 기준)
-    const durationMs = selectedGame.time;
-    if (durationMs > 0) {
-      this.scheduleGameEnd(server, roomId, selectedGame.id, this.GAME_START_DELAY_MS + durationMs);
+    if (playDurationMs > 0) {
+      this.scheduleGameEnd(server, roomId, selectedGame.id, this.GAME_START_DELAY_MS + playDurationMs);
     }
 
-    return startTime;
+    return startTimeMs;
   }
 
   /**
@@ -421,9 +469,7 @@ export class GameService {
 
       // delta 값 검증
       const deltaNum = parseInt(delta, 10);
-      if (isNaN(deltaNum) || deltaNum < 0) {
-        throw new Error('Invalid delta value');
-      }
+      if (isNaN(deltaNum)) throw new Error('Invalid delta value');
 
       // 현재 사용자의 점수 업데이트
       await this.updateParticipantScore(roomId, userId, deltaNum);
@@ -463,6 +509,8 @@ export class GameService {
     let currentRank = 1;
     let previousScore: number | null = null;
 
+    const achieveDate = new Date();
+
     for (let i = 0; i < scores.length; i++) {
       const { value: userId, score } = scores[i];
 
@@ -478,66 +526,113 @@ export class GameService {
         player_id: userId,
         nickname: playerData.nickname || '',
         profile_image: playerData.profile_image || '',
-        score: score,
+        score,
         rank: currentRank,
+        achieve_date: achieveDate.getTime(),
       };
 
       results.push(resultItem);
       previousScore = score;
     }
 
-    const broadcast: GameResultBroadcastDto = { results };
+    const successBroadcast = new GameResultBroadcastDto(results, true);
+    const failedBroadcast = new GameResultBroadcastDto(results, false, '게임 기록 저장 실패');
 
-    // 결과 브로드캐스트
-    server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_RESULT, broadcast);
+    // game_record 테이블에 최고 점수 기준으로 upsert (트랜잭션 처리)
+    // 모든 플레이어의 기록이 함께 저장되거나, 모두 실패하도록 하여(all or nothing) 공정성 보장
+    // N+1 문제 해결: 벌크 조회 -> 메모리 필터링 -> 벌크 저장
+    try {
+      await this.gameRecordRepository.manager.transaction(async (manager) => {
+        const validResults = results.filter((item) => !isNaN(item.score));
 
-    // game_record 테이블에 최고 점수 기준으로 upsert
-    for (const item of results) {
-      const userId = item.player_id;
-      const score = item.score;
+        if (validResults.length === 0) {
+          this.logger.warn(`유효한 게임 기록이 없음: roomId=${roomId}`);
+          return;
+        }
 
-      if (isNaN(score)) {
-        continue;
-      }
+        // 모든 user_id에 대한 기존 기록을 한 번에 조회 (N+1 -> 1번 쿼리)
+        const userIds = validResults.map((item) => item.player_id);
+        const existingRecords = await manager.find(GameRecord, {
+          where: {
+            game_id: gameId,
+            user_id: In(userIds),
+          },
+        });
 
-      const existingRecord = await this.gameRecordRepository.findOne({
-        where: { user_id: userId, game_id: gameId },
+        // 기존 기록을 Map으로 변환 (빠른 조회)
+        const existingRecordMap = new Map<string, GameRecord>();
+        existingRecords.forEach((record) => {
+          existingRecordMap.set(record.user_id, record);
+        });
+
+        // 메모리에서 비교하여 신규 생성 / 업데이트 분리
+        const recordsToInsert: GameRecord[] = [];
+        const recordsToUpdate: GameRecord[] = [];
+
+        for (const item of validResults) {
+          const existingRecord = existingRecordMap.get(item.player_id);
+
+          if (!existingRecord) {
+            // 기존 기록 없음 -> 신규 생성
+            recordsToInsert.push(
+              manager.create(GameRecord, {
+                user_id: item.player_id,
+                game_id: gameId,
+                score: item.score,
+                achieve_date: achieveDate,
+              }),
+            );
+          } else if (item.score > existingRecord.score) {
+            // 기존 기록보다 점수가 높음 -> 업데이트
+            existingRecord.score = item.score;
+            existingRecord.achieve_date = achieveDate;
+            recordsToUpdate.push(existingRecord);
+          }
+          // 기존 점수가 더 높거나 같으면 아무것도 안 함
+        }
+
+        // 벌크 저장 (insert + update를 각각 한 번씩)
+        if (recordsToInsert.length > 0) {
+          await manager.save(GameRecord, recordsToInsert);
+        }
+        if (recordsToUpdate.length > 0) {
+          await manager.save(GameRecord, recordsToUpdate);
+        }
       });
 
-      // 기존 기록이 없으면 새로 생성
-      if (!existingRecord) {
-        const record = this.gameRecordRepository.create({
-          user_id: userId,
-          game_id: gameId,
-          score,
-          achieve_date: new Date(),
-        });
-        await this.gameRecordRepository.save(record);
-        continue;
+      // DB 저장 성공 후 결과 브로드캐스트
+      server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_RESULT, successBroadcast);
+
+      logMessage(this.logger, LOG.GAME.RESULT_BROADCAST(roomId, results));
+    } catch (error) {
+      // 트랜잭션 실패 시 전체 롤백되므로 에러 로그 남김
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `게임 기록 저장 트랜잭션 실패: roomId=${roomId}, gameId=${gameId}, error=${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      // 저장 실패 시 실패했다고 브로드캐스팅
+      server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_RESULT, failedBroadcast);
+    } finally {
+      // Redis 게임 관련 키 정리
+      try {
+        const participantPattern = `room:${roomId}:game:players:*`;
+        const participantKeys = await this.redisClient.keys(participantPattern);
+
+        const deleteTargets: string[] = [this.getScoreKey(roomId), this.getGameKey(roomId)];
+        if (participantKeys.length > 0) {
+          deleteTargets.push(...participantKeys);
+        }
+
+        if (deleteTargets.length > 0) {
+          await this.redisClient.del(deleteTargets);
+        }
+      } catch (cleanupError) {
+        // Redis 정리 실패 시에도 로그만 남기고 계속 진행
+        const errorMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+        this.logger.error(`Redis 정리 실패: roomId=${roomId}, error=${errorMessage}`);
       }
-
-      // 기존 기록보다 점수가 높을 때만 갱신
-      if (score > existingRecord.score) {
-        existingRecord.score = score;
-        existingRecord.achieve_date = new Date();
-        await this.gameRecordRepository.save(existingRecord);
-      }
     }
-
-    // Redis 게임 관련 키 정리
-    const participantPattern = `room:${roomId}:game:players:*`;
-    const participantKeys = await this.redisClient.keys(participantPattern);
-
-    const deleteTargets: string[] = [this.getScoreKey(roomId), this.getGameKey(roomId)];
-    if (participantKeys.length > 0) {
-      deleteTargets.push(...participantKeys);
-    }
-
-    if (deleteTargets.length > 0) {
-      await this.redisClient.del(deleteTargets);
-    }
-
-    logMessage(this.logger, LOG.GAME.RESULT_BROADCAST(roomId, results));
   }
 
   // 🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️ 헬퍼 함수 🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️🛠️
@@ -554,7 +649,7 @@ export class GameService {
     return `room:${roomId}:game`;
   }
 
-  private async isGameRecruiting(roomId: string): Promise<boolean> {
+  async isGameRecruiting(roomId: string): Promise<boolean> {
     const gameKey = this.getGameKey(roomId);
     const value = await this.redisClient.hGet(gameKey, 'is_recruiting');
     return value === '1';
@@ -563,14 +658,14 @@ export class GameService {
   private extractHostProfile(
     hostId: string,
     participants: GameParticipantDto[],
-    roomParticipants?: Array<{ user_id: string; nickname: string; profile_image: string }>,
+    roomParticipants?: Array<{ player_id: string; nickname: string; profile_image: string }>,
   ): GameHostDto {
     const host =
-      participants.find((participant) => participant.user_id === hostId) ||
-      roomParticipants?.find((participant) => participant.user_id === hostId);
+      participants.find((participant) => participant.player_id === hostId) ||
+      roomParticipants?.find((participant) => participant.player_id === hostId);
 
     return {
-      user_id: hostId,
+      player_id: hostId,
       nickname: host?.nickname || '',
       profile_image: host?.profile_image || '',
     };
@@ -597,7 +692,7 @@ export class GameService {
     return false;
   }
 
-  async getGameParticipants(roomId: string): Promise<GameParticipantDto[]> {
+  async getGamePlayers(roomId: string): Promise<GameParticipantDto[]> {
     const pattern = `room:${roomId}:game:players:*`;
     const keys = await this.redisClient.keys(pattern);
 
@@ -606,11 +701,11 @@ export class GameService {
     const participants: GameParticipantDto[] = [];
 
     for (const key of keys) {
-      const userId = key.replace(`room:${roomId}:game:players:`, '');
+      const playerId = key.replace(`room:${roomId}:game:players:`, '');
       const playerData = await this.redisClient.hGetAll(key);
 
       participants.push({
-        user_id: userId,
+        player_id: playerId,
         nickname: playerData.nickname || '',
         profile_image: playerData.profile_image || '',
         is_ready: playerData.is_ready === '1',
@@ -675,8 +770,8 @@ export class GameService {
     await this.redisClient.zIncrBy(this.getScoreKey(roomId), deltaDelta, userId);
   }
 
-  private clientStartTimeIso(): string {
-    return new Date(Date.now() + this.GAME_START_DELAY_MS).toISOString();
+  private clientStartTimeMs(): number {
+    return Date.now() + this.GAME_START_DELAY_MS;
   }
 
   private async broadcastGameJoin(
@@ -686,17 +781,19 @@ export class GameService {
     currentPlayers: number,
     participants: GameParticipantDto[],
   ): Promise<void> {
-    const joinedParticipant = participants.find((participant) => participant.user_id === userId);
+    const joinedParticipant = participants.find((participant) => participant.player_id === userId);
 
-    server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_JOIN, {
+    const payload = {
       player: {
-        user_id: joinedParticipant?.user_id || userId,
+        player_id: joinedParticipant?.player_id || userId,
         nickname: joinedParticipant?.nickname || '',
         profile_image: joinedParticipant?.profile_image || '',
         is_ready: joinedParticipant?.is_ready ?? false,
       },
       current_players: currentPlayers.toString(),
-    });
+    };
+
+    server.to(roomId).except(userId).emit(WS_EVENTS_GAME.PLAYER_JOIN, payload);
   }
 
   /**
@@ -790,7 +887,7 @@ export class GameService {
       const broadcast: GameRealtimeBroadcastDto = {
         highest_score: highestScore,
         average_score: parseFloat(averageScore),
-        ranks: ranks.map((_, index) => index + 1),
+        ranks,
       };
 
       server.to(roomId).emit(WS_EVENTS_GAME.PLAYER_REALTIME, broadcast);

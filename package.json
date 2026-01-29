@@ -41,6 +41,7 @@
     "docker:down": "docker compose -f docker-compose-local.yml down",
     "docker:redis": "docker compose -f docker-compose-local.yml up -d redis",
     "docker:down:volumes": "docker compose -f docker-compose-local.yml down -v",
+    "docker:down:redis": "docker compose -f docker-compose-local.yml down -v redis && docker compose -f docker-compose-local.yml down",
     "docker:build": "docker compose -f docker-compose-local.yml build",
     "docker:rebuild": "docker compose -f docker-compose-local.yml build --no-cache",
     "docker:logs": "docker compose -f docker-compose-local.yml logs -f",
@@ -61,7 +62,16 @@
     "overrides": {
       "react": "^18.3.1",
       "react-dom": "^18.3.1"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "esbuild",
+      "mediasoup",
+      "msw",
+      "protobufjs",
+      "sharp",
+      "unrs-resolver"
+    ]
   },
   "devDependencies": {
     "husky": "^9.1.7",

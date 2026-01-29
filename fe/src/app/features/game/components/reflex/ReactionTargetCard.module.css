@@ -1,0 +1,12 @@
+.root {
+  display: inline-block;
+  cursor: default;
+}
+
+.root:hover {
+  cursor: default;
+}
+
+.active {
+  cursor: pointer;
+}

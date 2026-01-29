@@ -5,20 +5,32 @@ import Paths from '@/app/shared/path';
 import Image from 'next/image';
 import { AvatarProps } from './type';
 import CSSUtil from '@/utils/css';
+import { useCallback } from 'react';
 
 const DEFAULT_AVATAR = Paths.images('default_profile');
 const DEFAULT_THEMES = ['primary', 'secondary', 'success', 'warning'];
 
-function getThemeIndex(nickname?: string) {
-  if (!nickname) return 0;
-  let hash = 0;
-  for (let i = 0; i < nickname.length; i++) {
-    hash = (hash * 31 + nickname.charCodeAt(i)) >>> 0;
-  }
-  return hash % DEFAULT_THEMES.length;
-}
-
 export default function Avatar({ nickname, profileImage, isActive, onClick }: AvatarProps) {
+  const getThemeIndex = useCallback((nickname?: string) => {
+    if (!nickname) return 0;
+
+    // FNV offset basis
+    let hash = 2166136261;
+
+    for (let i = 0; i < nickname.length; i++) {
+      hash ^= nickname.charCodeAt(i);
+      hash = Math.imul(hash, 16777619); // FNV prime
+    }
+
+    hash += hash << 13;
+    hash ^= hash >>> 7;
+    hash += hash << 3;
+    hash ^= hash >>> 17;
+    hash += hash << 5;
+
+    return Math.abs(hash) % DEFAULT_THEMES.length;
+  }, []);
+
   const index = getThemeIndex(nickname);
 
   const className = CSSUtil.buildCls(

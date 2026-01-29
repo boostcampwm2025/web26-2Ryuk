@@ -17,6 +17,7 @@ function PostCategoryChip({ category }: { category: PostCategory }) {
 }
 
 function PostListRow({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   id,
   title,
   content,

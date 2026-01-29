@@ -1,11 +1,11 @@
 export interface SpeakerControlButtonProps {
-  initialState?: boolean;
+  speakerOn?: boolean;
   onChange?: (state: boolean) => void;
 }
 
 export interface AudioControlsProps {
-  initialMicState?: boolean;
-  initialSpeakerState?: boolean;
+  micOn?: boolean;
+  speakerOn?: boolean;
   onMicChange?: (state: boolean) => void;
   onSpeakerChange?: (state: boolean) => void;
 }

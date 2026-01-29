@@ -48,7 +48,7 @@ function TextfieldBase({
   };
 
   let inputType: InputType = 'text';
-  let iconToShow: 'show' | 'hide' | undefined = undefined;
+  let iconToShow: 'show' | 'hide' | undefined;
 
   if (hidable) {
     inputType = isVisible ? 'text' : 'password';

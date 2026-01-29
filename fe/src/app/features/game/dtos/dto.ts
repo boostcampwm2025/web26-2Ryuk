@@ -1,15 +1,7 @@
 // HTTP DTOs
-export type GameItemDto = {
-  id: string;
-  title: string;
-  type: string;
-  description?: string;
-  min_players: number;
-  max_players: number;
-};
 
 export type GameListResponseDto = {
-  games: GameItemDto[];
+  games: GameDto[];
 };
 
 // WebSocket DTOs
@@ -31,7 +23,7 @@ export type GameJoinDto = {
 };
 
 export type GamePlayerDto = {
-  user_id: string;
+  player_id: string;
   nickname: string;
   profile_image?: string;
   is_ready?: boolean;
@@ -43,8 +35,9 @@ export type GameDto = {
   title: string;
   description?: string;
   type: string;
-  min_players: string;
-  max_players: string;
+  min_players: number;
+  max_players: number;
+  time: number;
 };
 
 export type GameJoinAckDto = {
@@ -101,7 +94,9 @@ export type GameStartDto = {
 };
 
 export type GamePlayerStartDto = {
-  start_time: string;
+  start_time: number;
+  delay_ms: number;
+  play_duration_ms: number;
 };
 
 export type GameCloseDto = {
@@ -123,6 +118,28 @@ export type GamePlayerRealtimeDto = {
   ranks: string[];
 };
 
-export type GamePlayerResultDto = {
-  results: Array<GamePlayerDto & { score: string }>;
+export type GamePlayerResultItemDto = {
+  player_id: string;
+  nickname: string;
+  profile_image: string;
+  score: string;
+  rank: string;
+  achieve_date: number;
+};
+
+export type GamePlayerResultBroadcastDto = {
+  results: GamePlayerResultItemDto[];
+};
+
+export type GamePlayerRecordsDataDto = {
+  total: number;
+  page: number;
+  podium: GamePlayerResultItemDto[];
+  rankings: GamePlayerResultItemDto[];
+};
+
+export type GamePlayerRecordsResponseDto = {
+  success: boolean;
+  message: string;
+  data: GamePlayerRecordsDataDto;
 };

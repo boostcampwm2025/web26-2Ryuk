@@ -111,11 +111,18 @@ export class ChatGateway {
       };
 
       // 다른 참여자들에게 브로드캐스트
-      await this.chatService.broadcastGlobalChat(this.server, globalRoomId, userId, dto.message, senderInfo, client.id);
+      const filteredMessage = await this.chatService.broadcastGlobalChat(
+        this.server,
+        globalRoomId,
+        userId,
+        dto.message,
+        senderInfo,
+        client.id,
+      );
 
       // 요청을 보낸 클라이언트에게 응답 반환 (is_me: true)
       const timestamp = new Date().toISOString();
-      const responseToSender = new GlobalChatMessageResponseDto(dto.message, senderInfo, true, timestamp);
+      const responseToSender = new GlobalChatMessageResponseDto(filteredMessage, senderInfo, true, timestamp);
       return responseToSender.data;
     } catch (error) {
       // 모든 예외를 일관되게 처리
@@ -142,6 +149,8 @@ export class ChatGateway {
       const userId = client.data.userId;
       const isAuthenticated = client.data.authenticated;
 
+      const timestamp = new Date().toISOString();
+
       // 권한 검증: 인증되지 않은 사용자는 메시지 송신 불가능
       if (!isAuthenticated || !userId) {
         logMessage(this.logger, LOG.CHAT.UNAUTH_ROOM_SEND(client.id));
@@ -165,12 +174,32 @@ export class ChatGateway {
         profile_image: user.profile_image,
       };
 
+      // /ban 명령어 처리
+      if (dto.message.startsWith('/ban ')) {
+        await this.chatService.processBanCommand(this.server, dto.room_id, userId, dto.message, senderInfo, client.id);
+        // 명령어 처리 완료 응답 (빈 메시지로 반환하여 프론트에서 UI 표시 안 함)
+        const commandResponse = new LocalChatMessageResponseDto(dto.room_id, '', senderInfo, true, timestamp);
+        return commandResponse.data;
+      }
+
       // 참여자들에게 브로드캐스트
-      await this.chatService.broadcastRoomChat(this.server, dto.room_id, userId, dto.message, senderInfo, client.id);
+      const filteredMessage = await this.chatService.broadcastRoomChat(
+        this.server,
+        dto.room_id,
+        userId,
+        dto.message,
+        senderInfo,
+        client.id,
+      );
 
       // 요청을 보낸 클라이언트에게 응답 반환 (is_me: true)
-      const timestamp = new Date().toISOString();
-      const responseToSender = new LocalChatMessageResponseDto(dto.room_id, dto.message, senderInfo, true, timestamp);
+      const responseToSender = new LocalChatMessageResponseDto(
+        dto.room_id,
+        filteredMessage,
+        senderInfo,
+        true,
+        timestamp,
+      );
       return responseToSender.data;
     } catch (error) {
       // 모든 예외를 일관되게 처리

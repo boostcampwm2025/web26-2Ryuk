@@ -12,12 +12,15 @@ import {
   RoomLeaveAckDto,
   RoomLeaveDto,
   RoomParticipantLeaveDto,
+  RoomParticipantDeleteDto,
+  RoomBanDto,
 } from '@/app/features/room/dtos/dto';
 import { WS_EVENTS } from '@/app/services/events';
 import { toastStore } from '@/app/components/shared/toast/toast.store';
 import { authStore } from '@/app/features/user/stores/auth';
 import { RoomConverter } from '@/app/features/room/dtos/converter';
 import { RoomJoinData, RoomLeaveData } from '@/app/features/room/dtos/data';
+import { goHome } from '@/app/hooks/useNavigation';
 
 /**
  * RoomChat 클라이언트 서비스
@@ -30,8 +33,17 @@ export class RoomChatService {
   private roomInvalidatedCallbacks: Set<() => void> = new Set();
   private isSubscribed = false;
   private messages: ChatReceiveData[] = [];
-  private currentRoomId: string | null = null;
+  private currentRoomId?: string;
   private eventHandlers: Map<string, (...args: any[]) => void> = new Map();
+  private handlersRegistered = false;
+  private boundSocket?: unknown;
+
+  constructor() {
+    WebSocketService.onReconnect(() => {
+      this.removeEventHandlers();
+      this.registerEventHandlers();
+    });
+  }
 
   /**
    * 방 채팅 구독 (이미 연결된 WebSocket 세션 사용)
@@ -54,6 +66,11 @@ export class RoomChatService {
       // WebSocket 연결 확인
       const socket = WebSocketService.getSocket();
       if (!socket) return;
+
+      if (this.boundSocket !== socket) {
+        this.removeEventHandlers();
+        this.boundSocket = socket;
+      }
 
       if (!socket.connected) {
         await new Promise<void>((resolve) => socket.once(WS_EVENTS.CONNECT, resolve));
@@ -101,13 +118,11 @@ export class RoomChatService {
    * WebSocket 이벤트 핸들러 등록
    */
   private registerEventHandlers(): void {
-    // 기존 핸들러 제거
-    this.removeEventHandlers();
+    if (this.handlersRegistered) return;
+    this.handlersRegistered = true;
 
     // 소켓 끊김 시 연결 상태만 false
     const disconnectHandler = () => this.notifyConnection(false);
-    this.eventHandlers.set(WS_EVENTS.DISCONNECT, disconnectHandler);
-    WebSocketService.on(WS_EVENTS.DISCONNECT, disconnectHandler);
 
     // 소켓 재연결 시 같은 방이면 room:join 재요청
     const connectHandler = async () => {
@@ -122,8 +137,6 @@ export class RoomChatService {
         }
       }
     };
-    this.eventHandlers.set(WS_EVENTS.CONNECT, connectHandler);
-    WebSocketService.on(WS_EVENTS.CONNECT, connectHandler);
 
     // room:participant:join 브로드캐스트 핸들러
     const joinedBroadcastHandler = (dto: RoomParticipantJoinDto) => {
@@ -146,15 +159,19 @@ export class RoomChatService {
         currentParticipants: data.currentParticipants,
       });
     };
-    this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_JOIN, joinedBroadcastHandler);
-    WebSocketService.on(WS_EVENTS.ROOM_PARTICIPANT_JOIN, joinedBroadcastHandler);
 
     // room:leave ACK 핸들러 (방 퇴장 성공)
-    const leaveAckHandler = (_data: RoomLeaveAckDto) => {
+    const leaveAckHandler = (_dto: RoomLeaveAckDto) => {
       // ACK는 특별한 처리가 필요 없을 수 있음
     };
-    this.eventHandlers.set(WS_EVENTS.ROOM_LEAVE, leaveAckHandler);
-    WebSocketService.on(WS_EVENTS.ROOM_LEAVE, leaveAckHandler);
+
+    // room:ban 핸들러 (방 추방)
+    const banHandler = async (_dto: RoomBanDto) => {
+      // const data = RoomConverter.toRoomBanData(dto);
+      roomStore.getState().leaveRoom();
+      toastStore.getState().showErrorToast('방에서 추방되었습니다.');
+      setTimeout(() => goHome(), 1000);
+    };
 
     // room:participant:leave 브로드캐스트 핸들러 (다른 사용자 퇴장)
     const leftBroadcastHandler = (dto: RoomParticipantLeaveDto) => {
@@ -162,29 +179,50 @@ export class RoomChatService {
       if (data.roomId !== this.currentRoomId) return;
 
       const currentUserId = authStore.getState().userId;
-      const isOtherUser = !currentUserId || data.userId !== currentUserId;
+      const isOtherUser = !currentUserId || data.user.id !== currentUserId;
+      const hostChanged = roomStore.getState().roomData?.hostId !== data.host.id;
 
       if (isOtherUser) {
-        toastStore.getState().showInfoToast('사용자가 퇴장했습니다.');
-        roomStore.getState().removeParticipant(data.userId);
+        toastStore.getState().showInfoToast(`${data.user.nickname}님이 퇴장했습니다.`);
+        roomStore.getState().removeParticipant(data.user.id);
+
+        if (hostChanged) {
+          toastStore.getState().showInfoToast(`${data.host.nickname}님이 방장이 되었습니다.`);
+        }
       }
 
       roomStore.getState().updateRoomData({
         currentParticipants: data.currentParticipants,
+        hostId: data.host.id,
       });
     };
-    this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_LEAVE, leftBroadcastHandler);
-    WebSocketService.on(WS_EVENTS.ROOM_PARTICIPANT_LEAVE, leftBroadcastHandler);
+
+    // room:participant:delete 브로드캐스트 핸들러 (방 삭제)
+    const deleteBroadcastHandler = (dto: RoomParticipantDeleteDto) => {
+      const data = RoomConverter.toRoomParticipantDeleteData(dto);
+      if (data.roomId !== this.currentRoomId) return;
+
+      roomStore.getState().leaveRoom();
+      this.clearSubscriptionOnly();
+      this.roomInvalidatedCallbacks.forEach((cb) => cb());
+    };
 
     // chat:room:new-message 핸들러
     const messageHandler = (dto: ChatReceiveDto) => this.handleRoomMessage(dto);
-    this.eventHandlers.set(WS_EVENTS.CHAT_ROOM_NEW_MESSAGE, messageHandler);
-    WebSocketService.on(WS_EVENTS.CHAT_ROOM_NEW_MESSAGE, messageHandler);
 
     // error 핸들러
     const errorHandler = (error: any) => this.handleError(error);
+    this.eventHandlers.set(WS_EVENTS.DISCONNECT, disconnectHandler);
+    this.eventHandlers.set(WS_EVENTS.CONNECT, connectHandler);
+    this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_JOIN, joinedBroadcastHandler);
+    this.eventHandlers.set(WS_EVENTS.ROOM_LEAVE, leaveAckHandler);
+    this.eventHandlers.set(WS_EVENTS.ROOM_BAN, banHandler);
+    this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_LEAVE, leftBroadcastHandler);
+    this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_DELETE, deleteBroadcastHandler);
+    this.eventHandlers.set(WS_EVENTS.CHAT_ROOM_NEW_MESSAGE, messageHandler);
     this.eventHandlers.set(WS_EVENTS.ERROR, errorHandler);
-    WebSocketService.on(WS_EVENTS.ERROR, errorHandler);
+
+    this.eventHandlers.forEach((handler, event) => WebSocketService.on(event, handler));
   }
 
   /**
@@ -193,6 +231,8 @@ export class RoomChatService {
   private removeEventHandlers(): void {
     this.eventHandlers.forEach((handler, event) => WebSocketService.off(event, handler));
     this.eventHandlers.clear();
+    this.handlersRegistered = false;
+    this.boundSocket = undefined;
   }
 
   /**
@@ -224,7 +264,7 @@ export class RoomChatService {
   clearSubscriptionOnly(): void {
     this.removeEventHandlers();
     this.isSubscribed = false;
-    this.currentRoomId = null;
+    this.currentRoomId = undefined;
     this.messages = [];
     this.notifyConnection(false);
   }
@@ -259,7 +299,7 @@ export class RoomChatService {
     }
 
     this.isSubscribed = false;
-    this.currentRoomId = null;
+    this.currentRoomId = undefined;
     this.messages = [];
     this.notifyConnection(false);
   }
@@ -287,6 +327,11 @@ export class RoomChatService {
 
     // DTO → Data 변환
     const ackData = ChatConverter.toRoomSendAckData(ackDto);
+
+    // 빈 메시지는 화면에 표시 X (ban 명령어 처리 결과)
+    if (ackData.message.trim() === '') {
+      return;
+    }
 
     // 변환된 Data를 로직에서 사용
     this.messages = [...this.messages, ackData];

@@ -6,9 +6,11 @@ import {
   RoomJoinInfoDto,
   RoomLeaveAckDto,
   RoomLeaveDto,
+  RoomBanDto,
   RoomListDto,
   RoomParticipantJoinDto,
   RoomParticipantLeaveDto,
+  RoomParticipantDeleteDto,
   RoomUpdateRequestDto,
   RoomValidateJoinRequestDto,
   RoomValidateJoinResponseDto,
@@ -23,8 +25,10 @@ import {
   RoomJoinInfoData,
   RoomLeaveAckData,
   RoomLeaveData,
+  RoomBanData,
   RoomParticipantJoinData,
   RoomParticipantLeaveData,
+  RoomParticipantDeleteData,
   RoomUpdateRequestData,
   RoomValidateJoinRequestData,
   RoomMyCurrentData,
@@ -52,7 +56,7 @@ export const toData = (dto: RoomDto): RoomData => ({
     })) ?? [],
   players:
     dto.players?.map((p) => ({
-      userId: p.user_id,
+      playerId: p.player_id,
       nickname: p.nickname,
       profileImage: p.profile_image ?? undefined,
       isHost: p.is_host,
@@ -107,7 +111,7 @@ export const toRoomValidateJoinData = (
 });
 
 export const toMyCurrentData = (dto: RoomMyCurrentDto): RoomMyCurrentData => ({
-  roomId: dto.roomId,
+  roomId: dto.room_id,
 });
 
 export const toDto = (data: RoomData): RoomDto => ({
@@ -126,7 +130,7 @@ export const toDto = (data: RoomData): RoomDto => ({
     profile_image: p.profileImage,
   })),
   players: data.players?.map((p) => ({
-    user_id: p.userId,
+    player_id: p.playerId,
     nickname: p.nickname,
     profile_image: p.profileImage,
     is_host: p.isHost,
@@ -177,12 +181,33 @@ export const toRoomLeaveData = (dto: RoomLeaveAckDto): RoomLeaveAckData => ({
   roomId: dto.room_id,
 });
 
+export const toRoomBanDto = (dto: RoomBanData): RoomBanDto => ({
+  room_id: dto.roomId,
+});
+
+export const toRoomBanData = (dto: RoomBanDto): RoomBanData => ({
+  roomId: dto.room_id,
+});
+
 export const toRoomParticipantLeaveData = (
   dto: RoomParticipantLeaveDto,
 ): RoomParticipantLeaveData => ({
   roomId: dto.room_id,
-  userId: dto.user_id,
+  host: {
+    id: dto.host.id,
+    nickname: dto.host.nickname,
+  },
+  user: {
+    id: dto.user.id,
+    nickname: dto.user.nickname,
+  },
   currentParticipants: Number(dto.current_participants),
+});
+
+export const toRoomParticipantDeleteData = (
+  dto: RoomParticipantDeleteDto,
+): RoomParticipantDeleteData => ({
+  roomId: dto.room_id,
 });
 
 export const RoomConverter = {
@@ -203,5 +228,8 @@ export const RoomConverter = {
   toRoomParticipantJoinData,
   toRoomLeaveDto,
   toRoomLeaveData,
+  toRoomBanDto,
+  toRoomBanData,
   toRoomParticipantLeaveData,
+  toRoomParticipantDeleteData,
 };

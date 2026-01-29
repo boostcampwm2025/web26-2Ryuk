@@ -1,4 +1,4 @@
-import { Provider } from '@nestjs/common';
+import { Logger, Provider } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
@@ -12,12 +12,12 @@ export const redisProvider: Provider = {
     if (!host || !port) throw new Error('REDIS_HOST와 REDIS_PORT 환경 변수가 설정되지 않았습니다.');
 
     const url = `redis://${host}:${port}`;
-    console.log(`Redis 연결 시도: ${url}`);
+    Logger.log(`Redis 연결 시도: ${url}`);
 
     const client = createClient({ url }) as RedisClientType;
 
-    client.on('error', (err) => console.error('Redis 연결 에러:', err));
-    client.on('connect', () => console.log('Redis 연결 성공'));
+    client.on('error', (err) => Logger.error('Redis 연결 에러:', err));
+    client.on('connect', () => Logger.log('Redis 연결 성공'));
 
     await client.connect();
     return client;

@@ -48,7 +48,7 @@ export class MockAuthService {
    * @returns { userId: string } | null
    */
   verifyMockToken(token: string): { userId: string } | null {
-    if (!token || !token.startsWith('mock_token_')) return null;
+    if (!token?.startsWith('mock_token_')) return null;
 
     const match = token.match(/^mock_token_(.+)_\d+$/);
     if (!match) return null;

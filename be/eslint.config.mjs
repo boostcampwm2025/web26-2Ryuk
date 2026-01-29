@@ -9,6 +9,9 @@ const __dirname = dirname(__filename);
 
 export default [
   {
+    ignores: ['dist/**'],
+  },
+  {
     files: ['**/*.ts'],
     languageOptions: {
       parser: tsparser,

@@ -13,7 +13,14 @@
 
 .title {
   font: var(--heading-2);
+}
+
+.container.primary .title{
   color: var(--primary-6);
+}
+
+.container.secondary .title {
+  color: var(--secondary);
 }
 
 .time {
@@ -23,7 +30,7 @@
 }
 
 .timeValue {
-  font: var(--large-2);
+  font: var(--large-3);
   color: var(--neutral-9);
 }
 

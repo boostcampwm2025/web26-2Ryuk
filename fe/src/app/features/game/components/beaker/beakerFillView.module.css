@@ -1,0 +1,158 @@
+.beakerColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: var(--beaker-width, 140px);
+}
+
+.container {
+  position: relative;
+  width: var(--beaker-width, 140px);
+  height: var(--beaker-height, 220px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.dropLayer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.drop {
+  position: absolute;
+  left: 50%;
+  animation: drop-fall 0.6s ease-in forwards;
+}
+
+@keyframes drop-fall {
+  0% {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, var(--drop-distance));
+    opacity: 0;
+  }
+}
+
+.beakerLayer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.maskLayer {
+  position: absolute;
+  inset: 0;
+
+  display: block;
+  overflow: hidden;
+
+  mask-size: contain;
+  mask-position: center bottom;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-size: contain;
+  -webkit-mask-position: center bottom;
+  -webkit-mask-repeat: no-repeat;
+}
+
+.water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  height: var(--water-height, 0%);
+  transition: height 0.2s linear;
+}
+
+.me .water {
+  background: linear-gradient(
+    180deg,
+    var(--primary-5) 0%,
+    var(--primary-6) 100%
+  );
+}
+
+.other .water {
+  background: linear-gradient(
+    180deg,
+    var(--primary-4) 0%,
+    var(--primary-3) 100%
+  );
+}
+
+.beakerOutline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.detailLayer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.detailLayer .highest {
+  position: absolute;
+  width: 40%;
+  height: var(--highest-percent);
+  border-top: 2px solid var(--error);
+}
+
+.detailLayer .highest::after {
+  position: absolute;
+  content: '현재 1등';
+  left: 120%;
+  width: 300px;
+  transform: translateY(-50%);
+  font: var(--body-1);
+  color: var(--error);
+}
+
+.detailLayer .average {
+  position: absolute;
+  width: 40%;
+  height: var(--average-percent);
+  border-top: 2px solid var(--primary-5);
+}
+
+
+.detailLayer .average::after {
+  position: absolute;
+  content: '평균';
+  left: 120%;
+  width: 300px;
+  transform: translateY(-50%);
+  font: var(--body-1);
+  color: var(--primary-5);
+}
+
+.beakerLabelRow {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  font: var(--large-2);
+  color: var(--secondary);
+  text-transform: uppercase;
+}

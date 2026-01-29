@@ -2,34 +2,45 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ProgressBar from '@/app/components/shared/progressBar/ProgressBar';
+import CSSUtil from '@/utils/css';
 import styles from './RemainingTimeBar.module.css';
 
 interface RemainingTimeBarProps {
-  durationMs: number;
+  label?: string;
+  variant: 'primary' | 'secondary';
+  totalDurationMs: number;
+  remainingMs: number;
   intervalMs?: number;
   onComplete?: () => void;
 }
 
 export default function RemainingTimeBar({
-  durationMs,
+  label = '남은 시간',
+  variant,
+  totalDurationMs,
+  remainingMs: initialRemainingMs,
   intervalMs = 100,
   onComplete,
 }: RemainingTimeBarProps) {
-  const [remainingMs, setRemainingMs] = useState(() => Math.max(0, durationMs));
-  const intervalRef = useRef<number | null>(null);
+  const [remainingMs, setRemainingMs] = useState(() => Math.max(0, initialRemainingMs));
+  const intervalRef = useRef<number>();
   const completionCalledRef = useRef(false);
+  const startTimeRef = useRef<number>(Date.now());
+  const initialRemainingRef = useRef<number>(initialRemainingMs);
 
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
-      intervalRef.current = null;
+      intervalRef.current = undefined;
     }
 
-    const safeDuration = Math.max(0, durationMs);
-    setRemainingMs(safeDuration);
+    const safeRemaining = Math.max(0, initialRemainingMs);
+    setRemainingMs(safeRemaining);
     completionCalledRef.current = false;
+    startTimeRef.current = Date.now();
+    initialRemainingRef.current = safeRemaining;
 
-    if (safeDuration === 0) {
+    if (safeRemaining === 0) {
       if (!completionCalledRef.current) {
         completionCalledRef.current = true;
         onComplete?.();
@@ -37,16 +48,15 @@ export default function RemainingTimeBar({
       return undefined;
     }
 
-    const startTime = Date.now();
     intervalRef.current = window.setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const nextRemaining = Math.max(0, safeDuration - elapsed);
+      const elapsed = Date.now() - startTimeRef.current;
+      const nextRemaining = Math.max(0, initialRemainingRef.current - elapsed);
       setRemainingMs(nextRemaining);
 
       if (nextRemaining === 0) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
-          intervalRef.current = null;
+          intervalRef.current = undefined;
         }
         if (!completionCalledRef.current) {
           completionCalledRef.current = true;
@@ -58,24 +68,27 @@ export default function RemainingTimeBar({
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
-        intervalRef.current = null;
+        intervalRef.current = undefined;
       }
     };
-  }, [durationMs, onComplete]);
+  }, [initialRemainingMs, onComplete, intervalMs]);
 
   const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-  const progressValue = durationMs > 0 ? Math.min(1, Math.max(0, remainingMs / durationMs)) : 0;
+  const progressValue =
+    totalDurationMs > 0 ? Math.min(1, Math.max(0, remainingMs / totalDurationMs)) : 0;
+
+  const className = CSSUtil.buildCls(styles.container, styles[variant]);
 
   return (
-    <div className={styles.container}>
+    <div className={className}>
       <div className={styles.header}>
-        <span className={styles.title}>남은 시간</span>
+        <span className={styles.title}>{label}</span>
         <div className={styles.time}>
           <span className={styles.timeValue}>{remainingSeconds}</span>
           <span className={styles.timeUnit}>초</span>
         </div>
       </div>
-      <ProgressBar value={progressValue} />
+      <ProgressBar value={progressValue} variant={variant} />
     </div>
   );
 }

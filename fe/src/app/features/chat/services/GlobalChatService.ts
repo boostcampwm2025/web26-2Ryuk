@@ -1,22 +1,22 @@
 'use client';
 
+import { ChatConverter } from '@/app/features/chat/dtos/converter';
+import { ChatGlobalSendData, ChatReceiveData } from '@/app/features/chat/dtos/data';
 import {
+  ChatGlobalJoinAckDto,
   ChatGlobalNewMessageDto,
   ChatGlobalParticipantsUpdatedDto,
-  GlobalChatRecentsDto,
-  ChatGlobalJoinAckDto,
   ChatGlobalSendAckDto,
+  GlobalChatRecentsDto,
 } from '@/app/features/chat/dtos/dto';
-import { ChatReceiveData, ChatGlobalSendData } from '@/app/features/chat/dtos/data';
-import { ChatConverter } from '@/app/features/chat/dtos/converter';
 import { WS_EVENTS } from '@/app/services/events';
 import { WebSocketService } from '@/app/services/websocket.service';
 import { authStore } from '@/app/features/user/stores/auth';
 
 import {
   ChatChannel,
-  MessageCallback,
   ConnectionCallback,
+  MessageCallback,
   ParticipantsCallback,
   RecentsCallback,
   WebSocketErrorDto,
@@ -33,7 +33,7 @@ export class GlobalChatService implements ChatChannel {
   private isSubscribed = false;
   private messages: ChatReceiveData[] = [];
   private eventHandlers: Map<string, (...args: any[]) => void> = new Map();
-  private connectPromise: Promise<void> | null = null;
+  private connectPromise?: Promise<void>;
   private currentParticipants = 0;
 
   async connect(): Promise<void> {
@@ -53,7 +53,7 @@ export class GlobalChatService implements ChatChannel {
 
     this.connectPromise = WebSocketService.ensureConnected();
     await this.connectPromise;
-    this.connectPromise = null;
+    this.connectPromise = undefined;
   }
 
   async ensureConnected(): Promise<void> {
@@ -63,7 +63,9 @@ export class GlobalChatService implements ChatChannel {
 
   async subscribe(): Promise<void> {
     // 이미 구독 중이면 중복 구독 방지
-    if (this.isSubscribed) return;
+    if (this.isSubscribed) {
+      return;
+    }
 
     await this.connect();
     if (WebSocketService.isConnected()) this.notifyConnection(true);
@@ -150,7 +152,7 @@ export class GlobalChatService implements ChatChannel {
     this.notifyConnection(false);
     this.removeEventHandlers();
     WebSocketService.disconnect();
-    this.connectPromise = null;
+    this.connectPromise = undefined;
     this.isSubscribed = false;
   }
 

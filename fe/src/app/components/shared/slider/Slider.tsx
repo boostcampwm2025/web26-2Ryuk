@@ -1,29 +1,27 @@
 'use client';
 
-import { useState, type ChangeEvent } from 'react';
+import { type ChangeEvent, type CSSProperties } from 'react';
 import CSSUtil from '@/utils/css';
 import styles from './slider.module.css';
 import { SliderProps } from './type';
 
 export function SliderBase({
-  initialValue = 0,
+  value,
   min = 0,
-  max = 100,
-  step = 1,
+  max = 1,
+  step = 0.01,
   onChange,
   disabled = false,
   variant = 'primary',
 }: SliderProps) {
-  const [value, setValue] = useState(initialValue);
   const percentage = ((value - min) / (max - min)) * 100;
-  const style = { '--slider-percentage': `${percentage}%` } as React.CSSProperties;
+  const style = { '--slider-percentage': `${percentage}%` } as CSSProperties;
 
   const className = CSSUtil.buildCls(styles.slider, styles[variant], disabled && styles.disabled);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(event.target.value);
-    setValue(newValue);
-    onChange?.(newValue);
+    onChange?.(Number(newValue.toFixed(3)));
   };
 
   return (
@@ -33,7 +31,7 @@ export function SliderBase({
       min={min}
       max={max}
       step={step}
-      value={value}
+      value={value} // 부모가 준 value를 그대로 렌더링
       onChange={handleChange}
       disabled={disabled}
       style={style}

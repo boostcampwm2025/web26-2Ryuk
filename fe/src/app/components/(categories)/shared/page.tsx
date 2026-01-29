@@ -3,8 +3,11 @@ import TableOfContents from '@/app/components/helpers/TableOfContents';
 import TabNavigation from '@/app/components/helpers/TabNavigation';
 import { sharedSections } from '@/app/components/helpers/type';
 import SharedComponents from './Shared';
+import IconUtil from '@/utils/icon';
 
 export default async function SharedComponentsPage() {
+  const iconList = IconUtil.extractNames('icons.svg');
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -13,7 +16,7 @@ export default async function SharedComponentsPage() {
       </header>
       <TabNavigation />
       <div className={styles.contentWithToc}>
-        <SharedComponents />
+        <SharedComponents iconList={iconList} />
         <TableOfContents sections={sharedSections} />
       </div>
     </div>

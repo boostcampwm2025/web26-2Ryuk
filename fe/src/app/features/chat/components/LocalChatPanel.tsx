@@ -10,13 +10,12 @@ import { useRoomChat } from '../hooks/useRoomChat';
 import { Position } from '@/app/components/shared/floatingWidget/type';
 import { PANEL_CONFIG } from './type';
 import * as TextButton from '@/app/components/shared/button/TextButton';
-import { useRouter } from 'next/navigation';
 import Avatar from '@/app/components/shared/profile/Avatar';
 import { AuthStore, authStore } from '@/app/features/user/stores/auth';
 import roomService from '@/app/features/room/services/RoomService';
 import { RoomConverter } from '@/app/features/room/dtos/converter';
 import useNavigation from '@/app/hooks/useNavigation';
-import { ParticipantData } from '@/app/features/room/dtos/data';
+import { RoomParticipantData as PData } from '@/app/features/room/dtos/data';
 
 export default function LocalChatPanel() {
   const myId = authStore((state: AuthStore) => state.userId);
@@ -25,18 +24,22 @@ export default function LocalChatPanel() {
   const roomData = roomStore((state: RoomStore) => state.roomData);
   const [micState, setMicState] = useState(true);
   const [speakerState, setSpeakerState] = useState(true);
-  const { goToRoom } = useNavigation();
+  const { gotoRoom } = useNavigation();
   const roomTitle = roomData?.title || '대화방';
 
-  // 초기 위치 계산: 오른쪽 하단
-  const getInitialPosition = (): Position => {
-    if (typeof window === 'undefined') return PANEL_CONFIG.DEFAULT_POSITION;
-    const x = window.innerWidth - PANEL_CONFIG.WIDTH - PANEL_CONFIG.OFFSET;
-    const y = window.innerHeight - PANEL_CONFIG.HEIGHT - PANEL_CONFIG.OFFSET;
-    return { x, y };
-  };
+  const [initialPosition, setInitialPosition] = useState<Position>(PANEL_CONFIG.DEFAULT_POSITION);
 
-  const [initialPosition] = useState<Position>(getInitialPosition());
+  // 초기 위치 계산: 오른쪽 하단
+  useEffect(() => {
+    const x = window.innerWidth - PANEL_CONFIG.WIDTH - PANEL_CONFIG.OFFSET;
+    const y =
+      window.innerHeight -
+      PANEL_CONFIG.HEIGHT -
+      PANEL_CONFIG.OFFSET -
+      PANEL_CONFIG.HEIGHT -
+      PANEL_CONFIG.GAP;
+    setInitialPosition({ x, y });
+  }, []);
 
   // 채팅 구독, 메시지, 연결 상태를 자동으로 관리
   const { chats, isConnected } = useRoomChat(roomId, isJoined);
@@ -61,22 +64,21 @@ export default function LocalChatPanel() {
   };
 
   const handleGoRoomClick = () => {
-    if (roomId) goToRoom(roomId);
+    if (roomId) gotoRoom(roomId);
   };
 
   const headerChildren = (
     <div className={styles.roomChatHeaderControls}>
       <AudioControlButtons
-        initialMicState={micState}
-        initialSpeakerState={speakerState}
+        micOn={micState}
+        speakerOn={speakerState}
         onMicChange={handleMicChange}
         onSpeakerChange={handleSpeakerChange}
       />
     </div>
   );
 
-  const participants =
-    roomData?.participants?.filter((p: ParticipantData) => p.userId !== myId) ?? [];
+  const participants = roomData?.participants?.filter((p: PData) => p.userId !== myId) ?? [];
 
   const panelChildren = (
     <>
@@ -85,14 +87,14 @@ export default function LocalChatPanel() {
           <div className={styles.sectionTitle}>{roomTitle}</div>
         </div>
         <TextButton.Outline
-          iconName="right"
+          iconName="open"
           text="방으로"
           size="small"
           onClick={handleGoRoomClick}
         />
       </div>
       <div className={styles.sectionAvatars}>
-        {participants.map((p: ParticipantData) => (
+        {participants.map((p: PData) => (
           <Avatar key={p.nickname} nickname={p.nickname} profileImage={p.profileImage} />
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { Entity, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { PrimaryUuidColumn, UuidColumn } from '@src/common/decorators/primary-uuid-column.decorator';
 import { User } from '@src/modules/user/user.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 export enum ChatType {
   TEXT = 'TEXT',
@@ -15,7 +16,7 @@ export enum ReportStatus {
 @Entity('chatting_report')
 export class ChattingReport {
   @PrimaryUuidColumn()
-  id: string;
+  id: string = uuidv4();
 
   @Column({ type: 'enum', enum: ChatType })
   type: ChatType;

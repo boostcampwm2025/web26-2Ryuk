@@ -12,7 +12,20 @@ export interface BoardPageTitleSectionProps {
   onCreate?: () => void;
 }
 
-export interface GamePageTitleSectionProps {
+export interface GameListPageTitleSectionProps {
   onSearch?: (query: string) => void;
+  children?: ReactNode;
+}
+
+export interface GamePageTitleSectionProps {
+  gameId?: string;
+  children?: ReactNode;
+}
+
+export type RankingViewType = 'group' | 'all';
+
+export interface RankingPageTitleSectionProps {
+  view?: RankingViewType;
+  onChange?: (view: RankingViewType) => void;
   children?: ReactNode;
 }

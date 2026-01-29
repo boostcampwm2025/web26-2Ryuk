@@ -16,7 +16,7 @@ export interface SelectedGameCardProps {
 }
 
 export default function SelectedGameCard({ game, onChange, isHost }: SelectedGameCardProps) {
-  if (!game) return <GameSelectionButton />;
+  if (!game) return <GameSelectionButton disabled={!isHost} onChange={onChange} />;
 
   const typeLabel = game.type === 'cooperation' ? '협력' : '경쟁';
   const participantsLabel = `${game.minPlayers}-${game.maxPlayers}명`;

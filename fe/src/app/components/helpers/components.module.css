@@ -124,6 +124,19 @@
   margin-top: 16px;
 }
 
+.dropdownShowcaseRow {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.dropdownShowcaseRow .showcaseBlock {
+  flex: 1;
+  min-width: 220px;
+}
+
 .chipTable {
   display: table;
   width: 100%;

@@ -77,4 +77,38 @@ describe('DateUtil', () => {
       expect(result.length).toBeGreaterThan(0);
     });
   });
+
+  describe('describeAchieveDate', () => {
+    const baseTime = new Date('2026-01-10T12:00:00Z');
+
+    it('seconds ago', () => {
+      const target = new Date('2026-01-10T11:59:30Z');
+      expect(DateUtil.describe(target, { now: baseTime })).toBe('30초 전');
+    });
+
+    it('minutes ago', () => {
+      const target = new Date('2026-01-10T11:55:00Z');
+      expect(DateUtil.describe(target, { now: baseTime })).toBe('5분 전');
+    });
+
+    it('hours ago', () => {
+      const target = new Date('2026-01-10T09:30:00Z');
+      expect(DateUtil.describe(target, { now: baseTime })).toBe('2시간 전');
+    });
+
+    it('days ago returns formatted date', () => {
+      const target = new Date('2026-01-09T00:00:00Z');
+      expect(DateUtil.describe(target, { now: baseTime })).toBe('2026. 01. 09');
+    });
+
+    it('null fallback', () => {
+      expect(DateUtil.describe(null)).toBe('-');
+      expect(DateUtil.describe(undefined, { fallback: '없음' })).toBe('없음');
+    });
+
+    it('handles timestamp numbers', () => {
+      const targetTimestamp = new Date('2026-01-10T11:59:30Z').getTime();
+      expect(DateUtil.describe(targetTimestamp, { now: baseTime })).toBe('30초 전');
+    });
+  });
 });

@@ -10,8 +10,10 @@ export const WS_EVENTS = {
   // 방 관련 이벤트
   ROOM_JOIN: 'room:join',
   ROOM_LEAVE: 'room:leave',
+  ROOM_BAN: 'room:ban',
   ROOM_PARTICIPANT_LEAVE: 'room:participant:leave',
   ROOM_PARTICIPANT_JOIN: 'room:participant:join',
+  ROOM_PARTICIPANT_DELETE: 'room:participant:delete',
 
   // 방 채팅 이벤트
   CHAT_ROOM_SEND: 'chat:room:send',

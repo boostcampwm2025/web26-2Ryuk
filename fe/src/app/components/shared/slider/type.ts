@@ -1,7 +1,7 @@
 export type SliderVariant = 'primary' | 'secondary';
 
 export interface SliderProps {
-  initialValue?: number;
+  value: number;
   min?: number;
   max?: number;
   step?: number;

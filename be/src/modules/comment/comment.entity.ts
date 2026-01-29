@@ -2,11 +2,12 @@ import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColu
 import { PrimaryUuidColumn, UuidColumn } from '@src/common/decorators/primary-uuid-column.decorator';
 import { Post } from '@src/modules/post/post.entity';
 import { User } from '@src/modules/user/user.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 @Entity('comment')
 export class Comment {
   @PrimaryUuidColumn()
-  id: string;
+  id: string = uuidv4();
 
   @UuidColumn()
   post_id: string;

@@ -1,5 +1,4 @@
 import './globals.css';
-import MSWProvider from '@/app/providers/MSWProvider';
 import AuthProvider from '@/app/providers/AuthProvider';
 import RoomProvider from '@/app/providers/RoomProvider';
 import LoadingProvider from '@/app/providers/LoadingProvider';
@@ -19,17 +18,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="ko">
       <body>
         <ModalEventDelegation />
-        <MSWProvider>
-          <AuthProvider>
-            <RoomProvider>
-              <LoadingProvider>
-                <Header />
-                <div className="page">{children}</div>
-                <Toast />
-              </LoadingProvider>
-            </RoomProvider>
-          </AuthProvider>
-        </MSWProvider>
+        <AuthProvider>
+          <RoomProvider>
+            <LoadingProvider>
+              <Header />
+              <div className="page">{children}</div>
+              <Toast />
+            </LoadingProvider>
+          </RoomProvider>
+        </AuthProvider>
       </body>
     </html>
   );

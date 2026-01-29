@@ -88,6 +88,7 @@ jobs:
           NODE_ENV=production
           PORT=4000
           FRONTEND_URL=${FRONTEND_URL}
+          GEMINI_KEY=${GEMINI_KEY}
           EOF
 
           docker build \

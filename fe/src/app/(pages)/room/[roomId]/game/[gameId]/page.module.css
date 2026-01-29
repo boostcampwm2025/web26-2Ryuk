@@ -1,0 +1,13 @@
+.content {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.undefinedText {
+  font-size: 1rem;
+  color: #e11d48;
+  font-weight: 600;
+  margin: auto;
+}

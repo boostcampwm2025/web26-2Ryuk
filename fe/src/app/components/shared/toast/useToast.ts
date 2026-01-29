@@ -9,15 +9,3 @@ export function useToast() {
   const showInfoToast = toastStore((state) => state.showInfoToast);
   return { showToast, showSuccessToast, showErrorToast, showInfoToast };
 }
-
-export function showSuccessToast(message: string) {
-  toastStore.getState().showSuccessToast(message);
-}
-
-export function showErrorToast(message: string) {
-  toastStore.getState().showErrorToast(message);
-}
-
-export function showInfoToast(message: string) {
-  toastStore.getState().showInfoToast(message);
-}

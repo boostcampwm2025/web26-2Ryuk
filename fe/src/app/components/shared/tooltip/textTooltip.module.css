@@ -1,19 +1,24 @@
 .tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
+  position: fixed;
+  top: var(--tooltip-top);
+  left: var(--tooltip-left);
+
   padding: 8px 12px;
   background: var(--neutral-9);
   color: var(--neutral-1);
   font: var(--body-1);
   white-space: nowrap;
   border-radius: 8px;
+
   opacity: 0;
   pointer-events: none;
-  transition: all 0.2s ease-in-out;
+  transition: opacity 0.2s ease-in-out;
+
   z-index: 999;
+}
+
+.tooltip.visible {
+  opacity: 1;
 }
 
 .tooltip::after {
@@ -24,27 +29,15 @@
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-top-color: var(--neutral-9);
-  transition: left 0.2s ease-in-out;
-}
-
-.tooltip.left {
-  left: 0;
-  transform: translateX(0);
 }
 
 .tooltip.left::after {
-  left: 20px;
-  transform: translateX(0);
-}
-
-.tooltip.right {
-  left: auto;
-  right: 0;
-  transform: translateX(0);
+  left: 16px;
+  transform: none;
 }
 
 .tooltip.right::after {
   left: auto;
-  right: 20px;
-  transform: translateX(0);
+  right: 16px;
+  transform: none;
 }

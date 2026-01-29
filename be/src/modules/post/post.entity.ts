@@ -1,6 +1,7 @@
 import { Entity, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { PrimaryUuidColumn, UuidColumn } from '@src/common/decorators/primary-uuid-column.decorator';
 import { User } from '@src/modules/user/user.entity';
+import { v4 as uuidv4 } from 'uuid';
 
 export enum PostType {
   NORMAL = 'NORMAL',
@@ -10,7 +11,7 @@ export enum PostType {
 @Entity('post')
 export class Post {
   @PrimaryUuidColumn()
-  id: string;
+  id: string = uuidv4();
 
   @UuidColumn({
     name: 'author_id',

@@ -3,6 +3,7 @@ export interface RoomTextChatProps {}
 export interface RoomVoiceChatProps {}
 
 export interface VoiceParticipantCardProps {
+  userId: string;
   nickname: string;
   profileImage?: string;
   active?: boolean;

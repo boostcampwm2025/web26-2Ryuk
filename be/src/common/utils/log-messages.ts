@@ -5,10 +5,10 @@
 type LogLevel = 'log' | 'warn' | 'debug' | 'error';
 
 interface LoggerLike {
-  log: Function;
-  warn: Function;
-  debug: Function;
-  error: Function;
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  debug: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
 }
 
 interface LogMessage {
@@ -20,11 +20,11 @@ export const LOG = {
   // WebSocket 연결 관련
   WS: {
     CONNECT: (socketId: string, userId?: string): LogMessage => ({
-      message: `클라이언트 연결: socketId=${socketId}, userId=${userId || 'anonymous'}`,
+      message: `클라이언트 연결: socketId=${socketId}, userId=${userId ?? 'anonymous'}`,
       level: 'log',
     }),
     DISCONNECT: (socketId: string, userId?: string): LogMessage => ({
-      message: `클라이언트 연결 해제: socketId=${socketId}, userId=${userId || 'anonymous'}`,
+      message: `클라이언트 연결 해제: socketId=${socketId}, userId=${userId ?? 'anonymous'}`,
       level: 'log',
     }),
     ROOM_JOIN_DTO_RECEIVED: (dto: string, type: string): LogMessage => ({
@@ -95,6 +95,26 @@ export const LOG = {
       message: `로그아웃 처리 중 에러 발생: ${error}`,
       level: 'error',
     }),
+    VOICE_HANDLE_ERROR: (error: string, stack?: string): LogMessage => ({
+      message: `Voice Gateway 처리 중 에러 발생: ${error}${stack ? `\n${stack}` : ''}`,
+      level: 'error',
+    }),
+    CLEANUP_STALE_SESSION: (userId: string): LogMessage => ({
+      message: `만료된 JWT로 인한 유령 세션 정리: userId=${userId}`,
+      level: 'warn',
+    }),
+  },
+
+  // AUTH 관련
+  AUTH: {
+    GITHUB_EMAIL_FETCH_FAILED: (userId: string, error: string): LogMessage => ({
+      message: `GitHub 이메일 가져오기 실패: userId=${userId}, error=${error}`,
+      level: 'error',
+    }),
+    TEMP_EMAIL_GENERATED: (userId: string, tempEmail: string): LogMessage => ({
+      message: `GitHub 이메일 부재로 임시 이메일 생성: userId=${userId}, tempEmail=${tempEmail}`,
+      level: 'warn',
+    }),
   },
 
   // 채팅 관련
@@ -129,6 +149,10 @@ export const LOG = {
     }),
     PARTICIPANTS_UPDATED: (roomId: string, currentParticipants: number): LogMessage => ({
       message: `글로벌 채팅 참여자 수 업데이트: roomId=${roomId}, 참여자 수: ${currentParticipants}`,
+      level: 'log',
+    }),
+    USER_BAN: (roomId: string, userId: string, targetNickname: string): LogMessage => ({
+      message: `사용자 강제 퇴장: roomId=${roomId}, userId=${userId}, targetNickname=${targetNickname}`,
       level: 'log',
     }),
     BROADCAST_CLIENTS_COUNT: (roomId: string, eventType: string, clientsCount: number): LogMessage => ({
@@ -181,6 +205,14 @@ export const LOG = {
     }),
     USER_LEFT: (userId: string, roomId: string): LogMessage => ({
       message: `사용자 ${userId}가 방 ${roomId}에서 퇴장했습니다.`,
+      level: 'log',
+    }),
+    USER_KICKED: (userId: string, roomId: string): LogMessage => ({
+      message: `사용자 ${userId}가 방 ${roomId}에서 강제 퇴장당했습니다.`,
+      level: 'log',
+    }),
+    HOST_CHANGED: (roomId: string, newHostId: string): LogMessage => ({
+      message: `방장 변경: roomId=${roomId}, newHostId=${newHostId}`,
       level: 'log',
     }),
     PERMISSION_CHECK: (userId: string, roomId: string): LogMessage => ({
@@ -271,6 +303,10 @@ export const LOG = {
       message: `방 생성 실패 - 이미 참여 중인 방이 있음: userId=${userId}, roomId=${roomId}`,
       level: 'warn',
     }),
+    CLEANUP_STALE_GLOBAL_MEMBERS: (roomId: string, count: number): LogMessage => ({
+      message: `글로벌 방(${roomId}) 초기화 중 유령 멤버 데이터 ${count}개 정리.`,
+      level: 'warn',
+    }),
   },
 
   // 게임 관련
@@ -332,6 +368,183 @@ export const LOG = {
       results: Array<{ player_id: string; score: number; rank: number }>,
     ): LogMessage => ({
       message: `게임 결과 브로드캐스트: roomId=${roomId}, participants=${results.length}`,
+      level: 'log',
+    }),
+  },
+
+  // 음성 관련
+  VOICE: {
+    CREATING_WORKER: {
+      message: `mediasoup Worker 생성 중...`,
+      level: 'log',
+    },
+    WORKER_CREATED: (pid: number): LogMessage => ({
+      message: `Mediasoup Worker 생성: pid=${pid}`,
+      level: 'log',
+    }),
+    WORKER_DIED: {
+      message: `Mediasoup Worker가 예기치 않게 종료됨`,
+      level: 'error',
+    },
+    ROUTER_CREATED: (routerId: string, roomId: string): LogMessage => ({
+      message: `Mediasoup Router 생성: roomId=${roomId}, routerId=${routerId}`,
+      level: 'log',
+    }),
+    ROUTER_CLOSED: (routerId: string, roomId: string): LogMessage => ({
+      message: `Mediasoup Router 종료: roomId=${roomId}, routerId: ${routerId}`,
+      level: 'log',
+    }),
+    TRANSPORT_CREATED: (transportId: string, roomId: string, producing: boolean): LogMessage => ({
+      message: `WebRTC Transport 생성: transportId=${transportId}, roomId=${roomId}, producing=${producing}`,
+      level: 'log',
+    }),
+    TRANSPORT_CREATE_ERROR: (roomId: string, producing: boolean, error: string): LogMessage => ({
+      message: `WebRTC Transport 생성 실패: roomId=${roomId}, producing=${producing}, error=${error}`,
+      level: 'error',
+    }),
+    TRANSPORT_SET_MAX_BITRATE_ERROR: (roomId: string, error: string): LogMessage => ({
+      message: `Transport 최대 비트레이트 설정 실패: roomId=${roomId}, error=${error}`,
+      level: 'warn',
+    }),
+    TRANSPORT_DTLS_FAILED: (transportId: string, dtlsState: string): LogMessage => ({
+      message: `Transport DTLS 연결 실패: transportId=${transportId}, state=${dtlsState}`,
+      level: 'warn',
+    }),
+    TRANSPORT_CONNECTED: (transportId: string): LogMessage => ({
+      message: `WebRTC Transport 연결 성공: transportId=${transportId}`,
+      level: 'log',
+    }),
+    TRANSPORT_ICE_CANDIDATE: (transportId: string, candidate: string): LogMessage => ({
+      message: `ICE 후보 수신: transportId=${transportId}, candidate=${candidate}`,
+      level: 'debug',
+    }),
+    TRANSPORT_CLOSED: (transportId: string): LogMessage => ({
+      message: `WebRTC Transport 종료: transportId=${transportId}`,
+      level: 'log',
+    }),
+    TRANSPORT_NOT_FOUND: (transportId: string): LogMessage => ({
+      message: `WebRTC Transport를 찾을 수 없음: transportId=${transportId}`,
+      level: 'warn',
+    }),
+    TRANSPORT_ROOM_MISMATCH: (transportId: string, actualRoomId: string, requestedRoomId: string): LogMessage => ({
+      message: `Transport 방 불일치: transportId=${transportId}, 실제 방=${actualRoomId}, 요청 방=${requestedRoomId}`,
+      level: 'warn',
+    }),
+    ROUTER_IN_REDIS_NOT_IN_MEMORY: (routerId: string, roomId: string): LogMessage => ({
+      message: `Redis에는 있지만 메모리에 없는 Router 발견: routerId=${routerId}, roomId=${roomId}. 새 Router를 생성합니다.`,
+      level: 'warn',
+    }),
+    TRANSPORT_IN_REDIS_NOT_IN_MEMORY: (transportId: string): LogMessage => ({
+      message: `Redis에는 있지만 현재 서버 인스턴스의 메모리에 없는 Transport: transportId=${transportId}`,
+      level: 'error',
+    }),
+    MEDIASOUP_CONFIG_ERROR: {
+      message: `Mediasoup 환경 변수(RTC 포트, 리슨 IP, 공지 IP)가 완전히 구성되지 않았습니다.`,
+      level: 'error',
+    },
+    TRANSPORT_NOT_FOUND_REDIS: (transportId: string): LogMessage => ({
+      message: `Redis에서 ID "${transportId}"를 가진 Transport를 찾을 수 없습니다.`,
+      level: 'warn',
+    }),
+    TRANSPORT_ROOM_FORBIDDEN: (transportId: string, roomId: string): LogMessage => ({
+      message: `ID "${transportId}"를 가진 Transport는 방 "${roomId}"에 속하지 않습니다.`,
+      level: 'warn',
+    }),
+    REDIS_CLEANUP_ERROR: (objectId: string, error: string): LogMessage => ({
+      message: `Redis에서 객체 ${objectId} 정리 실패: ${error}`,
+      level: 'error',
+    }),
+    TRANSPORT_NOT_FOR_PRODUCING: (transportId: string): LogMessage => ({
+      message: `Transport ${transportId}는 producing용으로 생성되지 않았습니다.`,
+      level: 'warn',
+    }),
+    PRODUCER_CREATED: (producerId: string, transportId: string, userId: string): LogMessage => ({
+      message: `Producer 생성: producerId=${producerId}, transportId=${transportId}, userId=${userId}`,
+      level: 'log',
+    }),
+    PRODUCER_NOT_FOUND: (producerId: string): LogMessage => ({
+      message: `메모리에서 Producer를 찾을 수 없음: producerId=${producerId}`,
+      level: 'warn',
+    }),
+    PRODUCER_OWNERSHIP_MISMATCH: (producerId: string, actualUserId: string, requestedUserId: string): LogMessage => ({
+      message: `Producer 소유권 불일치: producerId=${producerId}, 실제 소유자=${actualUserId}, 요청자=${requestedUserId}`,
+      level: 'warn',
+    }),
+    PRODUCER_PAUSED: (producerId: string, userId: string): LogMessage => ({
+      message: `Producer 일시 중지: producerId=${producerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    PRODUCER_RESUMED: (producerId: string, userId: string): LogMessage => ({
+      message: `Producer 재개: producerId=${producerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    PRODUCER_CLOSED: (producerId: string, userId: string): LogMessage => ({
+      message: `Producer 종료: producerId=${producerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    PRODUCERS_FOR_ROOM_FETCHED: (roomId: string, count: number): LogMessage => ({
+      message: `방의 Producer 목록 조회: roomId=${roomId}, count=${count}`,
+      level: 'log',
+    }),
+    CONSUMER_NOT_FOUND: (consumerId: string): LogMessage => ({
+      message: `메모리에서 Consumer를 찾을 수 없음: consumerId=${consumerId}`,
+      level: 'warn',
+    }),
+    CONSUMER_OWNERSHIP_MISMATCH: (consumerId: string, actualUserId: string, requestedUserId: string): LogMessage => ({
+      message: `Consumer 소유권 불일치: consumerId=${consumerId}, 실제 소유자=${actualUserId}, 요청자=${requestedUserId}`,
+      level: 'warn',
+    }),
+    CONSUMER_PAUSED: (consumerId: string, userId: string): LogMessage => ({
+      message: `Consumer 일시 중지: consumerId=${consumerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    CONSUMER_RESUMED: (consumerId: string, userId: string): LogMessage => ({
+      message: `Consumer 재개: consumerId=${consumerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    PRODUCER_NOT_FOUND_REDIS: (producerId: string): LogMessage => ({
+      message: `Redis에서 ID "${producerId}"를 가진 Producer를 찾을 수 없습니다.`,
+      level: 'warn',
+    }),
+    CONSUMER_TRANSPORT_NOT_FOR_CONSUMING: (transportId: string): LogMessage => ({
+      message: `Transport ${transportId}는 consuming용으로 생성되지 않았습니다.`,
+      level: 'warn',
+    }),
+    PRODUCER_TRANSPORT_ROOM_MISMATCH: (
+      producerId: string,
+      transportId: string,
+      producerRoomId: string,
+      transportRoomId: string,
+    ): LogMessage => ({
+      message: `Producer ${producerId}(${producerRoomId})와 Transport ${transportId}(${transportRoomId})가 서로 다른 방에 속해있습니다.`,
+      level: 'warn',
+    }),
+    PRODUCER_PAUSED_CANNOT_CONSUME: (producerId: string): LogMessage => ({
+      message: `Producer ${producerId}가 일시 중지 상태이므로 소비할 수 없습니다.`,
+      level: 'warn',
+    }),
+    ROUTER_CANNOT_CONSUME: (producerId: string, transportId: string): LogMessage => ({
+      message: `Router가 이 Producer를 소비할 수 없음: producerId=${producerId}, transportId=${transportId}`,
+      level: 'error',
+    }),
+    CONSUMER_CREATED: (consumerId: string, producerId: string, userId: string): LogMessage => ({
+      message: `Consumer 생성: consumerId=${consumerId}, producerId=${producerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    TRANSPORT_OWNERSHIP_MISMATCH: (transportId: string, actualUserId: string, requestedUserId: string): LogMessage => ({
+      message: `Transport ${transportId}는 사용자 ${requestedUserId}의 소유가 아닙니다. 실제 소유자: ${actualUserId}`,
+      level: 'warn',
+    }),
+    MEDIASOUP_OBJECT_NOT_IN_MEMORY: {
+      message: `Mediasoup 객체가 Redis에는 존재하지만 현재 서버 메모리에는 없습니다. 서버 상태를 확인하세요.`,
+      level: 'error',
+    },
+    CONSUMER_CLOSED: (consumerId: string, userId: string): LogMessage => ({
+      message: `Consumer 종료: consumerId=${consumerId}, userId=${userId}`,
+      level: 'log',
+    }),
+    VOICE_LEAVE_ROOM: (userId: string, roomId: string): LogMessage => ({
+      message: `음성 채팅방 퇴장 및 리소스 정리 시작: userId=${userId}, roomId=${roomId}`,
       level: 'log',
     }),
   },
