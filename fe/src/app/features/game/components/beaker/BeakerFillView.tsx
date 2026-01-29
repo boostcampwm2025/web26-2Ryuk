@@ -6,7 +6,7 @@ import styles from './beakerFillView.module.css';
 import Paths from '@/app/shared/path';
 import CSSUtil from '@/utils/css';
 import WaterDrop from '@/app/components/sprite/waterDrop/WaterDrop';
-import { GAME_IDS } from '@/app/shared/constant';
+import GAMES from '@/app/shared/constant';
 
 type WaterType = 'me' | 'other';
 
@@ -31,8 +31,8 @@ function BeakerFillView({
   const prevTriggerRef = useRef(dropTrigger);
   const dropIdRef = useRef(0);
 
-  const beakerSrc = Paths.games(GAME_IDS.BEAKER, 'beaker');
-  const maskSrc = Paths.games(GAME_IDS.BEAKER, 'beaker-mask');
+  const beakerSrc = Paths.games(GAMES.BEAKER.ID, 'beaker');
+  const maskSrc = Paths.games(GAMES.BEAKER.ID, 'beaker-mask');
   const BEAKER_HEIGHT = 440;
   const BEAKER_RATIO = 14 / 22;
   const beakerWidth = Math.round(BEAKER_HEIGHT * BEAKER_RATIO);

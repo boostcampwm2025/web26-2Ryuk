@@ -3,7 +3,7 @@
 import CSSUtil from '@/utils/css';
 import { ProfileRow } from '@/app/components/shared/profile/Profile';
 import { RankCoin } from '@/app/components/shared/coin';
-import styles from './gameResultPodium.module.css';
+import styles from './rankingPodium.module.css';
 
 export interface PodiumRankItemProps {
   rank: 1 | 2 | 3;

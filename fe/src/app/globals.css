@@ -9,6 +9,10 @@
     'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
 }
 
+html {
+  scrollbar-gutter: stable both-edges;
+}
+
 body {
   font-family: var(--pretendard);
   -webkit-font-smoothing: antialiased;

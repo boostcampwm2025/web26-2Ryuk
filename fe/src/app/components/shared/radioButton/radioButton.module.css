@@ -8,6 +8,11 @@
   box-shadow: inset 0 0 0 1px var(--neutral-3);
 }
 
+.radioButtonGroup.disabled {
+  background: var(--neutral-1);
+  pointer-events: none;
+}
+
 .radioOption {
   position: relative;
   display: flex;
@@ -29,6 +34,20 @@
   color: var(--primary-1);
 }
 
+.radioButtonGroup.disabled .radioOption {
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.radioButtonGroup.disabled .radioOption:hover {
+  background: transparent;
+}
+
+.radioButtonGroup.disabled .radioOption.selected {
+  background: var(--neutral-4);
+  color: var(--neutral-1);
+}
+
 .input {
   position: absolute;
   opacity: 0;
@@ -42,6 +61,10 @@
   font: var(--button-medium);
   color: var(--secondary);
   white-space: nowrap;
+}
+
+.radioButtonGroup.disabled .label {
+  color: var(--neutral-4);
 }
 
 .radioOption.selected .label {

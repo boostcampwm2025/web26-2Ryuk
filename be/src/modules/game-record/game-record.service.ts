@@ -25,7 +25,7 @@ export class GameRecordService {
    * @param limit 페이지당 항목 수
    */
   async getGameRecordsRanking(
-    userId: string | null,
+    nickname: string | undefined,
     gameId: string,
     page: number | undefined,
     limit: number = 10,
@@ -83,12 +83,12 @@ export class GameRecordService {
         targetPage = page;
       } else {
         // FE가 page를 못 보낸 경우 (로그인 O, 최초 조회)
-        if (!userId) {
+        if (!nickname) {
           // 로그인 X -> 1페이지로
           targetPage = 1;
         } else {
           // 로그인 O -> 내 랭킹 찾기
-          const userRankItem = allRankItems.find((item) => item.player_id === userId);
+          const userRankItem = allRankItems.find((item) => item.nickname === nickname);
           if (userRankItem) {
             // 기록 O -> 내 랭킹이 있는 페이지 계산
             targetPage = Math.ceil(userRankItem.rank / limit);
@@ -119,9 +119,7 @@ export class GameRecordService {
         },
       };
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
+      if (error instanceof NotFoundException) throw error;
       this.logger.error('게임 랭킹 조회 중 오류 발생', error.stack);
       throw error;
     }

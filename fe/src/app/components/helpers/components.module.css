@@ -215,6 +215,18 @@
   align-items: flex-start;
 }
 
+.buttonRow {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.buttonRowItem {
+  flex: 1;
+  min-width: 200px;
+}
+
 .cardRow {
   display: flex;
   gap: 16px;

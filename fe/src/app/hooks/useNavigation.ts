@@ -30,7 +30,7 @@ export default function useNavigation() {
     gotoGame: (roomId: string, gameId: string) => {
       router.push(ROUTES.game(roomId, gameId));
     },
-    gotoRanking: (roomId: string, gameId: string) => {
+    gotoGameRanking: (roomId: string, gameId: string) => {
       router.push(ROUTES.ranking(roomId, gameId));
     },
     gotoRoomGameList: (roomId: string) => {
@@ -38,6 +38,9 @@ export default function useNavigation() {
     },
     gotoRoomReplace: (id: string) => {
       router.replace(ROUTES.room(id));
+    },
+    gotoRanking: (gameId: string) => {
+      router.push(`/ranking/${gameId}`);
     },
   };
 }

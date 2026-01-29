@@ -19,28 +19,21 @@ export default function AudioControlButtons({
   };
 
   // 로직도 props인 micOn, speakerOn을 기준으로 판단합니다.
-  const getMicThemeColor = () => {
-    if (!micOn) return speakerOn ? 'secondary' : 'error-secondary';
-    return 'outline';
-  };
-
-  const getSpeakerThemeColor = () => {
-    if (!speakerOn) return 'error-secondary';
-    return 'outline';
-  };
+  const micThemeColor = micOn ? 'outline' : 'error-secondary';
+  const speakerThemeColor = speakerOn ? 'outline' : 'error-secondary';
 
   return (
     <div className={styles.audioControls}>
       <IconButtonBase
         name={micOn ? 'mic' : 'micoff'}
         size="small"
-        variant={getMicThemeColor()}
+        variant={micThemeColor}
         onClick={handleMicToggle}
       />
       <IconButtonBase
         name={speakerOn ? 'volume' : 'mute'}
         size="small"
-        variant={getSpeakerThemeColor()}
+        variant={speakerThemeColor}
         onClick={handleSpeakerToggle}
       />
     </div>

@@ -12,6 +12,13 @@
   gap: 40px;
 }
 
+.sideWidgets {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex: 1;
+}
+
 .desktop .topSection {
   flex-direction: row;
 }
@@ -23,4 +30,3 @@
 .mobile .topSection {
   flex-direction: column;
 }
-

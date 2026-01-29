@@ -1,0 +1,14 @@
+.gameDropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 280px;
+}
+
+.label {
+  font: var(--body-2);
+  font-weight: 600;
+  color: #0f172a;
+}

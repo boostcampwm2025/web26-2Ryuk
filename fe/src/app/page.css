@@ -7,13 +7,16 @@
   );
 }
 
+body {
+  background: var(--primary-3);
+}
+
 .page {
   display: flex;
   justify-content: center;
   flex: 1;
   padding: 80px 0;
   min-height: calc(100vh - var(--page-header-height));
-  background: var(--primary-3);
 }
 
 .page .content {

@@ -2,35 +2,9 @@
   display: grid;
   gap: 24px;
   width: 100%;
-  grid-template-columns: repeat(var(--grid-columns-count, 4), minmax(0, 1fr));
-}
-
-.colsAuto {
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-}
-
-.cols1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-.cols2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.cols3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.cols4 {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.cols5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.cols6 {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--grid-card-min-width, 240px), 1fr));
+  justify-items: stretch;
+  align-items: stretch;
 }
 
 .cell {

@@ -2,11 +2,27 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: 100%;
   gap: 24px;
   align-items: stretch;
 }
 
 .podiumWrapper {
-  padding: 0 20px;
+  padding: 0 30px;
+}
+
+.tableWrapper {
+  padding: 0 24px 24px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+.errorMessage {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--error);
+  font: var(--body-3);
 }

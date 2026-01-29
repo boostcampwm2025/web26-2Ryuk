@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import styles from '@/app/components/helpers/components.module.css';
 import Icon from '@/app/components/shared/icon/Icon';
+import BrandIcon from '@/app/components/shared/icon/Brand';
 import IconCircleDefault from '@/app/components/shared/icon/IconCircle';
 import * as IconCircle from '@/app/components/shared/icon/IconCircle';
 import * as IconButton from '@/app/components/shared/icon/IconButton';
@@ -29,6 +30,8 @@ import Dropdown from '@/app/components/shared/dropdown/Dropdown';
 import ComponentRelations from '@/app/components/helpers/ComponentRelations';
 import Avatar from '@/app/components/shared/profile/Avatar';
 import AvatarCount from '@/app/components/shared/profile/AvatarCount';
+import PageIndicator from '@/app/components/shared/pageIndicator/PageIndicator';
+import LoginButtonWithModal from '@/app/components/shared/button/LoginButtonWithModal';
 import { ProfileRow, ProfileColumn } from '@/app/components/shared/profile/Profile';
 import Avatars from '@/app/components/shared/profile/Avatars';
 import profilesMock from '@/mocks/data/profiles.json';
@@ -39,6 +42,11 @@ import type { TableColumn } from '@/app/components/table/types';
 import type { GamePlayerResultItemData } from '@/app/features/game/dtos/data';
 import { GameConverter } from '@/app/features/game/dtos/converter';
 import resultsMock from '@/mocks/data/results.json';
+import {
+  GithubAuthButton,
+  GoogleAuthButton,
+  MbwtAuthButton,
+} from '@/app/features/auth/components/AuthButton';
 
 const sharedTableColumns: TableColumn<GamePlayerResultItemData>[] = [
   {
@@ -77,6 +85,16 @@ export default function SharedComponents({ iconList }: SharedComponentsProps) {
   const sharedGetRowKey = (row: GamePlayerResultItemData) => row.playerId;
   const sharedHighlightRow = (row: GamePlayerResultItemData) => row.rank === 1;
   const [selectedDropdownValue, setSelectedDropdownValue] = useState('item2');
+  const [pageIndicatorPage, setPageIndicatorPage] = useState(1);
+  const pageIndicatorMax = 12;
+
+  const handlePageIndicatorSelect = (page: number) => {
+    setPageIndicatorPage((_) => {
+      if (page < 1) return 1;
+      if (page > pageIndicatorMax) return pageIndicatorMax;
+      return page;
+    });
+  };
 
   return (
     <>
@@ -89,6 +107,25 @@ export default function SharedComponents({ iconList }: SharedComponentsProps) {
                 <Icon name={iconName} size="medium" />
               </div>
               <span className={styles.iconLabel}>{iconName}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="brand-icons" className={styles.section}>
+        <h2 className={styles.sectionTitle}>BrandIcons</h2>
+        <ComponentRelations componentId="brand-icons" />
+        <div className={styles.iconGrid}>
+          {[
+            { name: 'google', label: 'Google' },
+            { name: 'github', label: 'Github' },
+            { name: 'mbwt', label: 'MBWT' },
+          ].map((item) => (
+            <div key={item.name} className={styles.iconItem}>
+              <div className={styles.iconWrapper}>
+                <BrandIcon name={item.name} size="medium" />
+              </div>
+              <span className={styles.iconLabel}>{item.label}</span>
             </div>
           ))}
         </div>
@@ -1586,16 +1623,38 @@ export default function SharedComponents({ iconList }: SharedComponentsProps) {
       <section id="radio-button" className={styles.section}>
         <h2 className={styles.sectionTitle}>RadioButton</h2>
         <ComponentRelations componentId="radio-button" />
-        <div className={styles.showcaseBlock}>
-          <h3 className={styles.blockTitle}>Default</h3>
-          <Component>
-            <RadioButton name="filter" values={['item 1', 'item 2', 'item 3']} />
-          </Component>
+        <div className={styles.dropdownShowcaseRow}>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Default</h3>
+            <Component>
+              <RadioButton name="filter" values={['item 1', 'item 2', 'item 3']} />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Game Filter</h3>
+            <Component>
+              <RadioButton name="game-filter" values={['전체', '경쟁', '협동']} />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Disabled</h3>
+            <Component>
+              <RadioButton name="game-filter-disabled" values={['그룹', '전체']} disabled />
+            </Component>
+          </div>
         </div>
+      </section>
+
+      <section id="page-indicator" className={styles.section}>
+        <h2 className={styles.sectionTitle}>PageIndicator</h2>
+        <ComponentRelations componentId="page-indicator" />
         <div className={styles.showcaseBlock}>
-          <h3 className={styles.blockTitle}>Game Filter</h3>
           <Component>
-            <RadioButton name="game-filter" values={['전체', '경쟁', '협동']} />
+            <PageIndicator
+              page={pageIndicatorPage}
+              maxPage={pageIndicatorMax}
+              onPageSelect={handlePageIndicatorSelect}
+            />
           </Component>
         </div>
       </section>
@@ -1647,6 +1706,40 @@ export default function SharedComponents({ iconList }: SharedComponentsProps) {
               />
             </Component>
           </div>
+        </div>
+      </section>
+
+      <section id="auth-button" className={styles.section}>
+        <h2 className={styles.sectionTitle}>AuthButton</h2>
+        <ComponentRelations componentId="auth-button" />
+        <div className={styles.showcaseBlock}>
+          <div className={styles.buttonRow}>
+            <div className={styles.buttonRowItem}>
+              <Component fullWidth>
+                <GoogleAuthButton />
+              </Component>
+            </div>
+            <div className={styles.buttonRowItem}>
+              <Component fullWidth>
+                <GithubAuthButton />
+              </Component>
+            </div>
+            <div className={styles.buttonRowItem}>
+              <Component fullWidth>
+                <MbwtAuthButton />
+              </Component>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="login-modal-button" className={styles.section}>
+        <h2 className={styles.sectionTitle}>LoginButtonWithModal</h2>
+        <ComponentRelations componentId="login-modal-button" />
+        <div className={styles.showcaseBlock}>
+          <Component>
+            <LoginButtonWithModal />
+          </Component>
         </div>
       </section>
 

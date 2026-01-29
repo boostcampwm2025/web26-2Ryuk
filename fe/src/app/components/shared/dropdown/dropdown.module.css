@@ -11,7 +11,7 @@
   width: 100%;
   padding: 12px 16px;
   background: var(--neutral-1);
-  border: 2px solid var(--neutral-3);
+  border: 2px solid var(--neutral-4);
   border-radius: 52px;
   cursor: pointer;
   transition: border-color 0.2s ease-in-out;
@@ -31,6 +31,7 @@
 .dropdown.disabled .button {
   cursor: not-allowed;
   opacity: 0.6;
+  background: var(--neutral-2);
 }
 
 .label {

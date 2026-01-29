@@ -71,34 +71,38 @@ async function seedGameRecords() {
     const games = await gameRepository.find();
     const users = await userRepository.find();
 
-    if (games.length === 0) {
-      Logger.warn('⚠️  게임 데이터가 없습니다. 게임을 먼저 생성해주세요.');
+    if (games.length < 2) {
+      Logger.warn('⚠️  게임이 2개 이상 필요합니다.');
       return;
     }
 
-    if (users.length === 0) {
-      Logger.warn('⚠️  사용자 데이터가 없습니다. 사용자를 먼저 생성해주세요.');
+    if (users.length < 55) {
+      Logger.error(`❌ 사용자 수가 부족합니다. 필요: 55명, 현재: ${users.length}명`);
       return;
     }
 
-    Logger.log(`게임 ${games.length}개, 사용자 ${users.length}명을 찾았습니다.`);
+    // 앞의 2개 게임만 사용
+    const targetGames = games.slice(0, 2);
+    const RECORDS_PER_GAME = 55;
 
-    // 각 사용자당 각 게임에 대해 1~3개의 랜덤 기록 생성
+    Logger.log(`게임 2개 × 게임당 55개 = 총 110개 기록 생성`);
+
     const recordsToInsert: GameRecord[] = [];
-    const recordsPerUserGame = 1;
 
-    for (const user of users) {
-      for (const game of games) {
-        for (let i = 0; i < recordsPerUserGame; i++) {
-          const gameRecord = new GameRecord();
-          gameRecord.id = uuidv4();
-          gameRecord.user_id = user.id;
-          gameRecord.game_id = game.id;
-          gameRecord.score = getRandomScore();
-          gameRecord.achieve_date = getRandomDate();
+    for (const game of targetGames) {
+      // 각 게임마다 유저를 새로 섞어서 55명 선택
+      const shuffledUsers = [...users].sort(() => Math.random() - 0.5);
+      const selectedUsers = shuffledUsers.slice(0, RECORDS_PER_GAME);
 
-          recordsToInsert.push(gameRecord);
-        }
+      for (const user of selectedUsers) {
+        const gameRecord = new GameRecord();
+        gameRecord.id = uuidv4();
+        gameRecord.user_id = user.id;
+        gameRecord.game_id = game.id;
+        gameRecord.score = getRandomScore();
+        gameRecord.achieve_date = getRandomDate();
+
+        recordsToInsert.push(gameRecord);
       }
     }
 

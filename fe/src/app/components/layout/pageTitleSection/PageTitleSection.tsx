@@ -13,8 +13,9 @@ import {
 import { PrimaryTextButton } from '@/app/components/shared/button/TextButton';
 import SearchForm from '@/app/components/shared/form/search/SearchForm';
 import RadioButton from '@/app/components/shared/radioButton/RadioButton';
-import { GAME_IDS } from '@/app/shared/constant';
+import GAMES from '@/app/shared/constant';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import GameDropdown from '@/app/features/game/components/GameDropdown';
 
 export function PageTitleSection({ label, title, description, children }: PageTitleSectionProps) {
   const { status } = useResponsive();
@@ -56,17 +57,10 @@ export function GameListPageTitleSection({ onSearch }: GameListPageTitleSectionP
 }
 
 export function GamePageTitleSection({ gameId }: GamePageTitleSectionProps) {
-  switch (gameId) {
-    case GAME_IDS.BEAKER:
-      return (
-        <PageTitleSection
-          label="MINIGAMES"
-          title="비커 채우기"
-          description="제한시간 동안 스페이스바를 빠르게 눌러 비커를 채워보세요."
-        />
-      );
-  }
-  return null;
+  const meta = GAMES.fromId(gameId);
+  if (!meta) return null;
+
+  return <PageTitleSection label="MINIGAMES" title={meta.TITLE} description={meta.DESCRIPTION} />;
 }
 type RankingView = 'group' | 'all';
 
@@ -78,12 +72,21 @@ const rankingViews: { value: RankingView; label: string }[] = [
 export function RankingPageTitleSection({
   onChange,
   view = 'group',
+  selectedGameId,
+  dropdownDisabled,
+  radioDisabled,
+  onDropdownChange,
 }: RankingPageTitleSectionProps) {
   const [selectedView, setSelectedView] = useState<RankingView>(view);
+  const [selectedGame, setSelectedGame] = useState(selectedGameId ?? GAMES.BEAKER.ID);
 
   useEffect(() => {
     setSelectedView(view);
   }, [view]);
+
+  useEffect(() => {
+    if (selectedGameId !== undefined) setSelectedGame(selectedGameId);
+  }, [selectedGameId]);
 
   const handleSelectView = useCallback(
     (index: number) => {
@@ -100,19 +103,33 @@ export function RankingPageTitleSection({
     [selectedView],
   );
 
+  const handleDropdownChange = (value: string) => {
+    setSelectedGame(value);
+    onDropdownChange?.(value);
+  };
+
   return (
     <PageTitleSection
       label="RANKINGS"
       title="게임 랭킹"
       description="지금, 더 나은 기록에 도전해보세요!"
     >
-      <RadioButton
-        key={selectedView}
-        name="ranking-view"
-        values={rankingViews.map((item) => item.label)}
-        initialSelected={Math.max(selectedIndex, 0)}
-        onChange={handleSelectView}
-      />
+      <div className={styles.rankingControls}>
+        <GameDropdown
+          placeholder={GAMES.fromId(selectedGame)?.TITLE ?? '게임 선택'}
+          value={selectedGame}
+          onChange={handleDropdownChange}
+          disabled={dropdownDisabled}
+        />
+        <RadioButton
+          key={selectedView}
+          name="ranking-view"
+          values={rankingViews.map((item) => item.label)}
+          initialSelected={Math.max(selectedIndex, 0)}
+          onChange={handleSelectView}
+          disabled={radioDisabled}
+        />
+      </div>
     </PageTitleSection>
   );
 }

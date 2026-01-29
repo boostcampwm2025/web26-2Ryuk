@@ -10,7 +10,11 @@ import GlobalChatPanel from '@/app/features/chat/components/GlobalChatPanel';
 import RoomChatPanel from '@/app/features/chat/components/LocalChatPanel';
 import GameCard, { EmptyGameCard } from '@/app/features/game/components/GameCard';
 import GameCardGrid from '@/app/features/game/components/GameCardGrid';
-import GameResultPodium from '@/app/features/game/components/podium/GameResultPodium';
+import GameDropdown from '@/app/features/game/components/GameDropdown';
+import {
+  RankingPodiumRow,
+  RankingPodiumColumn,
+} from '@/app/features/game/components/podium/RankingPodium';
 import PodiumRankItem from '@/app/features/game/components/podium/PodiumRankItem';
 import RankingTable from '@/app/features/game/components/ranking/RankingTable';
 import SelectedGameCard from '@/app/features/game/components/SelectedGameCard';
@@ -19,6 +23,7 @@ import PopularPosts from '@/app/features/post/components/PopularPosts';
 import PostListItem from '@/app/features/post/components/PostListItem';
 import PostListRow from '@/app/features/post/components/PostListRow';
 import { PostConverter } from '@/app/features/post/dtos/Post';
+import GAMES from '@/app/shared/constant';
 import RoomCard from '@/app/features/room/components/card/RoomCard';
 import VoiceParticipantCard from '@/app/features/room/components/chat/VoiceParticipantCard';
 import MicSetting from '@/app/features/room/components/creation/MicSetting';
@@ -440,7 +445,7 @@ export default function FeatureComponents() {
           <div className={styles.showcaseBlock}>
             <Component fullWidth>
               <GameCard
-                id="5373d4b3-abcc-68a1-9e50-8eb662b38201"
+                id="550e8400-e29b-41d4-a716-446655440001"
                 title="비커 채우기"
                 description="제한 시간 동안 스페이스바를 빠르게 연타하여 비커를 채우세요!"
                 type="competition"
@@ -592,13 +597,37 @@ export default function FeatureComponents() {
         </div>
       </section>
 
-      <section id="game-result-podium" className={styles.section}>
-        <h2 className={styles.sectionTitle}>GameResultPodium</h2>
-        <ComponentRelations componentId="game-result-podium" />
+      <section id="ranking-podium" className={styles.section}>
+        <h2 className={styles.sectionTitle}>RankingPodium</h2>
+        <ComponentRelations componentId="ranking-podium" />
         <div className={styles.showcaseBlock}>
-          <Component fullWidth>
-            <GameResultPodium players={podiumResultPlayers} />
-          </Component>
+          <div className={styles.cardRow}>
+            <Component fullWidth>
+              <RankingPodiumRow players={podiumResultPlayers} />
+            </Component>
+            <Component fullWidth>
+              <RankingPodiumColumn players={podiumResultPlayers} />
+            </Component>
+          </div>
+        </div>
+      </section>
+
+      <section id="game-dropdown" className={styles.section}>
+        <h2 className={styles.sectionTitle}>GameDropdown</h2>
+        <ComponentRelations componentId="game-dropdown" />
+        <div className={styles.dropdownShowcaseRow}>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Default</h3>
+            <Component fullWidth>
+              <GameDropdown placeholder="게임 선택" />
+            </Component>
+          </div>
+          <div className={styles.showcaseBlock}>
+            <h3 className={styles.blockTitle}>Disabled</h3>
+            <Component fullWidth>
+              <GameDropdown placeholder="게임 선택" disabled value={GAMES.BEAKER.ID} />
+            </Component>
+          </div>
         </div>
       </section>
 

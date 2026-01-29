@@ -5,7 +5,7 @@
 import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import styles from './page.module.css';
-import { GAME_IDS } from '@/app/shared/constant';
+import GAMES from '@/app/shared/constant';
 import BeakerGameScreen from '@/app/features/game/components/beaker/BeakerGameScreen';
 import ReflexGameScreen from '@/app/features/game/components/reflex/ReflexGameScreen';
 
@@ -16,9 +16,9 @@ export default function GamePage() {
 
   const content = useMemo(() => {
     switch (gameId) {
-      case GAME_IDS.BEAKER:
+      case GAMES.BEAKER.ID:
         return <BeakerGameScreen roomId={roomId} />;
-      case GAME_IDS.REFLEX:
+      case GAMES.REFLEX.ID:
         return <ReflexGameScreen roomId={roomId} />;
     }
     return <div className={styles.undefinedText}>지원되지 않는 게임입니다.</div>;

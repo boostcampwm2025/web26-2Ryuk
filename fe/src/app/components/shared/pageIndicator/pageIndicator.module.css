@@ -1,0 +1,34 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: var(--neutral-1);
+}
+
+.pages {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pageButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--body-2);
+  color: var(--secondary);
+  background: transparent;
+  transition: background 0.2s ease-in-out;
+}
+
+.selected {
+  font: var(--title-1);
+  color: var(--primary-1);
+  background: var(--primary-6);
+}

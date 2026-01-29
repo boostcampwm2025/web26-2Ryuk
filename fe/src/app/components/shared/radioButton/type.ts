@@ -3,4 +3,5 @@ export interface RadioButtonProps {
   values: string[];
   initialSelected?: number;
   onChange?: (index: number) => void;
+  disabled?: boolean;
 }

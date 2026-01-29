@@ -2,18 +2,14 @@
 
 import '@/app/page.css';
 import HeroSection from '@/app/components/layout/heroSection/HeroSection';
-import PopularPostsSection from '@/app/features/post/components/PopularPosts.server';
 import RealtimeRoomsSection from '@/app/features/room/components/RealtimeRoomsSection';
 import styles from './page.module.css';
 import useResponsive from '@/app/hooks/useResponsive';
-import { roomStore, RoomStore } from '@/app/features/room/stores/room';
-import LocalChatPanel from '@/app/features/chat/components/LocalChatPanel';
 import GlobalChatPanel from '@/app/features/chat/components/GlobalChatPanel';
+import RankingSection from '@/app/features/gameRecords/components/RankingSection';
 
 export default function HomePage() {
   const { status } = useResponsive();
-  const roomId = roomStore((state: RoomStore) => state.roomId);
-  const isJoined = roomStore((state: RoomStore) => state.isJoined);
 
   return (
     <div className={styles[status]}>
@@ -21,15 +17,14 @@ export default function HomePage() {
         <div className={styles.contentWrapper}>
           <div className={styles.topSection}>
             <HeroSection />
-            <div>
-              <PopularPostsSection />
+            <div className={styles.sideWidgets}>
+              <RankingSection />
             </div>
           </div>
           <RealtimeRoomsSection />
         </div>
       </div>
       <GlobalChatPanel />
-      {roomId && isJoined && <LocalChatPanel />}
     </div>
   );
 }

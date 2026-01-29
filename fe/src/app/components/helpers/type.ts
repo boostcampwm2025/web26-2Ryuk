@@ -192,6 +192,12 @@ export const componentRelations: ComponentRelation[] = [
     children: ['game-card'],
   },
   { id: 'beaker-fill-view', title: 'BeakerFillView', category: 'feature' },
+  {
+    id: 'game-dropdown',
+    title: 'GameDropdown',
+    category: 'feature',
+    children: ['dropdown'],
+  },
 
   // Sprite Components
   { id: 'logo-image', title: 'LogoImage', category: 'sprite' },
@@ -289,6 +295,7 @@ export const featureSections = [
   { id: 'game-card', title: 'GameCard' },
   { id: 'game-card-grid', title: 'GameCardGrid' },
   { id: 'beaker-fill-view', title: 'BeakerFillView' },
+  { id: 'game-dropdown', title: 'GameDropdown' },
 ];
 
 export const spriteSections = [

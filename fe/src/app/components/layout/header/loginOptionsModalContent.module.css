@@ -1,13 +1,42 @@
-.container {
+.modal {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px;
+  gap: 52px;
+  padding: 52px;
+  width: 440px;
+  background: var(--neutral-1);
+  border-radius: 52px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .title {
-  font: var(--large-2);
+  margin: 0;
+  font: var(--display-1);
   color: var(--neutral-9);
-  margin-bottom: 16px;
-  text-align: center;
+}
+
+.subtitle {
+  margin: 0;
+  font: var(--heading-2);
+  color: var(--primary-6);
+}
+
+.buttonStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }

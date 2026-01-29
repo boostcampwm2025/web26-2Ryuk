@@ -49,6 +49,16 @@
   gap: 12px;
 }
 
+.rankingControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rankingControls > :first-child {
+  min-width: 240px;
+}
+
 .mobile .actions {
   flex-direction: column;
   align-items: flex-end;

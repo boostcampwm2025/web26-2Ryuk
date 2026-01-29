@@ -8,8 +8,8 @@ import { CSSProperties } from 'react';
 
 interface GameCardGridProps {
   games: GameData[];
-  viewRows: number;
-  viewColumns: number;
+  viewRows?: number;
+  viewColumns?: number;
   onSelect?: (id: string) => void;
 }
 
@@ -36,7 +36,7 @@ export default function GameCardGrid({
 
   const visibleItems = cardItems.slice(0, totalSlots);
   const gridStyle = {
-    '--grid-columns-count': viewColumns.toString(),
+    '--grid-card-min-width': `${Math.max(220, Math.floor(1200 / viewColumns))}px`,
   } as CSSProperties;
 
   return (

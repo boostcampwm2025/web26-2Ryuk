@@ -468,12 +468,18 @@ export class RoomService implements OnModuleInit {
 
     if (roomData.max_participants <= 1) throw new HttpException('최대 참여자 수는 2명 이상이어야 합니다.', 400);
 
+    let password = '';
+
+    if (roomData.is_private) {
+      password = (await this.redisClient.hGet(roomKey, 'password')) ?? '';
+    }
+
     await this.redisClient.hSet(roomKey, {
       title: roomData.title,
       max_participants: roomData.max_participants.toString(),
       is_mic_available: roomData.is_mic_available ? '1' : '0',
       is_private: roomData.is_private ? '1' : '0',
-      password: roomData.password ?? '',
+      password: roomData.password ?? password,
     });
 
     if (roomData.tags && roomData.tags.length > 0) {

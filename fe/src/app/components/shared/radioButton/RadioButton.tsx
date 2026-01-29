@@ -10,6 +10,7 @@ export default function RadioButton({
   values,
   initialSelected = 0,
   onChange,
+  disabled = false,
 }: RadioButtonProps) {
   const [selected, setSelected] = useState(initialSelected);
 
@@ -19,14 +20,16 @@ export default function RadioButton({
     onChange?.(index);
   };
 
+  const groupClassName = CSSUtil.buildCls(styles.radioButtonGroup, disabled && styles.disabled);
+
   return (
-    <div className={styles.radioButtonGroup}>
+    <div className={groupClassName}>
       {values.map((value, index) => {
         const isSelected = selected === index;
-        const className = CSSUtil.buildCls(styles.radioOption, isSelected && styles.selected);
+        const optionClassName = CSSUtil.buildCls(styles.radioOption, isSelected && styles.selected);
 
         return (
-          <label key={index} className={className}>
+          <label key={index} className={optionClassName}>
             <input
               type="radio"
               name={name}
@@ -34,6 +37,7 @@ export default function RadioButton({
               checked={isSelected}
               onChange={handleChange}
               className={styles.input}
+              disabled={disabled}
             />
             <span className={styles.label}>{value}</span>
           </label>

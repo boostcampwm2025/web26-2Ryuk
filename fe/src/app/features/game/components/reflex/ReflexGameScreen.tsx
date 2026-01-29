@@ -8,7 +8,7 @@ import { gameService } from '@/app/features/game/services/GameService';
 import { gameStore } from '@/app/features/game/stores/game';
 import { useGame } from '@/app/features/game/hooks/game';
 import styles from './ReflexGameScreen.module.css';
-import { GAME_IDS } from '@/app/shared/constant';
+import GAMES from '@/app/shared/constant';
 import IS from '@/utils/is';
 
 interface ReflexGameScreenProps {
@@ -16,7 +16,7 @@ interface ReflexGameScreenProps {
 }
 
 export default function ReflexGameScreen({ roomId }: ReflexGameScreenProps) {
-  const gameId = GAME_IDS.REFLEX;
+  const gameId = GAMES.REFLEX.ID;
 
   const {
     gameState,

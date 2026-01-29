@@ -283,7 +283,7 @@ export function useGame(roomId?: string): UseGameResult {
     isHost ? await gameService.close(roomId) : await handleLeaveGame();
   }, [roomId, isHost, handleLeaveGame]);
 
-  const { gotoGame, gotoRanking } = useNavigation();
+  const { gotoGame, gotoGameRanking } = useNavigation();
 
   // game:select 게임 선택
   const handleGameSelect = useCallback(
@@ -442,9 +442,9 @@ export function useGame(roomId?: string): UseGameResult {
 
       const targetGameId = selectedGame?.id ?? lastSelectedGameIdRef.current;
       if (!roomId || !targetGameId) return;
-      gotoRanking(roomId, targetGameId);
+      gotoGameRanking(roomId, targetGameId);
     });
-  }, [handleGameEnd, gotoRanking, roomId, selectedGame?.id]);
+  }, [handleGameEnd, gotoGameRanking, roomId, selectedGame?.id]);
 
   // 남은 시간 계산
   useEffect(() => {

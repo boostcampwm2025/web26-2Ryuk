@@ -7,7 +7,7 @@ import styles from './BeakerGameScreen.module.css';
 import { useBeakerGame } from '@/app/features/game/hooks/useBeakerGame';
 import Rules from '@/app/shared/rule';
 import IS from '@/utils/is';
-import { GAME_IDS } from '@/app/shared/constant';
+import GAMES from '@/app/shared/constant';
 
 const DEFAULT_MAX_LEVEL = Rules.GAME.BEAKER.MAX_LEVEL;
 
@@ -16,7 +16,7 @@ interface BeakerGameScreenProps {
 }
 
 export default function BeakerGameScreen({ roomId }: BeakerGameScreenProps) {
-  const gameId = GAME_IDS.BEAKER;
+  const gameId = GAMES.BEAKER.ID;
 
   const {
     gameState,

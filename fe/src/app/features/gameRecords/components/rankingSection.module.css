@@ -1,0 +1,45 @@
+.rankingSection {
+  border-radius: 52px;
+  padding: 32px 36px;
+  min-width: 440px;
+  height: 100%;
+  background: var(--neutral-1);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rankingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.rankingTitle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+}
+
+.dropdownWrapper {
+  width: 100%;
+}
+
+.rankingTitleText {
+  font: var(--display-1);
+  color: var(--neutral-9);
+  margin: 0;
+}
+
+.rankingActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.podiumWrapper {
+  width: 100%;
+}

@@ -10,6 +10,7 @@ export default function PasswordSetting({
   onChangeChecked,
   initialPassword = '',
   onChangePassword,
+  placeholder = '비밀번호를 입력하세요',
 }: PasswordSettingProps) {
   const [checked, setChecked] = useState<boolean>(initialChecked);
 
@@ -26,7 +27,7 @@ export default function PasswordSetting({
       onChange={handleChangeChecked}
     >
       <OutlineTextfield
-        placeholder="비밀번호를 입력하세요"
+        placeholder={placeholder}
         initialValue={initialPassword}
         disabled={!checked}
         onChange={onChangePassword}

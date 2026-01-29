@@ -1,6 +1,8 @@
 import { GamePlayerData } from '@/app/features/game/dtos/data';
 import { RoomEditData, RoomData } from '@/app/features/room/dtos/data';
 
+export type RoomEditType = 'create' | 'update';
+
 export interface RoomCardProps extends RoomData {}
 
 export interface RoomGridProps {
@@ -17,9 +19,11 @@ export interface PasswordSettingProps {
   onChangeChecked?: (checked: boolean) => void;
   initialPassword: string;
   onChangePassword?: (password: string) => void;
+  placeholder?: string;
 }
 
 export interface RoomEditFormProps {
+  type: RoomEditType;
   initialData?: Partial<RoomEditData>;
   onSubmit?: (data: RoomEditData) => void;
   onCancel?: () => void;

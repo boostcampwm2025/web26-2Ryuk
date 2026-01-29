@@ -27,5 +27,9 @@ export type RankingViewType = 'group' | 'all';
 export interface RankingPageTitleSectionProps {
   view?: RankingViewType;
   onChange?: (view: RankingViewType) => void;
+  selectedGameId?: string;
+  dropdownDisabled?: boolean;
+  radioDisabled?: boolean;
+  onDropdownChange?: (value: string) => void;
   children?: ReactNode;
 }

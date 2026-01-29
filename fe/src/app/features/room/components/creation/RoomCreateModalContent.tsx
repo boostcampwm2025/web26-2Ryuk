@@ -5,7 +5,7 @@ import RoomEditModalContentBase from './RoomEditModalContentBase';
 import { RoomEditFormProps } from '@/app/features/room/components/type';
 import { useModal } from '@/app/components/shared/modal/useModal';
 
-export default function RoomCreateModalContent(props: RoomEditFormProps) {
+export default function RoomCreateModalContent(props: Omit<RoomEditFormProps, 'type'>) {
   const { onSubmit } = props;
   const { closeModal } = useModal();
 
@@ -16,6 +16,7 @@ export default function RoomCreateModalContent(props: RoomEditFormProps) {
     <RoomEditModalContentBase title="대화방 만들기" subtitle="새로운 물방울을 띄워보세요!">
       <RoomEditForm
         {...props}
+        type="create"
         onCancel={handleCancel}
         onSubmit={handleSubmit}
         submitText="대화방 만들기"

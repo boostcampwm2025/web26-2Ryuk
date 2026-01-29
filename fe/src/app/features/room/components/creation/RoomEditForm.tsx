@@ -10,9 +10,11 @@ import PasswordSetting from './PasswordSetting';
 import { RoomEditData } from '@/app/features/room/dtos/data';
 import styles from './roomEditForm.module.css';
 import { RoomEditFormProps } from '@/app/features/room/components/type';
+import IS from '@/utils/is';
 
 export default function RoomEditForm({
   initialData = {},
+  type,
   onSubmit,
   onCancel,
   submitText,
@@ -45,8 +47,37 @@ export default function RoomEditForm({
     initialData.password,
   ]);
 
+  // 비밀번호 입력 여부
+  const hasPassword = !IS.nil(formData.password) && formData.password?.trim() !== '';
+
+  // 필수 입력값 검증
+  const isTitleEmpty = !formData.title.trim();
+  const hasNoTags = formData.tags.length === 0;
+  const isInvalidParticipantCount = formData.maxParticipants < 2;
+
+  // 비공개 방 비밀번호 조건
+  const isPrivateWithoutPassword = formData.isPrivate && !hasPassword;
+  const isUpdateRequiringPassword =
+    type === 'update' && !initialData.isPrivate && formData.isPrivate && !hasPassword;
+
+  // 전체 비활성화 조건
   const isDisabled =
-    !formData.title.trim() || formData.tags.length === 0 || formData.maxParticipants < 1;
+    isTitleEmpty ||
+    hasNoTags ||
+    isInvalidParticipantCount ||
+    (type === 'create' && isPrivateWithoutPassword) ||
+    isUpdateRequiringPassword;
+
+  initialData.isPrivate;
+
+  const initialIsPrivate = initialData.isPrivate ?? false;
+
+  const passwordPlaceholder = (() => {
+    if (type === 'create') return '비밀번호를 입력하세요';
+    return initialIsPrivate
+      ? '비밀번호를 비우면 기존 비밀번호로 적용됩니다'
+      : '비밀번호를 입력하세요';
+  })();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -103,6 +134,7 @@ export default function RoomEditForm({
             onChangeChecked={(value) => setFormData((prev) => ({ ...prev, isPrivate: value }))}
             initialPassword={formData.password || ''}
             onChangePassword={(value) => setFormData((prev) => ({ ...prev, password: value }))}
+            placeholder={passwordPlaceholder}
           />
         </div>
       </div>
