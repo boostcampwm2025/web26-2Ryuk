@@ -1,36 +1,37 @@
 import {
-  Injectable,
-  OnModuleInit,
-  Logger,
-  InternalServerErrorException,
-  NotFoundException,
-  ForbiddenException,
-  Inject,
   BadRequestException,
+  ForbiddenException,
   forwardRef,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { LOG, logMessage } from '@src/common/utils/log-messages';
+import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import * as mediasoup from 'mediasoup';
 import {
-  Worker,
+  Consumer,
+  Producer,
   Router,
   RtpCodecCapability,
-  WebRtcTransport,
   TransportListenIp,
-  Producer,
-  Consumer,
+  WebRtcTransport,
+  Worker,
 } from 'mediasoup/node/lib/types';
-import { LOG, logMessage } from '@src/common/utils/log-messages';
-import {
-  VoiceTransportConnectDto,
-  VoiceTransportCloseDto,
-  CreateProducerDto,
-  CreateConsumerDto,
-} from './dto/voice.dto';
-import { Socket } from 'socket.io';
-import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
+import { cpus } from 'os'; // CPU 코어 수 확인용
 import { RedisClientType } from 'redis';
+import { Socket } from 'socket.io';
 import { RoomService } from '../room/room.service';
+import {
+  CreateConsumerDto,
+  CreateProducerDto,
+  VoiceTransportCloseDto,
+  VoiceTransportConnectDto,
+} from './dto/voice.dto';
 
 /**
  * 서버(Router)에서 지원할 미디어 코덱 설정
@@ -57,6 +58,11 @@ const mediaCodecs: RtpCodecCapability[] = [
   },
 ];
 
+// 워커 갯수를 cpu 코어 수에 맞게 생성
+const NUM_WORKERS =
+  process.env.MEDIASOUP_WORKER_NUM === 'auto'
+    ? cpus().length
+    : parseInt(process.env.MEDIASOUP_WORKER_NUM || '1', 10) || 1;
 interface SocketWithAuth extends Socket {
   data: {
     userId: string;
@@ -65,7 +71,9 @@ interface SocketWithAuth extends Socket {
 
 @Injectable()
 export class VoiceService implements OnModuleInit {
-  private worker: Worker;
+  private workers: Worker[] = []; // 워커 담을 배열
+  private readonly numWorkers = NUM_WORKERS;
+  private nextWorkerIdx = 0; // 라운드 로빈용 인덱스
   // roomId를 키로 실제 mediasoup Router 객체를 저장하는 맵 (프로세스 메모리)
   private routers: Map<string, Router> = new Map();
   // transportId를 키로 실제 mediasoup WebRtcTransport 객체를 저장하는 맵 (프로세스 메모리)
@@ -105,19 +113,22 @@ export class VoiceService implements OnModuleInit {
       },
     ];
 
-    this.worker = await mediasoup.createWorker({
-      rtcMinPort: +rtcMinPort,
-      rtcMaxPort: +rtcMaxPort,
-      logLevel: 'debug',
-      logTags: ['rtp', 'rtcp', 'rtx', 'bwe', 'score', 'simulcast', 'svc'],
-    });
+    for (let i = 0; i < this.numWorkers; i++) {
+      const worker = await mediasoup.createWorker({
+        rtcMinPort: +rtcMinPort,
+        rtcMaxPort: +rtcMaxPort,
+        logLevel: 'debug',
+        logTags: ['rtp', 'rtcp', 'rtx', 'bwe', 'score', 'simulcast', 'svc'],
+      });
 
-    this.worker.on('died', () => {
-      logMessage(this.logger, LOG.VOICE.WORKER_DIED);
-      process.exit(1);
-    });
+      worker.on('died', () => {
+        logMessage(this.logger, LOG.VOICE.WORKER_DIED);
+        process.exit(1);
+      });
 
-    logMessage(this.logger, LOG.VOICE.WORKER_CREATED(this.worker.pid));
+      this.workers.push(worker);
+      logMessage(this.logger, LOG.VOICE.WORKER_CREATED(worker.pid));
+    }
   }
 
   /**
@@ -134,14 +145,16 @@ export class VoiceService implements OnModuleInit {
     if (Object.keys(routerDataFromRedis).length > 0) {
       logMessage(this.logger, LOG.VOICE.ROUTER_IN_REDIS_NOT_IN_MEMORY(routerDataFromRedis.id, roomId));
     }
+    const worker = this.workers[this.nextWorkerIdx];
+    this.nextWorkerIdx = (this.nextWorkerIdx + 1) % this.workers.length;
 
-    const router = await this.worker.createRouter({ mediaCodecs });
+    const router = await worker.createRouter({ mediaCodecs });
     this.routers.set(roomId, router);
 
     this.redisClient
       .hSet(`mediasoup:router:${roomId}`, {
         id: router.id,
-        worker_pid: this.worker.pid.toString(),
+        worker_pid: worker.pid.toString(),
       })
       .catch((err) => logMessage(this.logger, LOG.VOICE.REDIS_CLEANUP_ERROR(router.id, String(err))));
 

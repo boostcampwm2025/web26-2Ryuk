@@ -26,9 +26,16 @@ export class WebRtcService {
    * 2. Transport 생성 (내부용)
    * 서버에서 받은 정보를 바탕으로 실제 WebRTC 통로 객체를 만듭니다.
    */
-  createTransport(direction: 'send' | 'recv', transportOptions: any): Transport {
+  createTransport(direction: 'send' | 'recv', data: any): Transport {
     if (!this.device) throw new Error('Device not initialized');
 
+    const transportOptions = {
+      ...data,
+      iceServers: [
+        { urls: 'stun:stun1.l.google.com:19302' }, //stun 서버 설정
+        { urls: 'stun:stun2.l.google.com:19302' },
+      ],
+    };
     const transport =
       direction === 'send'
         ? this.device.createSendTransport(transportOptions)

@@ -38,23 +38,74 @@
 
 ## 🌟 주요 기능
 
-#### 1. 간편한 소셜 로그인
-- 복잡한 회원가입 절차 없이, 사용하던 GitHub나 Google 계정으로 클릭 한 번에 바로 시작할 수 있습니다.
-#### 2. 텍스트 채팅
-- 전체 채팅
+### 1. 간편한 소셜 로그인
 
-  - 대화방에 들어가지 않아도, 서비스에 접속한 모든 사람들과 소통할 수 있는 열린 공간입니다.
-- 대화방 채팅
+&nbsp;&nbsp; 복잡한 회원가입 절차 없이, 사용하던 GitHub나 Google 계정으로 클릭 한 번에 바로 시작할 수 있습니다.
+
+<img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/1df5566c-4389-4e15-9446-4a6a554b0164" />
+
+<br clear="left" />
+<br />
+<br />
+
+
+### 2. 텍스트 채팅
+#### &nbsp;&nbsp; 2-1. 전체 채팅
+
+&nbsp;&nbsp; 대화방에 들어가지 않아도, 서비스에 접속한 모든 사람들과 소통할 수 있는 열린 공간입니다.
+
+<img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/e809ca6f-3958-4f07-b6a2-fa7d9f278500" />
+
+<br clear="left" />
+<br />
+
+
+####  &nbsp;&nbsp; 2-2. 대화방 채팅
   
-  - 관심 있는 주제의 방에 들어가 새로운 사람들과 인연을 맺거나, 친구들과 우리만의 아지트를 만들어보세요. 
-#### 3. 음성 채팅
-- 실시간 텍스트 채팅은 물론, WebRTC 기반의 선명한 음성 채팅으로도 소통할 수 있습니다.
-#### 4. 미니게임
-- 대화가 끊겨 어색한 순간, 간단한 미니게임으로 분위기를 전환해보세요.
-- 게임 점수에 따라 실시간으로 업데이트되는 랭킹 시스템을 통해 다른 유저들과 경쟁하며 새로운 재미를 찾아보세요.
-#### 5. 안전한 대화 환경
-- 모두가 즐겁게 대화할 수 있도록, 비속어 필터링과 강제 퇴장 기능으로 쾌적한 커뮤니티를 만들어갑니다.
+&nbsp;&nbsp; 관심 있는 주제의 방에 들어가 새로운 사람들과 인연을 맺거나, 친구들과 우리만의 아지트를 만들어보세요.
+ 
+<img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/4b024449-7897-478a-ba3a-2020b48773b3" />
 
+<br clear="left" />
+<br />
+<br />
+
+#### 3. 음성 채팅
+
+&nbsp;&nbsp; 실시간 텍스트 채팅은 물론, WebRTC 기반의 선명한 음성 채팅으로도 소통할 수 있습니다.
+
+<br />
+
+#### 4. 미니게임
+
+&nbsp;&nbsp; 대화가 끊겨 어색한 순간, 간단한 미니게임으로 분위기를 전환해보면 어떨까요?  
+&nbsp;&nbsp; 게임 점수에 따라 실시간으로 업데이트되는 랭킹 시스템을 통해 다른 유저들과 경쟁하며 새로운 재미를 찾아보세요.
+ 
+&nbsp;&nbsp; <img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/6cfb0fe9-f114-4b65-bee9-a1f8eb96800c" />  
+<br clear="left" />
+&nbsp;&nbsp; <img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/dcebbf1d-61d5-4913-9f8a-252503a3e5e5" />
+<br clear="left" />
+&nbsp;&nbsp; <img align="left" width="800" alt="비커채우기" src="https://github.com/user-attachments/assets/91a646f1-b06c-4fb2-a56b-42bc649860a3" />  
+<br clear="left" />
+&nbsp;&nbsp; <img align="left" width="800" alt="반응속도테스트" src="https://github.com/user-attachments/assets/f3744602-bd3c-4684-9e95-d7e1f715c97a" />  
+<br clear="left" />
+<br />
+&nbsp;&nbsp; <img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/7cfd6774-5da2-46f2-bf7c-9df55f8d14d1" />  
+
+<br clear="left" />
+<br />
+<br />
+
+#### 5. 안전한 대화 환경
+
+&nbsp;&nbsp; 모두가 즐겁게 대화할 수 있도록, 비속어 필터링과 강제 퇴장 기능으로 쾌적한 커뮤니티를 만들어갑니다.
+
+&nbsp;&nbsp; <img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/baf11707-6fd0-4871-aa12-f1296afa3184" />  
+&nbsp;&nbsp; <img align="left" width="800" alt="image" src="https://github.com/user-attachments/assets/4a759687-4f7a-4827-bcc4-af259961b128" />
+
+<br clear="left" />
+<br />
+<br />
 <br />
 
 ## 📄 프로젝트 문서
