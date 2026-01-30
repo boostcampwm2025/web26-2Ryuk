@@ -61,6 +61,8 @@ services:
   nginx:
     image: nginx:alpine
     container_name: nginx
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env
     depends_on:
