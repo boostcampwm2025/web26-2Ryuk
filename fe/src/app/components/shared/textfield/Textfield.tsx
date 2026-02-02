@@ -17,6 +17,7 @@ function TextfieldBase({
   onCompositionEnd,
   hidable = false,
   disabled = false,
+  maxLength,
   variant,
 }: TextfieldProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -38,9 +39,12 @@ function TextfieldBase({
   };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const text = event.target.value;
-    if (!isControlled) setInternalValue(text);
-    onChange?.(text);
+    const inputText = event.target.value;
+    const nextValue =
+      maxLength && inputText.length > maxLength ? inputText.slice(0, maxLength) : inputText;
+
+    if (!isControlled) setInternalValue(nextValue);
+    onChange?.(nextValue);
   };
 
   const handleToggleVisibility = () => {
@@ -62,6 +66,7 @@ function TextfieldBase({
         type={inputType}
         placeholder={placeholder}
         value={value}
+        maxLength={maxLength}
         onChange={handleChange}
         onKeyDown={onKeyDown}
         onBlur={onBlur}

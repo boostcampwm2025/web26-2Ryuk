@@ -5,6 +5,8 @@ import { User } from '../user/user.entity';
 import { RoomController } from './room.controller';
 import { RoomService } from './room.service';
 import { RoomGateway } from './room.gateway';
+import { RoomRepository } from './room.repository';
+import { RoomNotificationService } from './room-notification.service';
 import { GameModule } from '../game/game.module';
 import { ChatModule } from '@src/modules/chat/chat.module';
 import { VoiceModule } from '../voice/voice.module';
@@ -16,9 +18,9 @@ import { VoiceModule } from '../voice/voice.module';
     forwardRef(() => GameModule),
     forwardRef(() => ChatModule),
     forwardRef(() => VoiceModule),
-  ], // RoomService에서 UserRepository 사용하므로 유지
+  ],
   controllers: [RoomController],
-  providers: [RoomService, RoomGateway],
+  providers: [RoomRepository, RoomNotificationService, RoomService, RoomGateway],
   exports: [RoomService],
 })
 export class RoomModule {}

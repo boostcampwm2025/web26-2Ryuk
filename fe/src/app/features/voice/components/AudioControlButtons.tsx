@@ -9,12 +9,15 @@ export default function AudioControlButtons({
   speakerOn, // 현재 스피커 상태
   onMicChange, // 상태 변경 핸들러
   onSpeakerChange,
+  disabled = false,
 }: AudioControlsProps) {
   const handleMicToggle = () => {
+    if (disabled) return;
     onMicChange?.(!micOn);
   };
 
   const handleSpeakerToggle = () => {
+    if (disabled) return;
     onSpeakerChange?.(!speakerOn);
   };
 
@@ -28,12 +31,14 @@ export default function AudioControlButtons({
         name={micOn ? 'mic' : 'micoff'}
         size="small"
         variant={micThemeColor}
+        disabled={disabled}
         onClick={handleMicToggle}
       />
       <IconButtonBase
         name={speakerOn ? 'volume' : 'mute'}
         size="small"
         variant={speakerThemeColor}
+        disabled={disabled}
         onClick={handleSpeakerToggle}
       />
     </div>

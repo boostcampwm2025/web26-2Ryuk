@@ -1,8 +1,15 @@
 import { ReactNode } from 'react';
 import { ChatReceiveData } from '@/app/features/chat/dtos/data';
-import { Position } from '@/app/components/shared/floatingWidget/type';
 
 export type ChatPanelType = 'global' | 'local';
+export type Position = { x: number; y: number };
+export const CHAT_PANEL_WIDGET_ID = {
+  global: 'global-chat-panel',
+  local: 'local-chat-panel',
+} as const;
+
+export type ChatPanelWidgetId = (typeof CHAT_PANEL_WIDGET_ID)[ChatPanelType];
+export type ActivePanelId = ChatPanelWidgetId | undefined;
 
 export const PANEL_CONFIG = {
   WIDTH: 340,
@@ -40,6 +47,7 @@ export interface ChatPanelHeaderProps {
   onMouseLeave?: () => void;
   onMouseDown?: () => void;
   onMouseUp?: () => void;
+  isUnread?: boolean;
 }
 
 export interface ChatPanelProps {
@@ -52,7 +60,8 @@ export interface ChatPanelProps {
   children?: ReactNode;
   isConnected?: boolean;
   disabled?: boolean;
-  initialPosition?: { x: number; y: number };
+  initialPosition?: Position;
+  isUnread?: boolean;
 }
 
 export interface GlobalChatHeaderProps {

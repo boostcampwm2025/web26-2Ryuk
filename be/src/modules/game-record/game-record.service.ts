@@ -1,12 +1,9 @@
-import { Injectable, Logger, NotFoundException, HttpStatus, HttpException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { GameRecord } from '@src/modules/game-record/game-record.entity';
 import { Game } from '@src/modules/game/game.entity';
-import {
-  GameRecordRankResponseDto,
-  GameRecordRankItemDto,
-} from '@src/modules/game-record/dto/game-record-response.dto';
+import { GameRecordRankResponseDto } from '@src/modules/game-record/dto/game-record-response.dto';
+import { GameRecordRepository } from '@src/modules/game-record/game-record.repository';
 
 @Injectable()
 export class GameRecordService {
@@ -14,7 +11,7 @@ export class GameRecordService {
 
   constructor(
     @InjectRepository(Game) private readonly gameRepository: Repository<Game>,
-    @InjectRepository(GameRecord) private readonly gameRecordRepository: Repository<GameRecord>,
+    private readonly gameRecordRepository: GameRecordRepository,
   ) {}
 
   /**
@@ -37,44 +34,25 @@ export class GameRecordService {
       }
 
       // 전체 레코드 개수
-      const total = await this.gameRecordRepository.count({
-        where: { game_id: gameId },
-      });
+      const total = await this.gameRecordRepository.countByGameId(gameId);
 
       // 전체 레코드를 점수 기준으로 내림차순
-      const allRecords = await this.gameRecordRepository.find({
-        where: { game_id: gameId },
-        relations: ['user'],
-        order: { score: 'DESC' },
-      });
+      const allRecords = await this.gameRecordRepository.findAllByGameIdOrderByScore(gameId);
       if (allRecords.length === 0) {
-        throw new HttpException('게임 랭킹이 없습니다.', HttpStatus.NO_CONTENT);
+        return {
+          success: true,
+          message: '랭킹이 성공적으로 조회되었습니다.',
+          data: {
+            total: 0,
+            page: 1,
+            podium: [],
+            rankings: [],
+          },
+        };
       }
 
       // 랭킹 계산 (같은 점수는 같은 순위, 다음 순위는 건너뜀)
-      let currentRank = 1;
-      let previousScore: number | null = null;
-
-      const allRankItems: GameRecordRankItemDto[] = allRecords.map((record, index) => {
-        const score = record.score;
-
-        // 이전 점수와 다르면 현재 인덱스 기반으로 순위 갱신
-        if (previousScore !== null && score !== previousScore) {
-          currentRank = index + 1;
-        }
-
-        const rankItem: GameRecordRankItemDto = {
-          player_id: record.user_id,
-          nickname: record.user.nickname,
-          profile_image: record.user.profile_image,
-          score: record.score,
-          rank: currentRank,
-          achieve_date: record.achieve_date.getTime(),
-        };
-
-        previousScore = score;
-        return rankItem;
-      });
+      const allRankItems = this.gameRecordRepository.calculateRankings(allRecords);
 
       // 페이지 계산
       let targetPage: number;
@@ -88,7 +66,7 @@ export class GameRecordService {
           targetPage = 1;
         } else {
           // 로그인 O -> 내 랭킹 찾기
-          const userRankItem = allRankItems.find((item) => item.nickname === nickname);
+          const userRankItem = this.gameRecordRepository.findRankItemByNickname(allRankItems, nickname);
           if (userRankItem) {
             // 기록 O -> 내 랭킹이 있는 페이지 계산
             targetPage = Math.ceil(userRankItem.rank / limit);
@@ -99,14 +77,11 @@ export class GameRecordService {
         }
       }
 
-      // 페이지네이션 계산
-      const start = (targetPage - 1) * limit;
-
       // 페이지네이션 적용
-      const rankItems = allRankItems.slice(start, start + limit);
+      const rankItems = this.gameRecordRepository.paginate(allRankItems, targetPage, limit);
 
       // 1~3등 랭킹
-      const podiumItems = allRankItems.slice(0, 3);
+      const podiumItems = this.gameRecordRepository.paginate(allRankItems, 1, 3);
 
       return {
         success: true,

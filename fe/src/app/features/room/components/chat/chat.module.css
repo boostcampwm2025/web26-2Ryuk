@@ -52,8 +52,8 @@
 
 
 .roomVoiceChat {
-  min-width: 240px;
-  width: 100%;
+  width: 400px;
+  flex: 1 1 auto;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -61,7 +61,6 @@
   overflow: hidden;
   background: var(--neutral-1);
   border: 1px solid var(--neutral-3);
-  flex: 1 1 auto;
   min-height: 0;
   max-height: var(--room-body-max-height);
 }
@@ -70,6 +69,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: 80px;
   padding: 24px 40px;
   border-bottom: 1px solid var(--neutral-3);
   background: var(--primary-1);
@@ -134,13 +134,13 @@
   transition: all .2s ease-in-out;
 }
 
+.disabled {
+  cursor: default;
+}
+
 .participantCard.me {
   background: var(--primary-1);
   border-color: var(--primary-3);
-}
-
-.participantCard.speaking {
-  box-shadow: 0 0 0 2px var(--primary-4);
 }
 
 .cardTop {
@@ -180,16 +180,43 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--secondary);
   font: var(--label-2);
 }
 
 .statusText {
+  color: inherit;
+}
+
+.statusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.statusRow.statusPrimary .statusText,
+.statusRow.statusPrimary .statusIcon {
+  color: var(--primary-6);
+}
+
+.statusRow.statusSecondary .statusText,
+.statusRow.statusSecondary .statusIcon {
   color: var(--secondary);
 }
 
-.speaking .statusText {
-  color: var(--primary-6);
+.statusRow.statusError .statusText,
+.statusRow.statusError .statusIcon {
+  color: var(--error);
+}
+
+.statusRow.statusWarning .statusText,
+.statusRow.statusWarning .statusIcon {
+  color: var(--warning);
+}
+
+.statusRow.statusDisabled .statusText,
+.statusRow.statusDisabled .statusIcon {
+  color: transparent;
 }
 
 .controls {
@@ -204,14 +231,30 @@
   gap: 12px;
 }
 
-.sliderRow svg {
+.disabled .sliderRow {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.sliderIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--secondary);
+}
+
+.me .sliderIcon {
+  color: var(--primary-6);
+}
+
+.disabled .sliderIcon {
+  color: var(--neutral-4);
+}
+
+.me.disabled .sliderIcon {
+  color: var(--primary-5);
 }
 
 .sliderRow input[type='range'] {
   flex: 1;
-}
-
-.me .sliderRow svg {
-  color: var(--primary-6);
 }

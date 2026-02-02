@@ -23,7 +23,10 @@ export class WsExceptionFilter extends BaseWsExceptionFilter {
       path: `event: ${ctx.getPattern()}`,
     };
 
+    // 클라이언트가 ack 콜백으로 요청한 경우, ack로 에러를 돌려주어 타임아웃 대신 즉시 reject 되도록 함
+    const ack = host.getArgByIndex?.(2);
+    if (typeof ack === 'function') ack({ error: errorResponse.message });
+
     client.emit('error', responseWithPath);
-    return;
   }
 }

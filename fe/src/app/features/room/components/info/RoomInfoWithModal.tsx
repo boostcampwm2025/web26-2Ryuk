@@ -32,7 +32,7 @@ export default function RoomInfoWithModal({
 }: RoomInfoWithModalProps) {
   const { openModal, closeModal } = useModal();
   const { showSuccessToast } = useToast();
-  const isJoined = roomStore((s) => s.isJoined);
+  const isJoined = Boolean(roomStore((state) => state.id));
   const { isConnected } = useRoomChat(roomId, isJoined);
 
   const modalId = `room-update-${title}`;
@@ -45,7 +45,7 @@ export default function RoomInfoWithModal({
     const updatedDto = await roomService.updateRoom(roomId, roomDto);
     const updated = RoomConverter.toData(updatedDto);
 
-    roomStore.getState().updateRoomData({
+    roomStore.getState().updateRoom({
       title: updated.title,
       tags: updated.tags,
       maxParticipants: updated.maxParticipants,

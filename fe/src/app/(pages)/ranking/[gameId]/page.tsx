@@ -12,7 +12,7 @@ import { GameRecordConverter } from '@/app/features/gameRecords/dtos/converter';
 import type { GamePlayerResultItemData } from '@/app/features/game/dtos/data';
 import GAMES from '@/app/shared/constant';
 import { authStore } from '@/app/features/user/stores/auth';
-import { loadingStore } from '@/app/features/loading/stores/loading';
+import useNavigation from '@/app/hooks/useNavigation';
 
 const GAME_META_LIST = [GAMES.BEAKER, GAMES.REFLEX];
 const PAGE_LIMIT = 10;
@@ -33,9 +33,9 @@ export default function RankingPage() {
   const [rankings, setRankings] = useState<GamePlayerResultItemData[]>([]);
   const nickname = authStore((state) => state.user?.nickname);
 
-  const { show, hide } = loadingStore();
   const myId = authStore((state) => state.userId);
   const requestIdRef = useRef(0);
+  const { gotoRanking } = useNavigation();
 
   useEffect(() => {
     setSelectedGameId(initialGameId);
@@ -45,7 +45,6 @@ export default function RankingPage() {
     async (gameId: string, page?: number) => {
       if (!gameId) return;
       const requestId = ++requestIdRef.current;
-      show();
 
       const dto = await gameRecordService.getGameRecords(gameId, nickname, page, PAGE_LIMIT);
       if (requestIdRef.current !== requestId) return;
@@ -55,10 +54,8 @@ export default function RankingPage() {
       setPage(data.page);
       setPodium(data.podium);
       setRankings(data.rankings);
-
-      hide();
     },
-    [hide, show, nickname],
+    [nickname],
   );
 
   useEffect(() => {
@@ -68,13 +65,13 @@ export default function RankingPage() {
   const handleGameChange = useCallback(
     (newGameId: string) => {
       if (newGameId === selectedGameId) return;
-      setSelectedGameId(newGameId);
       setPage(1);
       setTotal(0);
       setPodium([]);
       setRankings([]);
+      gotoRanking(newGameId);
     },
-    [selectedGameId],
+    [selectedGameId, gotoRanking],
   );
 
   const maxPage = useMemo(() => Math.max(1, Math.ceil(total / PAGE_LIMIT)), [total]);

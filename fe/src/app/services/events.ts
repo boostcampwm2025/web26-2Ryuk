@@ -20,11 +20,10 @@ export const WS_EVENTS = {
   CHAT_ROOM_NEW_MESSAGE: 'chat:room:new-message',
 
   // 글로벌 채팅 이벤트
-  CHAT_GLOBAL_JOIN: 'chat:global:join',
   CHAT_GLOBAL_SEND: 'chat:global:send',
   CHAT_GLOBAL_NEW_MESSAGE: 'chat:global:new-message',
   CHAT_GLOBAL_PARTICIPANTS_UPDATED: 'chat:global:participants-updated',
-  CHAT_GLOBAL_RECENTS: 'chat:global:recents',
+  CHAT_GLOBAL_INIT: 'chat:global:init',
 
   // 인증 이벤트
   AUTH_LOGOUT: 'auth:logout',
@@ -50,4 +49,26 @@ export const WS_EVENTS = {
   GAME_PLAYER_REALTIME: 'game:player:realtime',
   GAME_RESULT: 'game:result',
   GAME_PLAYER_RESULT: 'game:player:result',
+
+  // Voice (MediaSoup / WebRTC)
+  VOICE_ROUTER_CAPABILITIES: 'voice:router:capabilities',
+  VOICE_TRANSPORT_CREATE: 'voice:transport:create',
+  VOICE_TRANSPORT_CONNECT: 'voice:transport:connect',
+  VOICE_TRANSPORT_CLOSE: 'voice:transport:close',
+
+  VOICE_PRODUCER_CREATE: 'voice:producer:create',
+  VOICE_PRODUCER_CLOSE: 'voice:producer:close',
+  VOICE_PRODUCER_PAUSE: 'voice:producer:pause',
+  VOICE_PRODUCER_RESUME: 'voice:producer:resume',
+  VOICE_PRODUCER_NEW: 'voice:producer:new',
+  VOICE_PRODUCER_UPDATE: 'voice:producer:update',
+  VOICE_PRODUCER_CLOSED: 'voice:producer:closed',
+
+  VOICE_CONSUMER_CREATE: 'voice:consumer:create',
+  VOICE_CONSUMER_PAUSE: 'voice:consumer:pause',
+  VOICE_CONSUMER_RESUME: 'voice:consumer:resume',
+  VOICE_CONSUMER_CLOSE: 'voice:consumer:close',
+
+  VOICE_ROOM_PRODUCERS: 'voice:room:producers',
+  VOICE_ROOM_LEAVE: 'voice:room:leave',
 } as const;

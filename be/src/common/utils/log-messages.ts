@@ -27,10 +27,6 @@ export const LOG = {
       message: `클라이언트 연결 해제: socketId=${socketId}, userId=${userId ?? 'anonymous'}`,
       level: 'log',
     }),
-    ROOM_JOIN_DTO_RECEIVED: (dto: string, type: string): LogMessage => ({
-      message: `room:join 받은 DTO: ${dto}, 타입: ${type}`,
-      level: 'debug',
-    }),
     SOCKET_IO_JOIN_AUTH: (userId: string, roomId: string): LogMessage => ({
       message: `인증 사용자 Socket.io room 참여: userId=${userId}, roomId=${roomId}`,
       level: 'log',

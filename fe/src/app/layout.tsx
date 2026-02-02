@@ -2,6 +2,7 @@ import './globals.css';
 import AuthProvider from '@/app/providers/AuthProvider';
 import RoomProvider from '@/app/providers/RoomProvider';
 import LoadingProvider from '@/app/providers/LoadingProvider';
+import WebSocketInitializer from '@/app/providers/WebSocketInitializer';
 import ModalEventDelegation from '@/app/components/shared/modal/ModalEventDelegation';
 import Toast from '@/app/components/shared/toast/Toast';
 import Header from './components/layout/header/Header';
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html lang="ko">
       <body>
         <ModalEventDelegation />
+        <WebSocketInitializer />
         <AuthProvider>
           <RoomProvider>
             <LoadingProvider>

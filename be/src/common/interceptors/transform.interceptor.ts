@@ -65,7 +65,15 @@ export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> 
             Array.isArray(responseData.data.games) &&
             responseData.data.games.length === 0;
 
-          if (hasEmptyRooms || hasEmptyGames) {
+          // 게임 레코드가 없을 때
+          const hasEmptyRankings =
+            'rankings' in responseData.data &&
+            Array.isArray(responseData.data.rankings) &&
+            responseData.data.rankings.length === 0 &&
+            'total' in responseData.data &&
+            responseData.data.total === 0;
+
+          if (hasEmptyRooms || hasEmptyGames || hasEmptyRankings) {
             response.status(HttpStatus.NO_CONTENT);
           }
         }

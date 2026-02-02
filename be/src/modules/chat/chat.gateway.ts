@@ -1,22 +1,14 @@
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, ConnectedSocket, MessageBody } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, Inject, UsePipes, ValidationPipe, UseFilters } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe, UseFilters } from '@nestjs/common';
 import { WsExceptionFilter } from '@src/common/filters/ws-exception.filter';
 import { WsJsonParsePipe } from '@src/common/pipes/ws-json-parse.pipe';
 import { ChatService } from './chat.service';
 import { RoomService } from '@src/modules/room/room.service';
 import { AuthService } from '@src/modules/auth/auth.service';
 import { GlobalChatSendDto, RoomChatSendDto } from './dto/chat-message.dto';
-import {
-  GlobalChatRecentMessageDto,
-  GlobalChatMessageResponseDto,
-  LocalChatMessageResponseDto,
-  GlobalChatJoinAckResponseDto,
-} from './dto/chat-response.dto';
-import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
-import { RedisClientType } from 'redis';
+import { GlobalChatMessageResponseDto, LocalChatMessageResponseDto } from './dto/chat-response.dto';
 import { LOG, logMessage } from '@src/common/utils/log-messages';
-import { GLOBAL_ROOM_ID } from '@src/common/constants/constants';
 import { createWsError, createWsErrorResponse } from '@src/common/utils/ws-error-code';
 import { WS_EVENTS_CHAT, WS_EVENTS_ERROR } from '@src/common/constants/ws-events.constant';
 
@@ -44,40 +36,7 @@ export class ChatGateway {
     private readonly chatService: ChatService,
     private readonly roomService: RoomService,
     private readonly authService: AuthService,
-    @Inject(REDIS_CLIENT) private readonly redisClient: RedisClientType,
   ) {}
-
-  @SubscribeMessage(WS_EVENTS_CHAT.GLOBAL_JOIN)
-  async handleGlobalChatJoin(@ConnectedSocket() client: Socket) {
-    try {
-      const globalRoomId = GLOBAL_ROOM_ID;
-      if (!globalRoomId) return;
-
-      const userId = (client.data.userId as string) ?? null;
-      const [recents, currentParticipants] = await Promise.all([
-        this.roomService.getGlobalChatRecents(globalRoomId),
-        this.roomService.getCurrentParticipants(globalRoomId),
-      ]);
-
-      const messages: GlobalChatRecentMessageDto[] = recents.map((msg) => ({
-        message: msg.content,
-        sender: {
-          role: msg.role,
-          nickname: msg.nickname,
-          profile_image: msg.profile_image,
-          is_me: userId ? msg.sender_id === userId : false,
-        },
-        timestamp: msg.create_date,
-      }));
-
-      // chat:global:join ACK 응답 (명세 기준)
-      const joinAck = new GlobalChatJoinAckResponseDto(globalRoomId, currentParticipants, messages);
-      return joinAck.data;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logMessage(this.logger, LOG.WS.GLOBAL_CHAT_HANDLE_ERROR(errorMessage));
-    }
-  }
 
   // 글로벌 채팅 메시지 수신 및 브로드캐스트
   @SubscribeMessage(WS_EVENTS_CHAT.GLOBAL_SEND)
@@ -125,17 +84,12 @@ export class ChatGateway {
       const responseToSender = new GlobalChatMessageResponseDto(filteredMessage, senderInfo, true, timestamp);
       return responseToSender.data;
     } catch (error) {
-      // 모든 예외를 일관되게 처리
       const errorMessage = error instanceof Error ? error.message : String(error);
       logMessage(this.logger, LOG.WS.GLOBAL_CHAT_HANDLE_ERROR(errorMessage));
 
       const errorResponse = createWsErrorResponse(error, '메시지 전송 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -202,17 +156,12 @@ export class ChatGateway {
       );
       return responseToSender.data;
     } catch (error) {
-      // 모든 예외를 일관되게 처리
       const errorMessage = error instanceof Error ? error.message : String(error);
       logMessage(this.logger, LOG.WS.ROOM_CHAT_HANDLE_ERROR(errorMessage));
 
       const errorResponse = createWsErrorResponse(error, '메시지 전송 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 }

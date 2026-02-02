@@ -286,7 +286,7 @@ export class VoiceService implements OnModuleInit {
     this.producers.set(producer.id, producer);
 
     // Redis에 Producer 메타데이터 저장
-    Promise.all([
+    await Promise.all([
       this.redisClient.hSet(`mediasoup:producer:${producer.id}`, {
         room_id,
         user_id: userId,

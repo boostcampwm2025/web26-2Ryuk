@@ -6,6 +6,7 @@
   width: 440px;
   background: var(--neutral-1);
   border-radius: 52px;
+  z-index: 9999;
 }
 
 .header {

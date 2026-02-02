@@ -4,13 +4,13 @@ import { useEffect, useRef } from 'react';
 import ChatBubbles from '@/app/features/chat/components/ChatBubbles';
 import MessageForm from '@/app/components/shared/form/message/MessageForm';
 import styles from './chat.module.css';
-import { roomStore, RoomStore } from '@/app/features/room/stores/room';
+import { roomStore } from '@/app/features/room/stores/room';
 import { roomChatService } from '@/app/features/chat/services/RoomChatService';
 import { useRoomChat } from '@/app/features/chat/hooks/useRoomChat';
 
 export default function RoomTextChat() {
-  const roomId = roomStore((state: RoomStore) => state.roomId);
-  const isJoined = roomStore((state: RoomStore) => state.isJoined);
+  const roomId = roomStore((state) => state.id);
+  const isJoined = Boolean(roomId);
   const { chats, isConnected } = useRoomChat(roomId, isJoined);
   const chatAreaRef = useRef<HTMLDivElement>(null);
 

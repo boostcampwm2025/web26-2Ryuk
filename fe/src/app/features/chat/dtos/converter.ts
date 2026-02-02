@@ -2,27 +2,23 @@ import {
   ChatGlobalNewMessageDto,
   ChatGlobalParticipantsUpdatedDto,
   ChatGlobalSendDto,
-  ChatGlobalJoinAckDto,
   ChatGlobalSendAckDto,
   ChatReceiveDto,
   ChatRoomNewMessageDto,
   ChatRoomSendDto,
   ChatRoomSendAckDto,
-  GlobalChatRecentsDto,
-  ChatGlobalJoinDto,
+  GlobalChatInitDto,
 } from './dto';
 import {
   ChatGlobalNewMessageData,
   ChatGlobalParticipantsUpdatedData,
-  ChatGlobalJoinData,
   ChatGlobalSendData,
   ChatGlobalSendAckData,
   ChatReceiveData,
   ChatRoomNewMessageData,
   ChatRoomSendData,
   ChatRoomSendAckData,
-  GlobalChatRecentsData,
-  ChatGlobalJoinAckData,
+  GlobalChatInitData,
 } from './data';
 
 export const toGlobalSendDto = (data: ChatGlobalSendData): ChatGlobalSendDto => ({
@@ -74,22 +70,11 @@ export const toReceiveData = (dto: ChatReceiveDto): ChatReceiveData => ({
   },
   timestamp: new Date(dto.timestamp),
   roomId: dto.room_id,
-  userId: dto.user_id,
 });
 
-export const toGlobalChatRecentsData = (dto: GlobalChatRecentsDto): GlobalChatRecentsData => ({
-  messages: dto.messages.map(toReceiveData),
+export const toGlobalChatInitData = (dto: GlobalChatInitDto): GlobalChatInitData => ({
   currentParticipants: dto.current_participants,
-});
-
-export const toGlobalJoinAckData = (dto: ChatGlobalJoinAckDto): ChatGlobalJoinAckData => ({
-  roomId: dto.room_id,
-  messages: dto.recents.map(toReceiveData),
-  currentParticipants: Number(dto.current_participants),
-});
-
-export const toGlobalJoinDto = (data: ChatGlobalJoinData): ChatGlobalJoinDto => ({
-  room_id: data.roomId,
+  messages: dto.messages.map(toReceiveData),
 });
 
 export const toRoomSendAckData = (dto: ChatRoomSendAckDto): ChatRoomSendAckData => ({
@@ -102,7 +87,6 @@ export const toRoomSendAckData = (dto: ChatRoomSendAckDto): ChatRoomSendAckData 
   },
   timestamp: new Date(dto.timestamp),
   roomId: dto.room_id,
-  userId: undefined,
 });
 
 export const toGlobalSendAckData = (dto: ChatGlobalSendAckDto): ChatGlobalSendAckData => ({
@@ -115,7 +99,6 @@ export const toGlobalSendAckData = (dto: ChatGlobalSendAckDto): ChatGlobalSendAc
   },
   timestamp: new Date(dto.timestamp),
   roomId: undefined,
-  userId: undefined,
 });
 
 export const ChatConverter = {
@@ -125,9 +108,7 @@ export const ChatConverter = {
   toGlobalNewMessageData,
   toRoomNewMessageData,
   toGlobalParticipantsUpdatedData,
-  toGlobalChatRecentsData,
-  toGlobalJoinAckData,
-  toGlobalJoinDto,
+  toGlobalChatInitData,
   toRoomSendAckData,
   toGlobalSendAckData,
 };

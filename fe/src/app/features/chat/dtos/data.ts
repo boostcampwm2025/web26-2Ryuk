@@ -10,7 +10,6 @@ export type ChatReceiveData = {
   };
   timestamp: Date;
   roomId?: string;
-  userId?: string;
 };
 
 export type ChatGlobalSendData = {
@@ -35,15 +34,7 @@ export type ChatRoomSendAckData = ChatRoomNewMessageData;
 
 export type ChatGlobalSendAckData = ChatReceiveData;
 
-export type GlobalChatRecentsData = {
-  messages: ChatReceiveData[];
+export type GlobalChatInitData = {
   currentParticipants?: number;
-};
-
-export type ChatGlobalJoinAckData = GlobalChatRecentsData & {
-  roomId: string;
-};
-
-export type ChatGlobalJoinData = {
-  roomId: string;
+  messages: ChatReceiveData[];
 };

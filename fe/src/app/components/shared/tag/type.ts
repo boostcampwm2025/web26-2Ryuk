@@ -3,4 +3,6 @@ export interface TagSelectorProps {
   selectedTags?: string[];
   onChange?: (selectedTags: string[]) => void;
   placeholder?: string;
+  maxLength?: number;
+  maxCount?: number;
 }

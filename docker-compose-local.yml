@@ -5,14 +5,14 @@ services:
     env_file:
       - ./be/.env.development
     ports:
-      - '3307:3306'
+      - "3307:3306" 
     volumes:
       # MySQL 데이터 영속성을 위한 볼륨
       - mysql_data:/var/lib/mysql
       # MySQL 초기화 스크립트 (컨테이너가 처음 시작될 때만 실행됨)
       - ./infra/mysql/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -24,14 +24,14 @@ services:
     image: redis:7-alpine
     container_name: eryuk-redis
     ports:
-      - '6379:6379'
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - eryuk_network
     command: redis-server --appendonly yes
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -40,25 +40,28 @@ services:
     build:
       context: .
       dockerfile: be/Dockerfile
-    init: true
     container_name: eryuk-server
-    network_mode: "host" # 대량의 udp 포트 연결을 위해 host 네트워크 모드 사용
     working_dir: /app/be
     env_file:
       - ./be/.env.development
     environment:
       CHOKIDAR_USEPOLLING: 'true'
       WATCHPACK_POLLING: 'true'
-      MEDIASOUP_WORKER_NUM: "auto"
     command: pnpm dev
+    ports:
+      - '4000:4000'
+      - '20000-20020:20000-20020/udp'
+      - '20000-20020:20000-20020/tcp'
     volumes:
-      - ./be:/app/be:cached # 소스만 부분 바인드
-      - /app/be/node_modules # 컨테이너 내 설치본 유지 (호스트 node_modules 가림 방지)
+      - ./be:/app/be:cached   # 소스만 부분 바인드
+      - /app/be/node_modules  # 컨테이너 내 설치본 유지 (호스트 node_modules 가림 방지)
     depends_on:
       db:
         condition: service_started
       redis:
         condition: service_healthy
+    networks:
+      - eryuk_network
 
   client:
     build:
@@ -72,16 +75,16 @@ services:
     environment:
       NODE_ENV: development
       # 파일 감시를 위한 환경 변수 (Docker 환경에서 핫 리로드 지원)
-      CHOKIDAR_USEPOLLING: 'true'
-      WATCHPACK_POLLING: 'true'
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
       # Next.js Fast Refresh 활성화
-      WATCHPACK_WATCHER_LIMIT: '20'
+      WATCHPACK_WATCHER_LIMIT: "20"
     ports:
-      - '3000:3000' # Next.js 기본 포트
+      - "3000:3000"  # Next.js 기본 포트
     volumes:
-      - ./fe:/app/fe:cached # 소스만 부분 바인드
-      - /app/fe/.next # .next 디렉토리는 컨테이너 내부에만 저장 (성능 향상)
-      - /app/fe/node_modules # node_modules는 컨테이너 내부에만 저장
+      - ./fe:/app/fe:cached   # 소스만 부분 바인드
+      - /app/fe/.next  # .next 디렉토리는 컨테이너 내부에만 저장 (성능 향상)
+      - /app/fe/node_modules  # node_modules는 컨테이너 내부에만 저장
     networks:
       - eryuk_network
 

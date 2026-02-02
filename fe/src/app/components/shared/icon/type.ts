@@ -28,5 +28,4 @@ export interface IconCircleProps {
 export interface IconButtonProps extends IconCircleProps {
   onClick?: MouseEventHandler<HTMLButtonElement>;
   disabled?: boolean;
-  themeColor?: ThemeColor;
 }

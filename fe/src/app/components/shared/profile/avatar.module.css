@@ -1,7 +1,9 @@
 .avatar {
   position: relative;
-  width: 36px;
-  height: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  min-height: 36px;
+  min-height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -55,18 +57,23 @@
   z-index: 1;
 }
 
-.avatar.active::before {
+.avatar::before {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   width: 120%;
   height: 120%;
+  transition: all .2s ease-in-out;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   z-index: 0;
-  background-color: var(--primary-6);
   box-sizing: content-box;
+  background-color: transparent;
+}
+
+.avatar.active::before {
+  background-color: var(--primary-6);
 }
 
 .avatar.count {

@@ -1,15 +1,26 @@
-import { ForbiddenException, Logger, NotFoundException, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Logger,
+  NotFoundException,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
+  WebSocketServer,
 } from '@nestjs/websockets';
+import { Socket, Server } from 'socket.io';
+import { RedisClientType } from 'redis';
+import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import { WsExceptionFilter } from '@src/common/filters/ws-exception.filter';
 import { WsJsonParsePipe } from '@src/common/pipes/ws-json-parse.pipe';
 import { createWsErrorResponse } from '@src/common/utils/ws-error-code';
-import { Socket } from 'socket.io';
 import { RoomService } from '../room/room.service';
 import {
   ConsumerStateChangeDto,
@@ -46,11 +57,15 @@ interface SocketWithAuth extends Socket {
   }),
 )
 export class VoiceGateway implements OnGatewayDisconnect {
+  @WebSocketServer()
+  server!: Server;
+
   private readonly logger = new Logger(VoiceGateway.name);
 
   constructor(
     private readonly voiceService: VoiceService,
     private readonly roomService: RoomService,
+    @Inject(REDIS_CLIENT) private readonly redisClient: RedisClientType,
   ) {}
 
   private async _authorizeClient(client: SocketWithAuth, roomId: string): Promise<string> {
@@ -68,9 +83,8 @@ export class VoiceGateway implements OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithAuth,
   ) {
     try {
-      const room_Id = data.room_id;
-      await this._authorizeClient(client, room_Id);
-      const rtpCapabilities = await this.voiceService.getRouterRtpCapabilities(room_Id);
+      await this._authorizeClient(client, data.room_id);
+      const rtpCapabilities = await this.voiceService.getRouterRtpCapabilities(data.room_id);
       return { rtpCapabilities };
     } catch (error) {
       return { error: createWsErrorResponse(error, '라우터 기능 조회 중 오류가 발생했습니다.') };
@@ -106,11 +120,19 @@ export class VoiceGateway implements OnGatewayDisconnect {
       const userId = await this._authorizeClient(client, data.room_id);
       const producer = await this.voiceService.createProducer(data, userId);
 
-      client.to(data.room_id).emit('voice:producer:new', {
+      const payload = {
         room_id: data.room_id,
         user_id: userId,
         producer_id: producer.id,
-      });
+      };
+
+      const memberIds = await this.roomService.getRoomMemberIds(data.room_id);
+      for (const memberId of memberIds) {
+        if (memberId === userId) continue;
+        const targetSocketId = await this.redisClient.get(`user:session:${memberId}`);
+        if (!targetSocketId) continue;
+        this.server.to(targetSocketId).emit('voice:producer:new', payload);
+      }
 
       return { producer_id: producer.id };
     } catch (error) {
@@ -135,7 +157,7 @@ export class VoiceGateway implements OnGatewayDisconnect {
       const userId = await this._authorizeClient(client, data.room_id);
       await this.voiceService.pauseProducer(data.producer_id, userId);
 
-      client.to(data.room_id).emit('voice:producer:update', {
+      this.server.to(data.room_id).emit('voice:producer:update', {
         room_id: data.room_id,
         user_id: userId,
         is_mic_on: false,
@@ -154,7 +176,7 @@ export class VoiceGateway implements OnGatewayDisconnect {
       const userId = await this._authorizeClient(client, data.room_id);
       await this.voiceService.resumeProducer(data.producer_id, userId);
 
-      client.to(data.room_id).emit('voice:producer:update', {
+      this.server.to(data.room_id).emit('voice:producer:update', {
         room_id: data.room_id,
         user_id: userId,
         is_mic_on: true,
@@ -173,7 +195,7 @@ export class VoiceGateway implements OnGatewayDisconnect {
       const userId = await this._authorizeClient(client, data.room_id);
       await this.voiceService.closeProducer(data.producer_id, userId);
 
-      client.to(data.room_id).emit('voice:producer:closed', {
+      this.server.to(data.room_id).emit('voice:producer:closed', {
         room_id: data.room_id,
         producer_id: data.producer_id,
       });
@@ -261,8 +283,6 @@ export class VoiceGateway implements OnGatewayDisconnect {
   async handleDisconnect(client: SocketWithAuth) {
     const { userId } = client.data;
     if (!userId) return;
-
-    this.logger.log(`[Voice] 비정상 종료 감지: 유저 ${userId}`);
 
     try {
       await this.voiceService.cleanupUserResources(userId);

@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { roomChatService } from '../services/RoomChatService';
+import { roomStore } from '@/app/features/room/stores/room';
 import { ChatReceiveData } from '../dtos/data';
 
 export function useRoomChat(roomId?: string, isJoined?: boolean) {
   const [chats, setChats] = useState<ChatReceiveData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const storeRoomId = roomStore((s) => s.id);
 
   useEffect(() => {
-    if (!roomId || !isJoined) {
+    // 현재 소속된 방과 요청 roomId 가 다르면 구독하지 않음
+    // (다른 방 URL 직접 접근 시 중복 구독/입장 방지)
+    if (!roomId || !isJoined || storeRoomId !== roomId) {
       setIsConnected(false);
       setChats([]);
       return;
@@ -45,7 +49,7 @@ export function useRoomChat(roomId?: string, isJoined?: boolean) {
       unsubscribeMessage();
       unsubscribeConnection();
     };
-  }, [roomId, isJoined]);
+  }, [roomId, isJoined, storeRoomId]);
 
   return { chats, isConnected };
 }

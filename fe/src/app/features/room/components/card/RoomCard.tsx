@@ -25,17 +25,18 @@ function RoomCard({
   const { gotoRoom } = useNavigation();
   const remainingCount = maxParticipants - currentParticipants;
   const isAuthenticated = authStore((state) => state.isAuthenticated);
+  const myRoomId = roomStore((state) => state.id);
 
   const profiles = participants.map((p) => ({
     nickname: p.nickname,
     profileImage: p.profileImage,
   }));
-  const roomId = roomStore((state) => state.roomId);
   const noRemain = remainingCount === 0;
-  const isMember = roomId === id;
-  const enterable = isMember || !noRemain;
+  const isMember = myRoomId === id;
 
-  const getStatusChipStatus = (): 'success' | 'warning' | 'error' => {
+  const enterable = isMember || (!noRemain && !myRoomId);
+
+  const getStatus = (): 'success' | 'warning' | 'error' => {
     if (noRemain) return 'error'; // 풀방
     if (remainingCount === 1) return 'warning'; // 한 자리 남음
     return 'success';
@@ -55,20 +56,32 @@ function RoomCard({
   if (!isAuthenticated) tooltipText = '먼저 로그인을 해주세요!';
   else if (isMember) tooltipText = '기존 방에 입장합니다';
   else if (noRemain) tooltipText = '자리가 없어요!';
+  else if (myRoomId) tooltipText = '이미 소속된 방이 있어요!';
+  else if (remainingCount === 1) tooltipText = '한 자리 남았어요!';
 
   return (
     <div className={styles.roomCard}>
       <div className={styles.top}>
         <div className={styles.header}>
-          <div className={styles.titleContainer}>
-            <Icon name={isMicAvailable ? 'voice' : 'message'} size="medium" />
-            <h3 className={styles.title} data-anchor={titleAnchor}>
-              {title}
-            </h3>
-          </div>
-          <TextTooltip text={title} anchorId={titleAnchor} />
+          <>
+            <div className={styles.titleContainer}>
+              <>
+                <TooltipTrigger dataAnchor="roomcard-icon">
+                  <Icon name={isMicAvailable ? 'voice' : 'message'} size="medium" />
+                </TooltipTrigger>
+                <TextTooltip
+                  anchorId="roomcard-icon"
+                  text={isMicAvailable ? '음성 대화방 입니다' : '텍스트 대화방입니다'}
+                />
+              </>
+              <h3 className={styles.title} data-anchor={titleAnchor}>
+                {title}
+              </h3>
+            </div>
+            <TextTooltip text={title} anchorId={titleAnchor} />
+          </>
           <StatusChip
-            status={getStatusChipStatus()}
+            status={getStatus()}
             label={`${currentParticipants}/${maxParticipants}`}
             size="small"
           />

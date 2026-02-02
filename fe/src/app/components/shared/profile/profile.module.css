@@ -9,7 +9,9 @@
 }
 
 .profile.column {
+  width: 100%;
   flex-direction: column;
+  min-width: 0;
 }
 
 .profile.clickable {
@@ -20,4 +22,9 @@
   font: var(--title-2);
   color: var(--neutral-9);
   padding: 0 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

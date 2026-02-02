@@ -16,6 +16,7 @@ import Modal from '@/app/components/shared/modal/Modal';
 import GameReadyModalContent from '@/app/features/room/components/ready/GameReadyModalContent';
 import useNavigation from '@/app/hooks/useNavigation';
 import { authStore } from '@/app/features/user/stores/auth';
+import { roomStore } from '@/app/features/room/stores/room';
 
 export default function RoomPage() {
   const params = useParams();
@@ -24,14 +25,13 @@ export default function RoomPage() {
   const userId = authStore((s) => s.userId);
   const { status } = useResponsive();
 
-  const {
-    roomData,
-    roomJoinInfoData,
-    showPasswordAuth,
-    handlePasswordConfirm,
-    handlePasswordCancel,
-    game,
-  } = useRoom(roomId);
+  const { entry, game } = useRoom(roomId);
+  const storedHostId = roomStore((state) => state.hostId);
+  const storedTitle = roomStore((state) => state.title);
+  const storedTags = roomStore((state) => state.tags);
+  const storedIsMicAvailable = roomStore((state) => state.isMicAvailable);
+  const storedIsPrivate = roomStore((state) => state.isPrivate);
+  const storedMaxParticipants = roomStore((state) => state.maxParticipants);
 
   const {
     isGameRecruiting,
@@ -48,7 +48,7 @@ export default function RoomPage() {
 
   const { gotoRoomGameList } = useNavigation();
 
-  const isHost = roomData?.hostId === userId;
+  const isHost = storedHostId === userId;
   const isGameButtonEnabled = isHost || isGameRecruiting;
 
   return (
@@ -61,12 +61,12 @@ export default function RoomPage() {
             <div className={styles.left}>
               <RoomInfoWithModal
                 roomId={roomId}
-                title={roomData?.title ?? roomJoinInfoData?.title}
-                tags={roomData?.tags ?? roomJoinInfoData?.tags}
+                title={storedTitle ?? entry.joinInfo?.title}
+                tags={storedTags ?? entry.joinInfo?.tags}
                 isHost={isHost}
-                isMicAvailable={roomData?.isMicAvailable ?? roomJoinInfoData?.isMicAvailable}
-                isPrivate={roomData?.isPrivate ?? roomJoinInfoData?.isPrivate}
-                maxParticipants={roomData?.maxParticipants}
+                isMicAvailable={storedIsMicAvailable ?? entry.joinInfo?.isMicAvailable}
+                isPrivate={storedIsPrivate ?? entry.joinInfo?.isPrivate}
+                maxParticipants={storedMaxParticipants}
               />
               <RoomTextChat />
             </div>
@@ -83,9 +83,9 @@ export default function RoomPage() {
       </div>
 
       <PasswordAuthDialog
-        isOpen={showPasswordAuth}
-        onConfirm={handlePasswordConfirm}
-        onCancel={handlePasswordCancel}
+        isOpen={entry.isPasswordModalOpen}
+        onConfirm={entry.confirmEntryWithPassword}
+        onCancel={entry.cancelPasswordEntry}
       />
 
       <Modal
@@ -98,7 +98,7 @@ export default function RoomPage() {
         <GameReadyModalContent
           myStatus={myStatus}
           players={gamePlayers}
-          maxPlayers={roomData?.maxParticipants}
+          maxPlayers={storedMaxParticipants}
           selectedGame={selectedGame}
           onChangeGame={() => roomId && gotoRoomGameList(roomId)}
           onReadyChange={handleReadyChange}

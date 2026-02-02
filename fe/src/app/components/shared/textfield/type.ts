@@ -12,5 +12,6 @@ export interface TextfieldProps {
   onCompositionEnd?: (e: React.CompositionEvent<HTMLInputElement>) => void;
   hidable?: boolean;
   disabled?: boolean;
+  maxLength?: number;
   variant: TextfieldVariant;
 }

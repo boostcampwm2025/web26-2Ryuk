@@ -2,98 +2,90 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { RoomData, RoomParticipantData as PData } from '@/app/features/room/dtos/data';
+import { RoomData, RoomParticipantData } from '@/app/features/room/dtos/data';
+import { GamePlayerData } from '@/app/features/game/dtos/data';
 
-interface RoomState {
-  roomId?: string;
-  isJoined: boolean;
-  roomData?: RoomData;
-  isGameRecruiting: boolean;
-}
+type RoomState = Partial<RoomData>;
+
+const createEmptyRoomState = (): RoomState => ({
+  id: undefined,
+  title: undefined,
+  tags: [],
+  hostId: undefined,
+  currentParticipants: undefined,
+  maxParticipants: undefined,
+  isMicAvailable: undefined,
+  isPrivate: undefined,
+  isGameRecruiting: undefined,
+  participants: [],
+  players: [],
+  createDate: undefined,
+});
 
 interface RoomActions {
-  setRoom: (roomId?: string) => void;
-  setRoomData: (roomData?: RoomData) => void;
-  updateRoomData: (updates: Partial<RoomData>) => void;
-  setIsGameRecruiting: (isGameRecruiting: boolean) => void;
-  addParticipant: (participant: PData) => void;
+  replaceRoom: (room: RoomData) => void;
+  updateRoom: (patch: Partial<RoomData>) => void;
+  addParticipant: (participant: RoomParticipantData) => void;
   removeParticipant: (userId: string) => void;
-  setJoined: (isJoined: boolean) => void;
-  leaveRoom: () => void;
+  addPlayer: (player: GamePlayerData) => void;
+  removePlayer: (playerId: string) => void;
+  resetRoom: () => void;
 }
 
 export type RoomStore = RoomState & RoomActions;
 
 export const roomStore = create<RoomStore>()(
   persist(
-    (set) => ({
-      roomId: undefined,
-      isJoined: false,
-      roomData: undefined,
-      isGameRecruiting: false,
+    (set) => {
+      const emptyState = createEmptyRoomState();
 
-      setRoom: (roomId?: string) =>
-        set((state) => {
-          const roomData = state.roomData?.id === roomId ? state.roomData : undefined;
-          return { roomId, isJoined: false, roomData, isGameRecruiting: false };
-        }),
+      return {
+        ...emptyState,
 
-      setRoomData: (roomData?: RoomData) => {
-        const roomId = roomData?.id;
-        set({ roomData, roomId, isGameRecruiting: roomData?.isGameRecruiting ?? false });
-      },
+        replaceRoom: (room) => set(() => ({ ...room })),
+        updateRoom: (patch) => set((state) => ({ ...state, ...patch })),
 
-      updateRoomData: (updates: Partial<RoomData>) =>
-        set((state) => {
-          const next: Partial<RoomState> = {};
-          if (state.roomData) next.roomData = { ...state.roomData, ...updates };
-          else if (updates.currentParticipants != null && state.roomId) {
-            next.roomData = {
-              id: state.roomId,
-              title: updates.title ?? '',
-              tags: updates.tags ?? [],
-              hostId: updates.hostId ?? '',
-              maxParticipants: updates.maxParticipants ?? 0,
-              currentParticipants: updates.currentParticipants,
-              participants: [],
-              createDate: updates.createDate ?? new Date(),
-              isMicAvailable: updates.isMicAvailable ?? false,
-              isPrivate: updates.isPrivate ?? false,
+        addParticipant: (participant) =>
+          set((state) => {
+            const existing = state.participants ?? [];
+            if (existing.some((p) => p.userId === participant.userId)) return {};
+            return {
+              participants: [...existing, participant],
             };
-          }
-          if (typeof updates.isGameRecruiting === 'boolean') {
-            next.isGameRecruiting = updates.isGameRecruiting;
-          }
-          return next;
-        }),
+          }),
 
-      setIsGameRecruiting: (isGameRecruiting: boolean) => set({ isGameRecruiting }),
+        removeParticipant: (userId) =>
+          set((state) => {
+            const participants = state.participants ?? [];
+            if (!participants.length) return {};
+            const next = participants.filter((p) => p.userId !== userId);
+            if (next.length === participants.length) return {};
+            return { participants: next };
+          }),
 
-      addParticipant: (participant: PData) =>
-        set((state) => {
-          if (!state.roomData) return state;
-          const exists = state.roomData.participants.some((p) => p.userId === participant.userId);
-          const participants = [...state.roomData.participants, participant];
-          if (exists) return state;
-          return { roomData: { ...state.roomData, participants } };
-        }),
+        addPlayer: (player) =>
+          set((state) => {
+            const existing = state.players ?? [];
+            if (existing.some((p) => p.playerId === player.playerId)) return {};
+            return { players: [...existing, player] };
+          }),
 
-      removeParticipant: (userId: string) =>
-        set((state) => {
-          if (!state.roomData) return state;
-          const participants = state.roomData.participants.filter((p) => p.userId !== userId);
-          return { roomData: { ...state.roomData, participants } };
-        }),
+        removePlayer: (playerId) =>
+          set((state) => {
+            const players = state.players ?? [];
+            if (!players.length) return {};
+            const next = players.filter((p) => p.playerId !== playerId);
+            if (next.length === players.length) return {};
+            return { players: next };
+          }),
 
-      setJoined: (isJoined: boolean) => set({ isJoined }),
-
-      leaveRoom: () =>
-        set({ roomId: undefined, isJoined: false, roomData: undefined, isGameRecruiting: false }),
-    }),
+        resetRoom: () => set(() => ({ ...createEmptyRoomState() })),
+      };
+    },
     {
       name: 'room-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ roomId: state.roomId, isJoined: state.isJoined }),
+      partialize: (state) => ({ id: state.id }),
     },
   ),
 );

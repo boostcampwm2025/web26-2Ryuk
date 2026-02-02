@@ -24,7 +24,7 @@
 }
 
 .tablet .topSection {
-  flex-direction: row;
+  flex-direction: column;
 }
 
 .mobile .topSection {

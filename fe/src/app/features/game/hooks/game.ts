@@ -23,14 +23,13 @@ interface ResultSnapshot {
 export function useGame(roomId?: string): UseGameResult {
   const { showSuccessToast, showInfoToast, showErrorToast } = useToast();
 
-  const roomData = roomStore((s) => s.roomData);
+  const hostId = roomStore((s) => s.hostId);
+  const roomPlayers = roomStore((s) => s.players);
+  const storedIsGameRecruiting = roomStore((s) => s.isGameRecruiting);
   const userId = authStore((s) => s.userId);
   const user = authStore((s) => s.user);
-  const isHost = roomData?.hostId === userId;
-  const roomIsGameRecruiting = roomStore(
-    (s) => s.isGameRecruiting || Boolean(s.roomData?.isGameRecruiting),
-  );
-  const setRoomIsGameRecruiting = roomStore((s) => s.setIsGameRecruiting);
+  const isHost = hostId === userId;
+  const roomIsGameRecruiting = storedIsGameRecruiting ?? false;
 
   // GameStore 상태 구독
   const storeGameState = gameStore((s) => s.gameState);
@@ -78,7 +77,7 @@ export function useGame(roomId?: string): UseGameResult {
   }, [selectedGame?.id]);
   const shouldHandleGameEvents = myStatus?.isHost || Boolean(myStatus?.isReady);
   useEffect(() => {
-    const players = roomData?.players;
+    const players = roomPlayers;
     if (!players || players.length === 0) return;
 
     const hostStatus = players.find((p) => p.playerId === userId);
@@ -88,11 +87,11 @@ export function useGame(roomId?: string): UseGameResult {
 
     const filtered = players.filter((p) => p.playerId !== userId);
     setGamePlayers(filtered);
-  }, [roomData?.players, userId]);
+  }, [roomPlayers, userId]);
   const [remainingTime, setRemainingTime] = useState<number>(0);
 
   const isMe = (playerId: string) => playerId === userId;
-  const isHostPlayer = (playerId: string) => playerId === roomData?.hostId;
+  const isHostPlayer = (playerId: string) => playerId === hostId;
   const isSamePlayer = (a: PData, b: PData) => a.playerId === b.playerId;
   const withHostFlag = (p: PData): PData => ({ ...p, isHost: isHostPlayer(p.playerId) });
 
@@ -135,11 +134,11 @@ export function useGame(roomId?: string): UseGameResult {
   useEffect(() => {
     return gameService.onRecruit((data) => {
       setSelectedGame(undefined);
-      setRoomIsGameRecruiting(data.isGameRecruiting);
+      roomStore.getState().updateRoom({ isGameRecruiting: data.isGameRecruiting });
       if (!data.isGameRecruiting || isHost) return;
       showInfoToast('게임 모집이 시작되었습니다.');
     });
-  }, [isHost, setRoomIsGameRecruiting]);
+  }, [isHost]);
 
   // game:join (ack)
   const applyJoinAck = useCallback(
@@ -187,7 +186,7 @@ export function useGame(roomId?: string): UseGameResult {
       offJoin();
       offLeave();
     };
-  }, [userId, roomData?.hostId]);
+  }, [userId, hostId]);
 
   // game:player:ready, game:player:unready
   const updateReady = useCallback((playerId: string, isReady: boolean) => {
@@ -211,7 +210,7 @@ export function useGame(roomId?: string): UseGameResult {
     return gameService.onClose((data) => {
       if (data.isGameRecruiting) return;
 
-      setRoomIsGameRecruiting(data.isGameRecruiting);
+      roomStore.getState().updateRoom({ isGameRecruiting: data.isGameRecruiting });
       setGamePlayers([]);
       closeModal('game-ready');
 
@@ -219,7 +218,7 @@ export function useGame(roomId?: string): UseGameResult {
         ? showSuccessToast('게임 모집을 종료했습니다.')
         : showInfoToast('게임 모집이 종료되었습니다.');
     });
-  }, [isHost, setRoomIsGameRecruiting]);
+  }, [isHost]);
 
   // game:recruit
   const handleGameRecruit = useCallback(async () => {

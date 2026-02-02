@@ -1,133 +1,144 @@
-import { roomStore } from '@/app/features/room/stores/room';
-import { VoiceService } from '@/app/features/voice/services/VoiceService';
-import { UserVoiceState, useVoiceStore } from '@/app/features/voice/stores/voice';
-import { WebSocketService } from '@/app/services/websocket.service';
-import { useEffect } from 'react';
+'use client';
 
-export function useVoiceChat(roomId: string, isJoined: boolean) {
-  const isMicAvailable = roomStore((state) => state.roomData?.isMicAvailable ?? false);
-  const {
-    voiceUsers,
-    isMyMicOn,
-    setVoiceUser,
-    removeVoiceUser,
-    setMyMic,
-    isMasterMute,
-    toggleMasterMute,
-  } = useVoiceStore();
+import { useCallback, useEffect, useRef } from 'react';
+import { voiceStreamRegistry } from '@/app/features/voice/VoiceStreamRegistry';
+import {
+  createSpeakingDetector,
+  SpeakingDetector,
+} from '@/app/features/voice/utils/speakingDetector';
+import { voiceStore } from '@/app/features/voice/stores/voice';
+import { VoiceService } from '@/app/features/voice/services/VoiceService';
+
+type VoiceDomainEventPayload =
+  | { type: 'producer-added'; userId: string }
+  | { type: 'producer-removed'; userId: string }
+  | { type: 'producer-updated'; userId: string; isMicOn: boolean };
+
+export function useVoiceChat() {
+  const users = voiceStore((state) => state.users);
+  const isMyMicOn = voiceStore((state) => state.isMyMicOn);
+  const masterMute = voiceStore((state) => state.masterMute);
+
+  const addUser = voiceStore((state) => state.addUser);
+  const removeUser = voiceStore((state) => state.removeUser);
+  const setUserMic = voiceStore((state) => state.setUserMic);
+  const setUserSpeaker = voiceStore((state) => state.setUserSpeaker);
+  const setUserVolume = voiceStore((state) => state.setUserVolume);
+  const setUserSpeaking = voiceStore((state) => state.setUserSpeaking);
+  const setMyMic = voiceStore((state) => state.setMyMic);
+  const setMasterMute = voiceStore((state) => state.setMasterMute);
+
+  const detectorsRef = useRef<Map<string, SpeakingDetector>>(new Map());
 
   useEffect(() => {
-    // 룸 ID가 없거나 입장이 완료되지 않았다면 실행하지 않음
-    if (!roomId || !isJoined) return;
-
-    let isMounted = true;
-    let unsubscribe: (() => void) | null = null;
-
-    const init = async () => {
-      if (!isMicAvailable) {
-        console.log('🔇 이 방은 음성 채팅이 비활성화되어 있습니다.');
-        return;
-      }
-
-      try {
-        await WebSocketService.ensureConnected(10000); //소켓 연결 될때까지 기다리기
-
-        // 1. 보이스 채널 입장
-        await VoiceService.joinVoiceChannel(roomId);
-
-        if (!isMounted) return;
-
-        // 2. 채널 입장 성공 후 즉시 알림 구독 시작 (순서 보장)
-        unsubscribe = VoiceService.onStatusChange((payload) => {
-          if (payload.action === 'remove') {
-            removeVoiceUser(payload.userId);
-            return;
-          }
-          const updates: Partial<UserVoiceState> = {
-            isMicOn: payload.isMicOn,
-          };
-
-          // stream이 들어왔을 때만(즉, 처음 'add' 될 때만) updates 객체에 추가
-          if (payload.stream) {
-            updates.stream = payload.stream;
-          }
-
-          setVoiceUser(payload.userId, updates);
-        });
-
-        // 3. 내 마이크 시작 및 로컬 상태 업데이트
-        try {
-          await VoiceService.startMic();
-          setMyMic(true);
-        } catch (micError) {
-          console.warn('마이크 시작 실패(권한 거절 등):', micError);
-          setMyMic(false);
-        }
-
-        // 4. 기존 프로듀서(송출자) 목록 조회 및 구독 시작
-        await VoiceService.getProducerList();
-
-        if (isMounted) {
-          setMyMic(true);
-          console.log('✅ Voice Chat 연결 성공');
-        }
-      } catch (error: any) {
-        throw new Error('음성 채널 입장 실패: ' + (error.message || JSON.stringify(error)));
+    const handleEvent = (event: VoiceDomainEventPayload) => {
+      switch (event.type) {
+        case 'producer-added':
+          addUser(event.userId);
+          break;
+        case 'producer-updated':
+          setUserMic(event.userId, event.isMicOn);
+          break;
+        case 'producer-removed':
+          removeUser(event.userId);
+          break;
       }
     };
 
-    init();
-
-    // 클린업 함수
+    const unsubscribe = VoiceService.onEvent(handleEvent);
     return () => {
-      isMounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      VoiceService.leaveChannel();
-      console.log('🚪 Voice Chat 채널 퇴장');
+      unsubscribe();
     };
-  }, [roomId, isJoined, isMicAvailable, setVoiceUser, removeVoiceUser, setMyMic]);
+  }, [addUser, removeUser, setUserMic]);
 
-  // 내 마이크 토글 핸들러
-  const toggleMic = async () => {
-    if (!isMicAvailable) return;
+  useEffect(() => {
+    const detectors = detectorsRef.current;
+    const activeIds = Object.keys(users);
+    const activeSet = new Set(activeIds);
+
+    detectors.forEach((detector, userId) => {
+      if (activeSet.has(userId)) return;
+      detector.stop();
+      detectors.delete(userId);
+      setUserSpeaking(userId, false);
+    });
+
+    activeIds.forEach((userId) => {
+      if (detectors.has(userId)) return;
+      const stream = voiceStreamRegistry.getStream(userId);
+      if (!stream) return;
+      const detector = createSpeakingDetector({
+        stream,
+        onSpeakingChange: (isSpeaking) => setUserSpeaking(userId, isSpeaking),
+      });
+      detectors.set(userId, detector);
+    });
+  }, [users, setUserSpeaking]);
+
+  useEffect(() => {
+    return () => {
+      detectorsRef.current.forEach((detector) => detector.stop());
+      detectorsRef.current.clear();
+    };
+  }, []);
+
+  const toggleMyMic = useCallback(async () => {
+    const nextState = !isMyMicOn;
     try {
-      const nextState = !isMyMicOn;
-      // 서비스에는 미디어서버 일시정지 여부(pause)를 전달하므로 상태의 반대값 전송
       await VoiceService.toggleMic(!nextState);
       setMyMic(nextState);
     } catch (error) {
-      console.error('마이크 제어 실패:', error);
+      console.error('[Voice] 마이크 토글 실패', error);
     }
-  };
+  }, [isMyMicOn, setMyMic]);
 
-  // 상대방 소리 수신 토글 핸들러
-  const toggleUserAudio = async (userId: string, targetState: boolean) => {
-    try {
-      const consumer = VoiceService.getConsumerByUserId(userId);
-      if (consumer) {
-        // targetState가 true(켜기)면 pause는 false(끄기)여야 함
-        await VoiceService.toggleConsumer(consumer, !targetState);
-        setVoiceUser(userId, { isSpeakerOn: targetState });
+  const toggleUserSpeaker = useCallback(
+    (userId: string) => {
+      const current = users[userId]?.isSpeakerOn ?? true;
+      const nextSpeakerOn = !current;
+      setUserSpeaker(userId, nextSpeakerOn);
+      const shouldPause = masterMute || !nextSpeakerOn;
+      void VoiceService.setConsumerPaused(userId, shouldPause);
+    },
+    [masterMute, setUserSpeaker, users],
+  );
+
+  const setUserVolumeLevel = useCallback(
+    (userId: string, volume: number) => {
+      const nextVolume = Math.max(0, Math.min(1, volume));
+      setUserVolume(userId, nextVolume);
+      VoiceService.setConsumerVolume(userId, nextVolume);
+    },
+    [setUserVolume],
+  );
+
+  const toggleMasterMute = useCallback(() => {
+    const nextMasterMute = !masterMute;
+    setMasterMute(nextMasterMute);
+    if (nextMasterMute) {
+      Object.keys(users).forEach((userId) => {
+        void VoiceService.setConsumerPaused(userId, true);
+      });
+      return;
+    }
+
+    Object.entries(users).forEach(([userId, meta]) => {
+      if (meta.isSpeakerOn) {
+        void VoiceService.setConsumerPaused(userId, false);
       }
-    } catch (error) {
-      console.error('상대방 소리 제어 실패:', error);
-    }
-  };
+    });
+  }, [masterMute, setMasterMute, users]);
 
-  // 특정 유저의 볼륨 조절 핸들러
-  const changeUserVolume = (userId: string, volume: number) => {
-    setVoiceUser(userId, { volume: volume });
-  };
+  const getUserStream = useCallback((userId: string) => voiceStreamRegistry.getStream(userId), []);
 
   return {
-    voiceUsers,
+    users,
     isMyMicOn,
-    isMasterMute,
-    toggleMic,
-    toggleUserAudio,
-    changeUserVolume,
+    masterMute,
+    getUserStream,
+    toggleMyMic,
+    toggleUserSpeaker,
+    setUserVolume: setUserVolumeLevel,
     toggleMasterMute,
   };
 }

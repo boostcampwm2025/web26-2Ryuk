@@ -305,7 +305,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         timestamp: msg.create_date,
       }));
 
-      client.emit(WS_EVENTS_CHAT.GLOBAL_RECENTS, {
+      client.emit(WS_EVENTS_CHAT.GLOBAL_INIT, {
         messages,
         current_participants: currentParticipants,
       });

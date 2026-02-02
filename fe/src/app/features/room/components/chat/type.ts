@@ -12,6 +12,9 @@ export interface VoiceParticipantCardProps {
   micOn?: boolean;
   speakerOn?: boolean;
   volume?: number;
+  mutedByMe?: boolean;
+  disabled?: boolean;
+  connected?: boolean;
   onSliderChange?: (value: number) => void;
   onMicChange?: (state: boolean) => void;
   onSpeakerChange?: (state: boolean) => void;

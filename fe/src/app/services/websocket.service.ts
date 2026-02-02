@@ -4,6 +4,17 @@ export class WebSocketService {
   private static socket?: Socket;
   private static connectPromise?: Promise<void>;
   private static connectResolvers: Set<() => void> = new Set();
+  private static socketCreatedCallbacks: Set<(socket: Socket) => void> = new Set();
+
+  /**
+   * 소켓 인스턴스가 생성된 직후 한 번 호출되는 콜백 등록.
+   * (연결 완료 전에 등록해 두어 연결 직후 서버가 보내는 이벤트를 놓치지 않기 위함)
+   * 이미 소켓이 있으면 즉시 콜백을 호출한다.
+   */
+  static onSocketCreated(cb: (socket: Socket) => void): void {
+    this.socketCreatedCallbacks.add(cb);
+    if (this.socket) cb(this.socket);
+  }
 
   /**
    * WebSocket 연결
@@ -13,12 +24,18 @@ export class WebSocketService {
    * @param onError 에러 콜백
    */
   static connect(
-    url: string,
+    url?: string,
     onMessage?: (data: unknown) => void,
     onError?: (error: Error) => void,
   ): void {
-    // 이미 연결되어 있으면 재연결을 위해 기존 연결 해제
-    if (this.socket?.connected) this.disconnect();
+    const targetUrl = url ?? process.env.NEXT_PUBLIC_API_URL;
+    if (!targetUrl) return console.error('[WebSocket] 연결할 URL이 없습니다.');
+
+    if (this.socket) {
+      if (this.socket.connected) return;
+      if (this.connectPromise) return;
+      return;
+    }
 
     const connectionOptions: any = {
       transports: ['websocket'],
@@ -29,7 +46,10 @@ export class WebSocketService {
       timeout: 5000,
     };
 
-    this.socket = io(url, connectionOptions);
+    this.socket = io(targetUrl, connectionOptions);
+
+    this.socketCreatedCallbacks.forEach((cb) => cb(this.socket!));
+    this.socketCreatedCallbacks.clear();
 
     // 연결 완료 Promise 관리
     const socket = this.socket;
@@ -71,17 +91,6 @@ export class WebSocketService {
     return this.socket;
   }
 
-  /**
-   * WebSocket 연결 해제
-   */
-  static disconnect(): void {
-    if (!this.socket) return;
-    this.socket.disconnect();
-    this.socket = undefined;
-    this.connectPromise = undefined;
-    this.connectResolvers.clear();
-  }
-
   static onReconnect(cb: () => void) {
     this.on('connect', cb);
   }
@@ -91,6 +100,8 @@ export class WebSocketService {
    * @param timeout 타임아웃 (ms), 기본값 10초
    */
   static async ensureConnected(timeout: number = 10000): Promise<void> {
+    if (!this.socket && !this.connectPromise) this.connect();
+
     if (this.socket?.connected) return;
 
     if (this.connectPromise) {
@@ -120,21 +131,35 @@ export class WebSocketService {
    * 소켓 요청 유틸리티 (Ack 응답 대기)
    */
   static request(event: string, data: any, timeout = 5000): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const socket = this.socket;
-
-      if (!socket || !socket.connected) {
-        return reject(new Error('[WebSocket] 요청 실패: 연결되지 않은 상태입니다.'));
+    const normalizeSocketError = (error: unknown): string | null => {
+      if (error == null) return null;
+      if (typeof error === 'string') return error;
+      if (typeof error === 'object') {
+        const e = error as { message?: unknown };
+        if (typeof e.message === 'string') return e.message;
       }
 
-      const timer = setTimeout(() => {
-        reject(new Error(`[WebSocket] 요청 응답 시간 초과: ${event}`));
-      }, timeout);
+      return JSON.stringify(error);
+    };
+
+    const socket = this.socket;
+    if (!socket?.connected) {
+      return Promise.reject(new Error('[WebSocket] 요청 실패: 연결되지 않은 상태입니다.'));
+    }
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(`[WebSocket] 요청 응답 시간 초과: ${event}`)),
+        timeout,
+      );
 
       socket.emit(event, data, (res: any) => {
         clearTimeout(timer);
-        if (res?.error) reject(new Error(`[WebSocket] 서버 에러: ${res.error}`));
-        else resolve(res?.data ?? res);
+
+        const errorMessage = normalizeSocketError(res?.error);
+
+        errorMessage && reject(new Error(`[WebSocket] 서버 에러: ${errorMessage}`));
+        !errorMessage && resolve(res?.data ?? res);
       });
     });
   }

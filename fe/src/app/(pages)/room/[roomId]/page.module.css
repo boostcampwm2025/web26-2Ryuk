@@ -17,14 +17,15 @@
 .left {
   display: flex;
   flex-direction: column;
-  flex: 0.6;
+  flex: 1;
+  min-width: 400px;
   gap: 32px;
 }
 
 .right {
   display: flex;
-  flex: 0.4;
   flex-direction: column;
+  flex: 0 0 auto;
   gap: 24px;
   align-items: stretch;
 }

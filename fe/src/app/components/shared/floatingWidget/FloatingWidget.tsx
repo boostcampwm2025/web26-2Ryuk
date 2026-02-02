@@ -7,10 +7,34 @@ import CSSUtil from '@/utils/css';
 import styles from './floatingWidget.module.css';
 
 const FloatingWidget = forwardRef<FloatingWidgetHandle, FloatingWidgetProps>(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ({ children, id, initialPosition, dragHandleId, onActivate, elevated }, ref) => {
-    const { widgetRef, handleMouseDown, position, isDragging, isTransitioning, ensureInBounds } =
-      useFloatingWidget({ initialPosition, dragHandleId });
+  (
+    {
+      children,
+      initialPosition,
+      dragHandleId,
+      onActivate,
+      elevated,
+      onUserDragEnd,
+      onSystemAdjust,
+      onViewportAdjust,
+    },
+    ref,
+  ) => {
+    const {
+      widgetRef,
+      handleMouseDown,
+      position,
+      isDragging,
+      isTransitioning,
+      ensureInBounds,
+      moveTo,
+    } = useFloatingWidget({
+      initialPosition,
+      dragHandleId,
+      onUserDragEnd,
+      onSystemAdjust,
+      onViewportAdjust,
+    });
 
     const className = CSSUtil.buildCls(
       styles.floatingWidget,
@@ -29,7 +53,7 @@ const FloatingWidget = forwardRef<FloatingWidgetHandle, FloatingWidgetProps>(
       handleMouseDown(e);
     };
 
-    useImperativeHandle(ref, () => ({ ensureInBounds }), [ensureInBounds]);
+    useImperativeHandle(ref, () => ({ ensureInBounds, moveTo }), [ensureInBounds, moveTo]);
 
     return (
       <div

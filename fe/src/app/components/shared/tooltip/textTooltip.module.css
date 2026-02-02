@@ -1,7 +1,8 @@
 .tooltip {
   position: fixed;
+  --scroll-bar-width: 16px;
   top: var(--tooltip-top);
-  left: var(--tooltip-left);
+  left: calc(var(--tooltip-left) - var(--scroll-bar-width));
 
   padding: 8px 12px;
   background: var(--neutral-9);

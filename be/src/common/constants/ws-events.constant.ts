@@ -10,12 +10,11 @@ export const WS_EVENTS_AUTH = {
  */
 export const WS_EVENTS_CHAT = {
   // 수신 이벤트
-  GLOBAL_JOIN: 'chat:global:join',
   GLOBAL_SEND: 'chat:global:send',
   ROOM_SEND: 'chat:room:send',
 
   // 송신 이벤트
-  GLOBAL_RECENTS: 'chat:global:recents',
+  GLOBAL_INIT: 'chat:global:init',
   GLOBAL_PARTICIPANTS_UPDATED: 'chat:global:participants-updated',
   GLOBAL_NEW_MESSAGE: 'chat:global:new-message',
   ROOM_NEW_MESSAGE: 'chat:room:new-message',

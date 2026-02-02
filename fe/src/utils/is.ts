@@ -8,6 +8,7 @@ const is = (type: string) => (v: unknown) => typeof v === type;
 /**
  * 값의 타입을 판별하는 유틸리티 객체
  */
+
 const IS = {
   string: is('string'),
   function: is('function'),
@@ -17,11 +18,11 @@ const IS = {
   numeric: (v: unknown) =>
     IS.number(v) || (IS.string(v) && (v as string).trim() !== '' && !Number.isNaN(Number(v))),
   array: Array.isArray,
-  null: (v: unknown) => v === null || (typeof v === 'object' && v === null),
-  undefined: (v: unknown) => v === undefined || typeof v === 'undefined',
+  null: (v: unknown) => v === null,
+  undefined: (v: unknown) => v === undefined,
   nil: (v: unknown) => IS.null(v) || IS.undefined(v),
   form: (v: unknown) => v instanceof FormData,
   date: (v: unknown) => v instanceof Date,
-} as Record<string, (v: unknown) => boolean>;
+};
 
 export default IS;

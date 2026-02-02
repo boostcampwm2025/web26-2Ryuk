@@ -3,11 +3,8 @@
 import styles from './heroSection.module.css';
 import { LogoImage } from '@/app/components/sprite/logo/Logo';
 import SpriteAnimation from '@/app/components/sprite/spriteAnimation/SpriteAnimation';
-import useResponsive from '@/app/hooks/useResponsive';
 
 export default function HeroSection() {
-  const { isDesktop } = useResponsive();
-
   return (
     <div className={styles.heroSection}>
       <div className={styles.content}>
@@ -29,11 +26,9 @@ export default function HeroSection() {
           </div>
         </div>
       </div>
-      {isDesktop && (
-        <div className={styles.imageWrapper}>
-          <SpriteAnimation variant="default" size="medium" />
-        </div>
-      )}
+      <div className={styles.imageWrapper}>
+        <SpriteAnimation variant="default" size="medium" />
+      </div>
     </div>
   );
 }

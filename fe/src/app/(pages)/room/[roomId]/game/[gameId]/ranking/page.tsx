@@ -11,9 +11,10 @@ import { rankingStore } from '@/app/features/game/stores/ranking';
 import { authStore } from '@/app/features/user/stores/auth';
 import { loadingStore } from '@/app/features/loading/stores/loading';
 import GoBackButton from '@/app/components/shared/button/GoBackButton';
-import { gotoRoomReplace } from '@/app/hooks/useNavigation';
+import useNavigation from '@/app/hooks/useNavigation';
 import { useParams } from 'next/navigation';
 import { roomStore } from '@/app/features/room/stores/room';
+import { modalStore } from '@/app/components/shared/modal/modal.store';
 import { gameRecordService } from '@/app/features/game/services/GameRecordService';
 import { GameRecordConverter } from '@/app/features/gameRecords/dtos/converter';
 import PageIndicator from '@/app/components/shared/pageIndicator/PageIndicator';
@@ -22,6 +23,7 @@ export default function GameRankingPage() {
   const params = useParams();
   const roomId = params.roomId as string;
   const gameId = params.gameId as string;
+  const { gotoRoomReplace, refresh } = useNavigation();
 
   const [view, setView] = useState<RankingViewType>('group');
   const myId = authStore((s) => s.userId);
@@ -38,12 +40,13 @@ export default function GameRankingPage() {
   const LIMIT = 10;
 
   const highlightRow = (row: GamePlayerResultItemData) => row.playerId === myId;
-  const setRoomIsGameRecruiting = roomStore((s) => s.setIsGameRecruiting);
 
   const handleGoBackClick = () => {
     if (!roomId) return;
-    setRoomIsGameRecruiting(false);
+    roomStore.getState().updateRoom({ isGameRecruiting: false });
+    modalStore.getState().closeModal('game-ready');
     gotoRoomReplace(roomId);
+    refresh();
   };
 
   const handleChangeViewType = (type: RankingViewType) => {

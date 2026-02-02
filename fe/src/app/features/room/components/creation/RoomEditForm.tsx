@@ -97,8 +97,9 @@ export default function RoomEditForm({
           <label className={styles.label}>대화방 제목</label>
           <DefaultTextfield
             placeholder="대화방 제목을 입력하세요"
-            initialValue={formData.title}
+            value={formData.title}
             onChange={(value) => setFormData((prev) => ({ ...prev, title: value }))}
+            maxLength={40}
           />
         </div>
 
@@ -107,7 +108,9 @@ export default function RoomEditForm({
           <TagSelector
             defaultTags={['수다', '게임', '소통']}
             selectedTags={formData.tags}
+            placeholder="#대화방, #태그를, #입력하세요 (최대 6개)"
             onChange={(value) => setFormData((prev) => ({ ...prev, tags: value }))}
+            maxCount={6}
           />
         </div>
 

@@ -6,6 +6,7 @@ import { roomStore } from '@/app/features/room/stores/room';
 import { roomChatService } from '@/app/features/chat/services/RoomChatService';
 import { authStore } from '@/app/features/user/stores/auth';
 import roomService from '@/app/features/room/services/RoomService';
+import { voiceSessionManager } from '@/app/features/voice/services/VoiceSessionManager';
 
 interface RoomProviderProps {
   children: ReactNode;
@@ -13,6 +14,8 @@ interface RoomProviderProps {
 
 export default function RoomProvider({ children }: RoomProviderProps) {
   const hasRestored = useRef(false);
+  const voiceDeferredByRestoreRef = useRef(false);
+  const roomId = roomStore((state) => state.id);
 
   useEffect(() => {
     const restoreRoomConnection = async () => {
@@ -26,32 +29,41 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       const { isAuthenticated } = authStore.getState();
       if (!isAuthenticated) return;
 
-      const { roomId: storedRoomId, isJoined } = roomStore.getState();
-      if (!storedRoomId || !isJoined) return;
+      const storedRoomId = roomStore.getState().id;
+      if (!storedRoomId) return;
 
       hasRestored.current = true;
+      voiceDeferredByRestoreRef.current = true;
 
-      // BE 상태 먼저 확인
-      let beRoomId;
+      let beRoomId: string | undefined;
 
       try {
         const { roomId } = await roomService.getMyCurrentRoom();
         beRoomId = roomId;
       } catch {
-        roomStore.getState().leaveRoom();
+        roomStore.getState().resetRoom();
         roomChatService.clearSubscriptionOnly();
+        voiceDeferredByRestoreRef.current = false;
         return;
       }
 
       if (!beRoomId) {
-        roomStore.getState().leaveRoom();
+        roomStore.getState().resetRoom();
         roomChatService.clearSubscriptionOnly();
+        voiceDeferredByRestoreRef.current = false;
         return;
       }
 
-      if (storedRoomId !== beRoomId) roomStore.getState().leaveRoom();
+      if (storedRoomId !== beRoomId) {
+        roomStore.getState().resetRoom();
+        roomChatService.clearSubscriptionOnly();
+        voiceDeferredByRestoreRef.current = false;
+        return;
+      }
 
       await roomChatService.subscribe(beRoomId);
+      voiceSessionManager.start(beRoomId);
+      voiceDeferredByRestoreRef.current = false;
     };
 
     // 이미 hydration 완료된 경우
@@ -78,6 +90,15 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       return roomStore.persist.onFinishHydration(restoreRoomConnection);
     }
   }, []);
+
+  // 음성 세션
+  useEffect(() => {
+    if (roomId && !voiceDeferredByRestoreRef.current) {
+      const t = setTimeout(() => voiceSessionManager.start(roomId), 100);
+      return () => clearTimeout(t);
+    }
+    if (!roomId) voiceSessionManager.stop();
+  }, [roomId]);
 
   return <>{children}</>;
 }

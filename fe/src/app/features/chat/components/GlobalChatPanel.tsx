@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { globalChatService } from '@/app/features/chat/services/GlobalChatService';
 import { ChatReceiveData } from '@/app/features/chat/dtos/data';
 import { authStore, type AuthStore } from '@/app/features/user/stores/auth';
+import { chatPanelStore } from '@/app/features/chat/stores/chatPanel';
 import ChatPanel from './ChatPanel';
-import { Position } from '@/app/components/shared/floatingWidget/type';
-import { PANEL_CONFIG } from './type';
 
 /**
  * GlobalChat 클라이언트 컴포넌트
@@ -16,14 +15,18 @@ export default function GlobalChatPanel() {
   const [chats, setChats] = useState<ChatReceiveData[]>([]);
   const [currentParticipants, setCurrentParticipants] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [isUnread, setIsUnread] = useState(false);
+  const showPanel = chatPanelStore((state) => state.show);
+  const isExpanded = chatPanelStore((state) => state.global.isExpanded);
+  const prevExpandedRef = useRef(isExpanded);
 
-  const [initialPosition, setInitialPosition] = useState<Position>(PANEL_CONFIG.DEFAULT_POSITION);
+  useEffect(() => showPanel('global'), []);
+  useEffect(() => globalChatService.onUnreadChange(setIsUnread), []);
 
   useEffect(() => {
-    const x = window.innerWidth - PANEL_CONFIG.WIDTH - PANEL_CONFIG.OFFSET;
-    const y = window.innerHeight - PANEL_CONFIG.HEIGHT - PANEL_CONFIG.OFFSET;
-    setInitialPosition({ x, y });
-  }, []);
+    if (isExpanded) globalChatService.markAsRead();
+    prevExpandedRef.current = isExpanded;
+  }, [isExpanded]);
 
   // WebSocket 연결 및 구독
   useEffect(() => {
@@ -37,7 +40,10 @@ export default function GlobalChatPanel() {
     subscribe();
 
     // recents 수신 콜백 등록
-    const unsubscribeRecents = globalChatService.onRecents((messages) => setChats(messages));
+    const unsubscribeRecents = globalChatService.onInit((count, messages) => {
+      setCurrentParticipants(count);
+      setChats(messages);
+    });
 
     // 메시지 수신 콜백 등록
     const unsubscribeMessage = globalChatService.onMessage((message) =>
@@ -77,10 +83,10 @@ export default function GlobalChatPanel() {
       type="global"
       participantCount={currentParticipants}
       chats={chats}
+      isUnread={isUnread}
       onMessageSubmit={handleMessageSubmit}
       isConnected={isConnected}
       disabled={!isConnected || !isAuthenticated}
-      initialPosition={initialPosition}
     />
   );
 }

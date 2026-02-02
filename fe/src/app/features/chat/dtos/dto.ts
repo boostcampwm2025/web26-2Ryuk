@@ -10,17 +10,6 @@ export type ChatReceiveDto = {
   };
   timestamp: string;
   room_id?: string;
-  user_id?: string;
-};
-
-export type ChatGlobalJoinAckDto = {
-  room_id: string;
-  current_participants: string;
-  recents: ChatReceiveDto[];
-};
-
-export type ChatGlobalJoinDto = {
-  room_id: string;
 };
 
 export type ChatGlobalSendDto = {
@@ -64,7 +53,7 @@ export type ChatGlobalSendAckDto = {
   timestamp: string;
 };
 
-export type GlobalChatRecentsDto = {
-  messages: ChatReceiveDto[];
+export type GlobalChatInitDto = {
   current_participants?: number;
+  messages: ChatReceiveDto[];
 };

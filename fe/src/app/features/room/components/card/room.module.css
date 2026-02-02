@@ -29,6 +29,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .titleContainer svg {
@@ -55,7 +56,9 @@
 
 .tags {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1;
+  overflow-x: scroll;
+  scrollbar-width: none;
   gap: 4px;
 }
 

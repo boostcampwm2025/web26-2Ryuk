@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, KeyboardEvent, CompositionEvent } from 'react';
+import { useState, useEffect, KeyboardEvent, CompositionEvent } from 'react';
 import { DefaultTextfield } from '@/app/components/shared/textfield/Textfield';
 import ToggleChip from '@/app/components/shared/chip/ToggleChip';
 import { TagSelectorProps } from './type';
@@ -10,11 +10,19 @@ export default function TagSelector({
   defaultTags = [],
   selectedTags: initialSelectedTags = [],
   onChange,
-  placeholder = '#대화방, #태그를, #입력하세요',
+  placeholder = '',
+  maxLength = 10,
+  maxCount,
 }: TagSelectorProps) {
   const [inputValue, setInputValue] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>(initialSelectedTags);
   const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    setSelectedTags(initialSelectedTags);
+  }, [initialSelectedTags]);
+
+  const canSelectMore = () => maxCount === undefined || selectedTags.length < maxCount;
 
   const handleInputChange = (value: string) => {
     // 콤마는 입력 필드에 남기지 않음
@@ -27,9 +35,9 @@ export default function TagSelector({
     // # 제거하고 실제 입력값 확인
     const actualValue = value.replace(/^#+/, '');
 
-    // 태그 길이 제한: 10글자 (공백 제외)
+    // 태그 길이 제한: maxLength 글자 (공백 제외)
     const tagLength = actualValue.replace(/\s/g, '').length;
-    if (tagLength > 10) return; // 입력 자체를 막음
+    if (tagLength > maxLength) return; // 입력 자체를 막음
 
     // 한글 입력 중이면 # 자동 추가하지 않음
     if (isComposing) return setInputValue(value);
@@ -75,6 +83,14 @@ export default function TagSelector({
     if (!isComposing && inputValue.trim() !== '') addTag(inputValue);
   };
 
+  const addTagToSelection = (tagName: string) => {
+    if (!canSelectMore()) return;
+
+    const newSelectedTags = [...selectedTags, tagName];
+    setSelectedTags(newSelectedTags);
+    onChange?.(newSelectedTags);
+  };
+
   const addTag = (tagInput: string) => {
     // # 제거하고 태그 이름 추출
     let tagName = tagInput.replace(/^#+/, '').trim();
@@ -88,32 +104,31 @@ export default function TagSelector({
     // 중복 태그 무시
     if (selectedTags.includes(tagName)) return setInputValue('');
 
-    // 새 태그 추가
-    const newSelectedTags = [...selectedTags, tagName];
+    // 태그 개수 제한 확인
+    if (!canSelectMore()) {
+      return setInputValue('');
+    }
+    addTagToSelection(tagName);
+    setInputValue('');
+  };
+
+  const removeTag = (tagName: string) => {
+    const newSelectedTags = selectedTags.filter((tag) => tag !== tagName);
     setSelectedTags(newSelectedTags);
     onChange?.(newSelectedTags);
-    setInputValue('');
   };
 
   const handleTagClick = (tagName: string) => {
     if (defaultTags.includes(tagName)) {
       // 기본값에 포함되어 있으면 토글
       if (selectedTags.includes(tagName)) {
-        // 선택되어 있으면 해제
-        const newSelectedTags = selectedTags.filter((tag) => tag !== tagName);
-        setSelectedTags(newSelectedTags);
-        onChange?.(newSelectedTags);
+        removeTag(tagName);
       } else {
-        // 선택되어 있지 않으면 추가
-        const newSelectedTags = [...selectedTags, tagName];
-        setSelectedTags(newSelectedTags);
-        onChange?.(newSelectedTags);
+        addTagToSelection(tagName);
       }
     } else {
       // 기본값에 포함 안되어 있으면 삭제
-      const newSelectedTags = selectedTags.filter((tag) => tag !== tagName);
-      setSelectedTags(newSelectedTags);
-      onChange?.(newSelectedTags);
+      removeTag(tagName);
     }
   };
 
@@ -130,6 +145,7 @@ export default function TagSelector({
         onBlur={handleBlur}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
+        maxLength={maxLength}
       />
       {allTags.length > 0 && (
         <div className={styles.tagList}>

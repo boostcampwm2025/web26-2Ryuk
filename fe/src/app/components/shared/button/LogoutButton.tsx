@@ -14,7 +14,7 @@ export default function LogoutButton() {
   const handleLogout = () => {
     logout();
     showSuccessToast('로그아웃 되었습니다.');
-    roomStore.getState().leaveRoom();
+    roomStore.getState().resetRoom();
     goHome();
   };
 

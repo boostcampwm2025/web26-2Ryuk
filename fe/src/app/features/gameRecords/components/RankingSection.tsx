@@ -43,7 +43,7 @@ export default function RankingSection() {
     <div className={styles.rankingSection}>
       <div className={styles.rankingHeader}>
         <div className={styles.rankingTitle}>
-          <IconCircle.Secondary name="game" size="medium" />
+          <IconCircle.Secondary name="trophy" size="medium" />
           <div className={styles.dropdownWrapper}>
             <GameDropdown
               value={selectedGameId}
