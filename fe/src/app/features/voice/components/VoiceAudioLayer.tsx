@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { useVoiceChat } from '@/app/features/voice/hooks/useVoiceChat';
+import { useEffect, useRef } from 'react';
+import { authStore } from '../../user/stores/auth';
 
 function RemoteAudioPlayer({
   userId,
@@ -53,10 +54,13 @@ function RemoteAudioPlayer({
  */
 export default function VoiceAudioLayer() {
   const { users, masterMute, getUserStream } = useVoiceChat();
+  const myId = authStore((state) => state.userId);
 
   return (
     <div id="voice-streams-portal" style={{ display: 'none' }} aria-hidden="true">
       {Object.entries(users).map(([userId, voiceInfo]) => {
+        if (userId === myId) return null; // 내 오디오는 재생하지 않음
+
         const stream = getUserStream(userId);
         if (!stream) return null;
         return (

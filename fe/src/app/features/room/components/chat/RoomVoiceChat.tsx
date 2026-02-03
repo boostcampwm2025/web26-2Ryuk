@@ -95,7 +95,7 @@ export default function RoomVoiceChat() {
                 speakerOn={!masterMute}
                 onSpeakerChange={toggleMasterMute}
                 onMicChange={toggleMyMic}
-                active={false}
+                active={myId ? (users[myId]?.isSpeaking ?? false) : false}
                 isHost={hostId === me.id}
                 disabled={voiceControlsDisabled}
               />

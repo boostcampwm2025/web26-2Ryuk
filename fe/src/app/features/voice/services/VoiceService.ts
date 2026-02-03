@@ -230,9 +230,20 @@ export class VoiceService {
     if (!stream?.getAudioTracks?.().length) {
       throw new Error('마이크 트랙을 가져올 수 없습니다.');
     }
+
+    const myUserId = authStore.getState().userId;
+
+    if (!myUserId) {
+      throw new Error('사용자 정보를 찾을 수 없습니다.');
+    }
+
     const track = stream.getAudioTracks()[0];
 
     this.myProducer = await this.webRtc.produceAudio(track);
+
+    voiceStreamRegistry.attachTrack(myUserId, track);
+
+    this.emit({ type: 'producer-added', userId: myUserId });
 
     // 마이크 끄기 대비 (track 종료 이벤트)
     this.myProducer.on('trackended', () => {
