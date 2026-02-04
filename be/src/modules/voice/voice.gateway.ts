@@ -15,12 +15,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket, Server } from 'socket.io';
-import { RedisClientType } from 'redis';
-import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import { WsExceptionFilter } from '@src/common/filters/ws-exception.filter';
 import { WsJsonParsePipe } from '@src/common/pipes/ws-json-parse.pipe';
 import { createWsErrorResponse } from '@src/common/utils/ws-error-code';
+import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
+import { RedisClientType } from 'redis';
+import { Server, Socket } from 'socket.io';
 import { RoomService } from '../room/room.service';
 import {
   ConsumerStateChangeDto,
@@ -119,6 +119,7 @@ export class VoiceGateway implements OnGatewayDisconnect {
     try {
       const userId = await this._authorizeClient(client, data.room_id);
       const producer = await this.voiceService.createProducer(data, userId);
+      await client.join(data.room_id);
 
       const payload = {
         room_id: data.room_id,
@@ -126,13 +127,7 @@ export class VoiceGateway implements OnGatewayDisconnect {
         producer_id: producer.id,
       };
 
-      const memberIds = await this.roomService.getRoomMemberIds(data.room_id);
-      for (const memberId of memberIds) {
-        if (memberId === userId) continue;
-        const targetSocketId = await this.redisClient.get(`user:session:${memberId}`);
-        if (!targetSocketId) continue;
-        this.server.to(targetSocketId).emit('voice:producer:new', payload);
-      }
+      client.to(data.room_id).emit('voice:producer:new', payload);
 
       return { producer_id: producer.id };
     } catch (error) {

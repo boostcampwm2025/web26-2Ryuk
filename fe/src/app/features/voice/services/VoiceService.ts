@@ -1,19 +1,19 @@
 import { authStore } from '@/app/features/user/stores/auth';
-import { WebRtcService } from '@/app/services/webRTC.service';
-import { WebSocketService } from '@/app/services/websocket.service';
 import { voiceStreamRegistry } from '@/app/features/voice/VoiceStreamRegistry';
 import { VoiceConverter } from '@/app/features/voice/dtos/converter';
 import type {
-  VoiceProducerNewDto,
-  VoiceProducerUpdateDto,
-  VoiceProducerClosedDto,
-} from '@/app/features/voice/dtos/dto';
-import type {
+  VoiceProducerClosedData,
   VoiceProducerNewData,
   VoiceProducerUpdateData,
-  VoiceProducerClosedData,
 } from '@/app/features/voice/dtos/data';
+import type {
+  VoiceProducerClosedDto,
+  VoiceProducerNewDto,
+  VoiceProducerUpdateDto,
+} from '@/app/features/voice/dtos/dto';
 import { WS_EVENTS } from '@/app/services/events';
+import { WebRtcService } from '@/app/services/webRTC.service';
+import { WebSocketService } from '@/app/services/websocket.service';
 import { Consumer, Producer } from 'mediasoup-client/types';
 
 type VoiceDomainEvent =
@@ -231,7 +231,7 @@ export class VoiceService {
       throw new Error('마이크 트랙을 가져올 수 없습니다.');
     }
 
-    const myUserId = authStore.getState().userId;
+    const myUserId = authStore.getState().id;
 
     if (!myUserId) {
       throw new Error('사용자 정보를 찾을 수 없습니다.');
@@ -415,10 +415,16 @@ export class VoiceService {
    */
   private static async handleNewProducer(data: VoiceProducerNewData) {
     const myUserId = authStore.getState().id;
-    if (!this.roomId) return;
-    if (data.roomId !== this.roomId) return;
-    if (data.userId === myUserId) return;
-    if (this.consumersByUser.has(data.userId)) return;
+    if (!this.roomId || data.roomId !== this.roomId || data.userId === myUserId) return;
+
+    // 핵심 수정: 기존에 이 유저의 Consumer가 있다면 먼저 파괴/제거
+    if (this.consumersByUser.has(data.userId)) {
+      console.log(`[Voice] 기존 유저(${data.userId})의 오래된 Consumer를 교체합니다.`);
+      const oldConsumer = this.consumersByUser.get(data.userId);
+      oldConsumer?.close(); // Mediasoup 객체 닫기
+      this.consumersByUser.delete(data.userId); // Map에서 제거
+      voiceStreamRegistry.detachUser(data.userId); // 스트림 해제
+    }
 
     await this.consumeUser(data.userId, data.producerId);
   }

@@ -54,7 +54,7 @@ function RemoteAudioPlayer({
  */
 export default function VoiceAudioLayer() {
   const { users, masterMute, getUserStream } = useVoiceChat();
-  const myId = authStore((state) => state.userId);
+  const myId = authStore((state) => state.id);
 
   return (
     <div id="voice-streams-portal" style={{ display: 'none' }} aria-hidden="true">
