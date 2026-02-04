@@ -3,14 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { globalChatService } from '@/app/features/chat/services/GlobalChatService';
 import { ChatReceiveData } from '@/app/features/chat/dtos/data';
-import { authStore, type AuthStore } from '@/app/features/user/stores/auth';
+import { authStore } from '@/app/features/user/stores/auth';
 import { chatPanelStore } from '@/app/features/chat/stores/chatPanel';
 import ChatPanel from './ChatPanel';
 
-/**
- * GlobalChat 클라이언트 컴포넌트
- * WebSocket 연결 및 메시지 관리 담당
- */
 export default function GlobalChatPanel() {
   const [chats, setChats] = useState<ChatReceiveData[]>([]);
   const [currentParticipants, setCurrentParticipants] = useState(0);
@@ -28,39 +24,31 @@ export default function GlobalChatPanel() {
     prevExpandedRef.current = isExpanded;
   }, [isExpanded]);
 
-  // WebSocket 연결 및 구독
+  // WebSocket 연결 및 구독 — 연결 상태 콜백을 먼저 등록해 connect 이벤트를 놓치지 않음
   useEffect(() => {
-    const subscribe = async () => {
-      await globalChatService.subscribe();
+    const unsubscribeConnection = globalChatService.onConnectionChange((connected) =>
+      setIsConnected(connected),
+    );
+    setIsConnected(globalChatService.isConnected());
 
-      // 구독 완료 후 연결 상태 확인
-      setIsConnected(globalChatService.isConnected());
-    };
-
-    subscribe();
-
-    // recents 수신 콜백 등록
     const unsubscribeRecents = globalChatService.onInit((count, messages) => {
       setCurrentParticipants(count);
       setChats(messages);
     });
 
-    // 메시지 수신 콜백 등록
     const unsubscribeMessage = globalChatService.onMessage((message) =>
       setChats((prev) => [...prev, message]),
     );
 
-    // 연결 상태 변경 콜백 등록
-    const unsubscribeConnection = globalChatService.onConnectionChange((connected) =>
-      setIsConnected(connected),
-    );
-
-    // 참여자 수 변경 콜백 등록
     const unsubscribeParticipants = globalChatService.onParticipantsChange((count) =>
       setCurrentParticipants(count),
     );
 
-    // 정리 함수
+    (async () => {
+      await globalChatService.subscribe();
+      setIsConnected(globalChatService.isConnected());
+    })();
+
     return () => {
       unsubscribeRecents();
       unsubscribeMessage();
@@ -75,7 +63,7 @@ export default function GlobalChatPanel() {
     await globalChatService.sendMessage(message);
   }, []);
 
-  const isAuthenticated = authStore((state: AuthStore) => state.isAuthenticated);
+  const isAuthenticated = Boolean(authStore((state) => state.id));
 
   return (
     <ChatPanel

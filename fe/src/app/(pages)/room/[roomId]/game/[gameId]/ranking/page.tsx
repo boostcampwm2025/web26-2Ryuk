@@ -26,12 +26,12 @@ export default function GameRankingPage() {
   const { gotoRoomReplace, refresh } = useNavigation();
 
   const [view, setView] = useState<RankingViewType>('group');
-  const myId = authStore((s) => s.userId);
+  const myId = authStore((s) => s.id);
   const storedResult = rankingStore((state) => state.result);
   const { show, hide } = loadingStore();
   const players = storedResult?.results;
-  const isAuthenticated = authStore((state) => state.isAuthenticated);
-  const nickname = authStore((state) => state.user?.nickname);
+  const nickname = authStore((state) => state.nickname);
+  const isAuthenticated = Boolean(authStore((state) => state.id));
   const [allPage, setAllPage] = useState(1);
   const [allTotal, setAllTotal] = useState(0);
   const [allRankings, setAllRankings] = useState<GamePlayerResultItemData[]>([]);

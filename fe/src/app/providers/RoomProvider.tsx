@@ -26,8 +26,8 @@ export default function RoomProvider({ children }: RoomProviderProps) {
 
       if (!isAuthHydrated || !isRoomHydrated) return;
 
-      const { isAuthenticated } = authStore.getState();
-      if (!isAuthenticated) return;
+      const hasAuthSession = Boolean(authStore.getState().id);
+      if (!hasAuthSession) return;
 
       const storedRoomId = roomStore.getState().id;
       if (!storedRoomId) return;

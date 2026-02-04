@@ -22,11 +22,19 @@ export class UserWithRoleResponseDto extends UserInfoResponseDto {
 export class GetMeResponseDto {
   id: string;
   nickname: string;
-  avatar: string;
+  profile_image: string;
 
   constructor(data: { id: string; nickname: string; profile_image: string | null }) {
     this.id = data.id;
     this.nickname = data.nickname;
-    this.avatar = data.profile_image || '';
+    this.profile_image = data.profile_image || '';
+  }
+}
+
+export class RefreshTokenResponseDto {
+  access_token: string;
+
+  constructor(accessToken: string) {
+    this.access_token = accessToken;
   }
 }

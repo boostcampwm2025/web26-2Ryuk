@@ -8,6 +8,7 @@ import { WebSocketService } from '@/app/services/websocket.service';
 import { authStore } from '@/app/features/user/stores/auth';
 import * as callback from './type';
 import { chatPanelStore } from '@/app/features/chat/stores/chatPanel';
+import { toastStore } from '@/app/components/shared/toast/toast.store';
 
 export class GlobalChatService implements callback.ChatChannel {
   private messageCallbacks: Set<callback.MessageCallback> = new Set();
@@ -20,64 +21,64 @@ export class GlobalChatService implements callback.ChatChannel {
   private messages: chatData.ChatReceiveData[] = [];
   private currentParticipants = 0;
   private isUnread = false;
+  private isInitialized = false;
 
-  private eventHandlers: Map<string, (...args: any[]) => void> = new Map();
-  private handlersRegistered = false;
-  private boundSocket?: unknown;
-  private connectPromise?: Promise<void>;
+  /** 등록한 핸들러 참조 — 소켓이 바뀌어도 동일 참조로 off 가능, 재등록 시 유실 방지 */
+  private readonly connectionHandlers: Array<{ event: string; handler: (...args: any[]) => void }> =
+    [];
 
   constructor() {
-    WebSocketService.onSocketCreated(() => this.ensureHandlersRegistered());
-
-    WebSocketService.onReconnect(() => {
-      if (!this.isSubscribed) return;
-      this.removeEventHandlers();
-      this.registerEventHandlers();
+    WebSocketService.onSocketCreated(() => {
+      if (this.isSubscribed) this.attachHandlersToCurrentSocket();
     });
   }
 
   async ensureConnected(): Promise<void> {
-    if (WebSocketService.isConnected()) {
-      this.ensureHandlersRegistered();
-      return;
-    }
-
-    if (this.connectPromise) return this.connectPromise;
-
-    this.connectPromise = WebSocketService.ensureConnected().then(() => {
-      this.ensureHandlersRegistered();
-    });
-
-    try {
-      await this.connectPromise;
-    } finally {
-      this.connectPromise = undefined;
-    }
+    if (WebSocketService.isConnected()) return;
+    await WebSocketService.ensureConnected();
   }
 
+  /**
+   * 구독 시도. 연결 실패/타임아웃 시에도 auth에는 영향 없이 notifyConnection(false)만 하고 반환.
+   */
   async subscribe(): Promise<void> {
     if (this.isSubscribed) return;
 
-    await this.ensureConnected();
-    if (!WebSocketService.isConnected()) return;
+    try {
+      await this.ensureConnected();
+    } catch {
+      return this.notifyConnection(false);
+    }
+
+    // React StrictMode 등으로 동일 effect가 두 번 실행될 수 있으므로 비동기 처리 이후에도 다시 한 번 구독 여부 확인
+    if (this.isSubscribed) return;
 
     this.isSubscribed = true;
+
+    // 웹소켓 연결 후 초기 데이터 요청
+    try {
+      const initDto = (await WebSocketService.request(
+        wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT,
+        {},
+      )) as chatDto.GlobalChatInitDto;
+
+      this.handleGlobalChatInit(initDto);
+    } catch (error) {
+      console.error('[GlobalChatService] 초기 데이터 요청 실패:', error);
+    }
   }
 
   async unsubscribe(): Promise<void> {
     if (!this.isSubscribed) return;
 
     this.notifyConnection(false);
-    this.removeEventHandlers();
-
-    this.connectPromise = undefined;
-    this.boundSocket = undefined;
+    this.detachHandlers();
     this.isSubscribed = false;
+    this.isInitialized = false;
   }
 
   async sendMessage(message: string): Promise<void> {
-    if (!authStore.getState().isAuthenticated)
-      throw new Error('메시지를 보내려면 로그인이 필요합니다.');
+    if (!authStore.getState().id) throw new Error('메시지를 보내려면 로그인이 필요합니다.');
     if (!WebSocketService.isConnected()) throw new Error('WebSocket이 연결되지 않았습니다.');
 
     const sendDto = chatConverter.toGlobalSendDto({ message } as chatData.ChatGlobalSendData);
@@ -127,6 +128,10 @@ export class GlobalChatService implements callback.ChatChannel {
 
   onInit(cb: callback.InitCallback): () => void {
     this.initCallbacks.add(cb);
+    // 이미 초기화가 완료되었다면 즉시 콜백 호출
+    if (this.isInitialized) {
+      cb(this.currentParticipants, this.messages);
+    }
     return () => this.initCallbacks.delete(cb);
   }
 
@@ -154,71 +159,50 @@ export class GlobalChatService implements callback.ChatChannel {
     return [...this.messages];
   }
 
-  private ensureHandlersRegistered(): void {
-    const socket = WebSocketService.getSocket();
-    if (!socket) return;
+  /**
+   * 현재 소켓에 핸들러를 부착 소켓이 바뀔 때마다 호출되며, 기존 핸들러는 detach 후 동일 참조로 재등록
+   * connect/disconnect는 절대 유실되지 않고, 이미 연결된 상태에서 등록 시에도 notifyConnection(true) 가 한 번 호출
+   */
+  private attachHandlersToCurrentSocket(): void {
+    this.detachHandlers();
 
-    if (this.boundSocket !== socket) {
-      this.removeEventHandlers();
-      this.boundSocket = socket;
-    }
-
-    this.registerEventHandlers();
-  }
-
-  private registerEventHandlers(): void {
-    if (this.handlersRegistered) return;
-    this.handlersRegistered = true;
-
-    // connect
     const onConnect = () => this.notifyConnection(true);
-    this.eventHandlers.set(wsEvents.WS_EVENTS.CONNECT, onConnect);
-    WebSocketService.on(wsEvents.WS_EVENTS.CONNECT, onConnect);
-
-    // disconnect
     const onDisconnect = () => this.notifyConnection(false);
-    this.eventHandlers.set(wsEvents.WS_EVENTS.DISCONNECT, onDisconnect);
-    WebSocketService.on(wsEvents.WS_EVENTS.DISCONNECT, onDisconnect);
-
-    // chat:global:new-message
     const onMessage = (dto: chatDto.ChatGlobalNewMessageDto) => this.handleGlobalMessage(dto);
-    this.eventHandlers.set(wsEvents.WS_EVENTS.CHAT_GLOBAL_NEW_MESSAGE, onMessage);
-    WebSocketService.on(wsEvents.WS_EVENTS.CHAT_GLOBAL_NEW_MESSAGE, onMessage);
-
-    // chat:global:participants-updated
     const onParticipants = (dto: chatDto.ChatGlobalParticipantsUpdatedDto) => {
       const data = chatConverter.toGlobalParticipantsUpdatedData(dto);
       this.currentParticipants = data.currentParticipants;
       this.notifyParticipants(this.currentParticipants);
     };
-    this.eventHandlers.set(wsEvents.WS_EVENTS.CHAT_GLOBAL_PARTICIPANTS_UPDATED, onParticipants);
-    WebSocketService.on(wsEvents.WS_EVENTS.CHAT_GLOBAL_PARTICIPANTS_UPDATED, onParticipants);
-
-    // chat:global:init
     const onInit = (dto: chatDto.GlobalChatInitDto) => this.handleGlobalChatInit(dto);
-    this.eventHandlers.set(wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT, onInit);
-    WebSocketService.on(wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT, onInit);
-
-    // error
     const onError = (error: any) => this.handleError(error);
-    this.eventHandlers.set(wsEvents.WS_EVENTS.ERROR, onError);
-    WebSocketService.on(wsEvents.WS_EVENTS.ERROR, onError);
+
+    this.connectionHandlers.push(
+      { event: wsEvents.WS_EVENTS.CONNECT, handler: onConnect },
+      { event: wsEvents.WS_EVENTS.DISCONNECT, handler: onDisconnect },
+      { event: wsEvents.WS_EVENTS.CHAT_GLOBAL_NEW_MESSAGE, handler: onMessage },
+      { event: wsEvents.WS_EVENTS.CHAT_GLOBAL_PARTICIPANTS_UPDATED, handler: onParticipants },
+      { event: wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT, handler: onInit },
+      { event: wsEvents.WS_EVENTS.ERROR, handler: onError },
+    );
+
+    this.connectionHandlers.forEach(({ event, handler }) => {
+      WebSocketService.on(event, handler);
+    });
   }
 
-  private removeEventHandlers(): void {
-    this.eventHandlers.forEach((handler, event) => {
+  private detachHandlers(): void {
+    this.connectionHandlers.forEach(({ event, handler }) => {
       WebSocketService.off(event, handler);
     });
-    this.eventHandlers.clear();
-    this.handlersRegistered = false;
+    this.connectionHandlers.length = 0;
   }
 
   private handleGlobalMessage(dto: chatDto.ChatGlobalNewMessageDto): void {
-    const chatData = chatConverter.toGlobalNewMessageData(dto);
-    this.messages = [...this.messages, chatData];
-    this.notifyMessage(chatData);
+    const data = chatConverter.toGlobalNewMessageData(dto);
+    this.messages = [...this.messages, data];
+    this.notifyMessage(data);
 
-    // 닫힌 상태에서만 안읽음 표시
     const isExpanded = chatPanelStore.getState().global.isExpanded;
     if (!isExpanded) this.setUnread();
   }
@@ -228,17 +212,24 @@ export class GlobalChatService implements callback.ChatChannel {
 
     this.currentParticipants = data.currentParticipants ?? 0;
     this.messages = [...data.messages];
+    this.isInitialized = true;
 
     this.notifyInit(this.currentParticipants, this.messages);
-
-    if (dto.current_participants != null) {
-      this.currentParticipants = dto.current_participants;
-      this.notifyParticipants(this.currentParticipants);
-    }
+    this.notifyParticipants(this.currentParticipants);
   }
 
   private handleError(error: any): void {
     console.error('[GlobalChatService] WebSocket error:', error);
+
+    // 모든 웹소켓 에러 토스트 메시지
+    let message = '오류가 발생했습니다.'; // 기본 메시지
+    if (typeof error === 'string') {
+      message = error;
+    } else if (typeof error === 'object' && error !== null && typeof error.message === 'string') {
+      message = error.message;
+    }
+
+    toastStore.getState().showErrorToast(message);
   }
 
   private notifyMessage(message: chatData.ChatReceiveData): void {

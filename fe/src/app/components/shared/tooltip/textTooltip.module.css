@@ -13,10 +13,11 @@
 
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease-in-out;
+  transition: opacity .2s ease-in-out;
 
   z-index: 999;
 }
+
 
 .tooltip.visible {
   opacity: 1;

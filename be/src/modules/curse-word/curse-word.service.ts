@@ -57,7 +57,8 @@ export class CurseWordService implements OnModuleInit {
       return { text: chars.join(''), map };
     };
 
-    const normKorean = buildNormalized((ch) => /[가-힣]/.test(ch));
+    // 한글 완성형 + 자모(초성, 중성) 포함
+    const normKorean = buildNormalized((ch) => /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(ch));
     const normEnglish = buildNormalized((ch) => /[A-Za-z]/.test(ch));
 
     if (normKorean.text.length === 0 && normEnglish.text.length === 0) {
@@ -71,7 +72,8 @@ export class CurseWordService implements OnModuleInit {
       if (!word) continue;
 
       // 단어가 한글을 포함하면 한글 정규화 문자열을, 아니면 영문 정규화 문자열을 사용
-      const isKoreanWord = /[가-힣]/.test(word);
+      // 한글 완성형 + 자모(초성, 중성) 포함
+      const isKoreanWord = /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(word);
       const target = isKoreanWord ? normKorean : normEnglish;
       if (target.text.length === 0) continue;
 

@@ -24,7 +24,7 @@ function RoomCard({
 }: RoomCardProps) {
   const { gotoRoom } = useNavigation();
   const remainingCount = maxParticipants - currentParticipants;
-  const isAuthenticated = authStore((state) => state.isAuthenticated);
+  const isAuthenticated = Boolean(authStore((state) => state.id));
   const myRoomId = roomStore((state) => state.id);
 
   const profiles = participants.map((p) => ({

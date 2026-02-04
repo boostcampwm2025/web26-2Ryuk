@@ -25,7 +25,7 @@ export function useRoom(roomId?: string): UseRoomResult {
   const hasShownEnterToastRef = useRef(false);
   const prevRoomIdForToastRef = useRef<string>();
 
-  const myId = authStore((state) => state.userId);
+  const myId = authStore((state) => state.id);
   const addParticipant = roomStore((state) => state.addParticipant);
   const removeParticipant = roomStore((state) => state.removeParticipant);
   const updateRoom = roomStore((state) => state.updateRoom);

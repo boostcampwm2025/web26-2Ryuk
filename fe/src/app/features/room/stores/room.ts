@@ -79,13 +79,15 @@ export const roomStore = create<RoomStore>()(
             return { players: next };
           }),
 
-        resetRoom: () => set(() => ({ ...createEmptyRoomState() })),
+        resetRoom: () => {
+          set(() => ({ ...createEmptyRoomState() }));
+          localStorage.removeItem('room-storage');
+        },
       };
     },
     {
       name: 'room-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ id: state.id }),
     },
   ),
 );

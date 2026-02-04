@@ -265,3 +265,11 @@ $RECYCLE.BIN/
 
 docs/
 .acommit/
+
+# SonarQube 임시 작업 폴더 및 로그
+.scannerwork/
+.sonar_lock
+
+# 설정 파일 (토큰이 포함되어 있다면 보안을 위해 제외 권장)
+# 만약 토큰을 환경 변수로 관리한다면 올려도 되지만, 파일에 직접 썼다면 제외해야 함
+sonar-project.properties

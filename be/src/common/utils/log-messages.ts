@@ -19,6 +19,10 @@ interface LogMessage {
 export const LOG = {
   // WebSocket 연결 관련
   WS: {
+    GLOBAL_INIT_ERROR: (error: string): LogMessage => ({
+      message: `글로벌 채팅 최신 메시지 조회 실패: ${error}`,
+      level: 'error',
+    }),
     CONNECT: (socketId: string, userId?: string): LogMessage => ({
       message: `클라이언트 연결: socketId=${socketId}, userId=${userId ?? 'anonymous'}`,
       level: 'log',

@@ -3,7 +3,7 @@
 import { SecondaryChip } from '@/app/components/shared/chip/Chip';
 import { RoomParticipantData as PData } from '@/app/features/room/dtos/data';
 import { roomStore } from '@/app/features/room/stores/room';
-import { AuthStore, authStore } from '@/app/features/user/stores/auth';
+import { authStore } from '@/app/features/user/stores/auth';
 import { useVoiceChat } from '@/app/features/voice/hooks/useVoiceChat';
 import { useEffect, useMemo, useState } from 'react';
 import styles from './chat.module.css';
@@ -12,8 +12,16 @@ import VoiceParticipantCard from './VoiceParticipantCard';
 export default function RoomVoiceChat() {
   const [isHydrated, setIsHydrated] = useState(false);
 
-  const myId = authStore((state: AuthStore) => state.userId);
-  const me = authStore((state: AuthStore) => state.user);
+  const myId = authStore((state) => state.id);
+  const myNickname = authStore((state) => state.nickname);
+  const myProfileImage = authStore((state) => state.profileImage);
+  const me = myId
+    ? {
+        id: myId,
+        nickname: myNickname ?? '',
+        profileImage: myProfileImage,
+      }
+    : undefined;
   const hostId = roomStore((s) => s.hostId);
   const roomParticipants = roomStore((s) => s.participants);
   const currentParticipants = roomStore((s) => s.currentParticipants);

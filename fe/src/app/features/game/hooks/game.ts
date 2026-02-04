@@ -26,9 +26,10 @@ export function useGame(roomId?: string): UseGameResult {
   const hostId = roomStore((s) => s.hostId);
   const roomPlayers = roomStore((s) => s.players);
   const storedIsGameRecruiting = roomStore((s) => s.isGameRecruiting);
-  const userId = authStore((s) => s.userId);
-  const user = authStore((s) => s.user);
-  const isHost = hostId === userId;
+  const myId = authStore((s) => s.id);
+  const myNickname = authStore((s) => s.nickname);
+  const myProfileImage = authStore((s) => s.profileImage);
+  const isHost = hostId === myId;
   const roomIsGameRecruiting = storedIsGameRecruiting ?? false;
 
   // GameStore 상태 구독
@@ -56,13 +57,13 @@ export function useGame(roomId?: string): UseGameResult {
 
   const initialMe = useCallback(
     (): PData => ({
-      playerId: userId ?? '',
-      nickname: user?.nickname ?? '',
-      profileImage: user?.profileImage ?? '',
+      playerId: myId ?? '',
+      nickname: myNickname ?? '',
+      profileImage: myProfileImage ?? '',
       isHost,
       isReady: false,
     }),
-    [userId, user?.nickname, user?.profileImage, isHost],
+    [myId, myNickname, myProfileImage, isHost],
   );
 
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
@@ -80,17 +81,17 @@ export function useGame(roomId?: string): UseGameResult {
     const players = roomPlayers;
     if (!players || players.length === 0) return;
 
-    const hostStatus = players.find((p) => p.playerId === userId);
+    const hostStatus = players.find((p) => p.playerId === myId);
     if (hostStatus) {
       setMyStatus((prev) => (prev ? { ...prev, ...hostStatus } : hostStatus));
     }
 
-    const filtered = players.filter((p) => p.playerId !== userId);
+    const filtered = players.filter((p) => p.playerId !== myId);
     setGamePlayers(filtered);
-  }, [roomPlayers, userId]);
+  }, [roomPlayers, myId]);
   const [remainingTime, setRemainingTime] = useState<number>(0);
 
-  const isMe = (playerId: string) => playerId === userId;
+  const isMe = (playerId: string) => playerId === myId;
   const isHostPlayer = (playerId: string) => playerId === hostId;
   const isSamePlayer = (a: PData, b: PData) => a.playerId === b.playerId;
   const withHostFlag = (p: PData): PData => ({ ...p, isHost: isHostPlayer(p.playerId) });
@@ -101,34 +102,34 @@ export function useGame(roomId?: string): UseGameResult {
 
   // user가 로드될 때 myStatus 업데이트
   useEffect(() => {
-    if (!user || !userId) return;
+    if (!myId) return;
 
     setMyStatus((prev) => {
       const joinedUser = {
-        playerId: userId,
-        nickname: user.nickname ?? prev.nickname,
-        profileImage: user.profileImage ?? prev.profileImage,
-        isHost: prev.isHost ?? isHost,
+        playerId: myId,
+        nickname: myNickname ?? prev?.nickname,
+        profileImage: myProfileImage ?? prev?.profileImage,
+        isHost: prev?.isHost ?? isHost,
       };
 
-      const participantAlreadyLoaded = prev.playerId === userId && !!prev.nickname;
+      const participantAlreadyLoaded = prev?.playerId === myId && !!prev?.nickname;
 
       if (participantAlreadyLoaded) {
-        const missingProfile = !prev.nickname || !prev.profileImage;
+        const missingProfile = !prev?.nickname || !prev?.profileImage;
         if (!missingProfile) return prev;
         return { ...prev, ...joinedUser };
       }
 
       return { ...prev, ...joinedUser };
     });
-  }, [user, userId, isHost]);
+  }, [myId, myNickname, myProfileImage, isHost]);
 
   useEffect(() => {
     setMyStatus((prev) => {
-      if (!prev || prev.playerId !== userId) return prev;
+      if (!prev || prev.playerId !== myId) return prev;
       return { ...prev, isHost };
     });
-  }, [isHost, userId]);
+  }, [isHost, myId]);
 
   // room:player:recruit
   useEffect(() => {
@@ -151,13 +152,13 @@ export function useGame(roomId?: string): UseGameResult {
       const hasHost = players.some(isPlayerHost);
       const merged = hasHost ? players : [...players, ack.host];
 
-      const me = merged.find((p) => p.playerId === userId);
-      const others = merged.filter((p) => p.playerId !== userId);
+      const me = merged.find((p) => p.playerId === myId);
+      const others = merged.filter((p) => p.playerId !== myId);
 
       setGamePlayers(others);
       setMyStatus(me ?? initialMe());
     },
-    [initialMe, userId],
+    [initialMe, myId],
   );
 
   // game:player:join, game:player:leave
@@ -186,7 +187,7 @@ export function useGame(roomId?: string): UseGameResult {
       offJoin();
       offLeave();
     };
-  }, [userId, hostId]);
+  }, [myId, hostId]);
 
   // game:player:ready, game:player:unready
   const updateReady = useCallback((playerId: string, isReady: boolean) => {
@@ -317,7 +318,7 @@ export function useGame(roomId?: string): UseGameResult {
     setResultSnapshot({
       myScore: state.myScore,
       opponentScore: state.averageScore,
-      myRank: userId ? state.ranks.indexOf(userId) + 1 : undefined,
+      myRank: myId ? state.ranks.indexOf(myId) + 1 : undefined,
       highestScore: state.highestScore,
     });
 
@@ -335,7 +336,7 @@ export function useGame(roomId?: string): UseGameResult {
     }
 
     setStartTrigger(undefined);
-  }, [resetGameProgress, userId]);
+  }, [resetGameProgress, myId]);
 
   // watchDate 설정 함수
   const setupWatchDates = useCallback(
@@ -500,7 +501,7 @@ export function useGame(roomId?: string): UseGameResult {
   const storeHighestScore = isOneToOne ? undefined : highestScore;
 
   // 내 랭킹 계산
-  const storeMyRank = userId ? ranks.indexOf(userId) + 1 : undefined;
+  const storeMyRank = myId ? ranks.indexOf(myId) + 1 : undefined;
 
   const displayedMyScore = resultSnapshot?.myScore ?? myScore;
   const displayedOpponentScore = resultSnapshot?.opponentScore ?? storeOpponentScore;

@@ -61,12 +61,3 @@ export class RoomJoinInfoResponseDto {
   is_private: boolean;
   is_member: boolean;
 }
-
-export class GlobalChatRecentMessageDto {
-  sender_id: string;
-  content: string;
-  nickname: string;
-  profile_image: string;
-  role: string;
-  create_date: string;
-}

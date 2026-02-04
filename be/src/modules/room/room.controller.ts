@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { RoomRequestDto, JoinRoomRequestDto, RoomJoinDto, RoomSearchQueryDto } from './dto/room.dto';
 import {
@@ -24,6 +25,7 @@ import { RoomService } from './room.service';
 import { RoomGateway } from './room.gateway';
 import { ApiResponseMessage } from '@src/common/decorators/api-response-message.decorator';
 import { JwtAuthGuard } from '@src/modules/auth/jwt-auth.guard';
+import type { Request } from 'express';
 
 @Controller('rooms')
 export class RoomController {
@@ -32,14 +34,22 @@ export class RoomController {
     private readonly roomGateway: RoomGateway,
   ) {}
 
+  private getUserId(req: Request): string {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException();
+    }
+    return userId;
+  }
+
   /**
    * 대화방 생성
    */
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('대화방이 성공적으로 생성되었습니다.')
-  async createRoom(@Req() req, @Body() dto: RoomRequestDto): Promise<RoomCreateResponseDto> {
-    const userId = req.user.id;
+  async createRoom(@Req() req: Request, @Body() dto: RoomRequestDto): Promise<RoomCreateResponseDto> {
+    const userId = this.getUserId(req);
 
     return await this.roomService.createRoom(userId, dto);
   }
@@ -51,11 +61,11 @@ export class RoomController {
   @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('대화방이 성공적으로 수정되었습니다.')
   async updateRoom(
-    @Req() req,
+    @Req() req: Request,
     @Param('roomId') roomId: string,
     @Body() dto: RoomRequestDto,
   ): Promise<RoomCreateResponseDto> {
-    const userId = req.user.id;
+    const userId = this.getUserId(req);
 
     return await this.roomService.updateRoom(userId, roomId, dto, this.roomGateway.server);
   }
@@ -66,8 +76,8 @@ export class RoomController {
   @Delete(':roomId')
   @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('대화방이 성공적으로 삭제되었습니다.')
-  async deleteRoom(@Req() req, @Param('roomId') roomId: string): Promise<RoomDeleteResponseDto> {
-    const userId = req.user.id;
+  async deleteRoom(@Req() req: Request, @Param('roomId') roomId: string): Promise<RoomDeleteResponseDto> {
+    const userId = this.getUserId(req);
     return await this.roomService.deleteRoom(userId, roomId, this.roomGateway.server);
   }
 
@@ -97,8 +107,8 @@ export class RoomController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('참여 중인 방 조회에 성공 했습니다.')
-  async getMyCurrentRoom(@Req() req): Promise<{ roomId: string | null }> {
-    const userId = req.user.id;
+  async getMyCurrentRoom(@Req() req: Request): Promise<{ roomId: string | null }> {
+    const userId = this.getUserId(req);
     const roomId = await this.roomService.getUserLocalRoom(userId);
     return { roomId };
   }
@@ -118,8 +128,8 @@ export class RoomController {
   @Get(':id/join')
   @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('방 입장 정보 조회에 성공 했습니다.')
-  async getRoomJoinInfo(@Req() req, @Param('id') roomId: string): Promise<RoomJoinInfoResponseDto> {
-    const userId = req.user.id;
+  async getRoomJoinInfo(@Req() req: Request, @Param('id') roomId: string): Promise<RoomJoinInfoResponseDto> {
+    const userId = this.getUserId(req);
 
     return await this.roomService.getRoomJoinInfo(userId, roomId);
   }
@@ -138,8 +148,12 @@ export class RoomController {
   @Post(':id/validate-join')
   @UseGuards(JwtAuthGuard)
   @ApiResponseMessage('입장 가능한 방입니다.')
-  async validateJoin(@Req() req, @Param('id') roomId: string, @Body() dto: JoinRoomRequestDto): Promise<RoomJoinDto> {
-    const userId = req.user.id;
+  async validateJoin(
+    @Req() req: Request,
+    @Param('id') roomId: string,
+    @Body() dto: JoinRoomRequestDto,
+  ): Promise<RoomJoinDto> {
+    const userId = this.getUserId(req);
 
     await this.roomService.validateJoinRoom(roomId, userId, dto.password);
 

@@ -4,6 +4,11 @@ import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import { GameParticipantDto, GameInfoPayloadDto } from './dto/game-response.dto';
 import { LOG, logMessage } from '@src/common/utils/log-messages';
 
+interface InputLog {
+  timestamp: number;
+  delta: number;
+}
+
 /**
  * Redis 데이터 접근 전용 Repository
  * 게임 상태, 참가자 정보, 점수 등의 데이터 CRUD만 담당
@@ -25,6 +30,10 @@ export class GameRepository {
 
   private getGameKey(roomId: string): string {
     return `room:${roomId}:game`;
+  }
+
+  private getMacroViolationKey(roomId: string, userId: string): string {
+    return `room:${roomId}:game:macro_violations:${userId}`;
   }
 
   // ==================== 게임 상태 관리 ====================
@@ -99,6 +108,7 @@ export class GameRepository {
         is_ready: '0',
         score: '0',
         rank: '0',
+        frozen_until: '0',
       });
 
       return true;
@@ -121,6 +131,11 @@ export class GameRepository {
     await this.redisClient.hSet(playerKey, 'is_ready', isReady ? '1' : '0');
   }
 
+  async setPlayerFrozen(roomId: string, userId: string, frozenUntilTimestamp: number): Promise<void> {
+    const playerKey = this.getParticipantKey(roomId, userId);
+    await this.redisClient.hSet(playerKey, 'frozen_until', frozenUntilTimestamp.toString());
+  }
+
   async getParticipant(roomId: string, userId: string): Promise<GameParticipantDto | null> {
     const playerKey = this.getParticipantKey(roomId, userId);
     const exists = await this.redisClient.exists(playerKey);
@@ -134,6 +149,7 @@ export class GameRepository {
       is_ready: playerData.is_ready === '1',
       score: parseInt(playerData.score, 10) || 0,
       rank: parseInt(playerData.rank, 10) || 0,
+      frozen_until: parseInt(playerData.frozen_until, 10) || 0,
     };
   }
 
@@ -156,6 +172,7 @@ export class GameRepository {
         is_ready: playerData.is_ready === '1',
         score: parseInt(playerData.score, 10) || 0,
         rank: parseInt(playerData.rank, 10) || 0,
+        frozen_until: parseInt(playerData.frozen_until, 10) || 0,
       });
     }
 
@@ -256,5 +273,57 @@ export class GameRepository {
     await this.deleteGameData(roomId);
     await this.deleteScores(roomId);
     await this.deleteAllParticipants(roomId);
+    await this.deleteAllMacroInputs(roomId);
+    await this.deleteAllMacroViolations(roomId);
+  }
+
+  // ==================== 매크로 감지 관련 ====================
+  private getMacroDetectionKey(roomId: string, userId: string): string {
+    return `room:${roomId}:game:macro_inputs:${userId}`;
+  }
+
+  async deleteAllMacroInputs(roomId: string): Promise<void> {
+    const pattern = `room:${roomId}:game:macro_inputs:*`;
+    const keys = await this.redisClient.keys(pattern);
+    if (keys.length > 0) {
+      await this.redisClient.del(keys);
+    }
+  }
+
+  async deleteAllMacroViolations(roomId: string): Promise<void> {
+    const pattern = `room:${roomId}:game:macro_violations:*`;
+    const keys = await this.redisClient.keys(pattern);
+    if (keys.length > 0) {
+      await this.redisClient.del(keys);
+    }
+  }
+
+  async incrementMacroViolationCount(roomId: string, userId: string): Promise<number> {
+    const key = this.getMacroViolationKey(roomId, userId);
+    const count = await this.redisClient.incr(key);
+    if (count === 1) {
+      await this.redisClient.expire(key, 900);
+    }
+    return count;
+  }
+
+  async getMacroViolationCount(roomId: string, userId: string): Promise<number> {
+    const key = this.getMacroViolationKey(roomId, userId);
+    const value = await this.redisClient.get(key);
+    return value ? parseInt(value, 10) : 0;
+  }
+
+  async addInputTimestamp(roomId: string, userId: string, timestamp: number, delta: number): Promise<void> {
+    const key = this.getMacroDetectionKey(roomId, userId);
+    // 리스트에 타임스탬프와 델타를 JSON 형태로 추가하고, 리스트의 길이를 100으로 제한하여 최신 100개만 유지
+    await this.redisClient.lPush(key, JSON.stringify({ timestamp, delta }));
+    await this.redisClient.lTrim(key, 0, 99); // 인덱스 0부터 99까지 유지 (최신 100개)
+  }
+
+  async getInputTimestamps(roomId: string, userId: string): Promise<InputLog[]> {
+    const key = this.getMacroDetectionKey(roomId, userId);
+    const rawLogs = await this.redisClient.lRange(key, 0, -1);
+    // Redis 리스트는 역순으로 저장되므로, 파싱 후 시간 순서대로 정렬하여 반환
+    return rawLogs.map((log) => JSON.parse(log) as InputLog).sort((a, b) => a.timestamp - b.timestamp);
   }
 }

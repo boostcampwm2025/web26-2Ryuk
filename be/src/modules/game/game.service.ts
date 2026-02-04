@@ -25,6 +25,16 @@ import { GameRecordRepository } from '@src/modules/game-record/game-record.repos
 export class GameService {
   private readonly logger = new Logger(GameService.name);
   private readonly GAME_START_DELAY_MS = 5000;
+  private readonly STRIKE_2_FREEZE_MS = 3000; // 매크로 2회 감지 입력 동결 시간
+  private readonly STRIKE_3_FREEZE_MS = 999000; // 매크로 2회 감지, 사실상 영구 동결
+  private readonly BEAKER_GAME_ID = '550e8400-e29b-41d4-a716-446655440001'; // 비커 채우기 게임 ID
+
+  // 매크로 감지 관련 상수
+  private readonly MACRO_DETECTION_WINDOW_MS = 1000; // 입력 빈도수 측정 주기 (1000ms 권장)
+  private readonly MIN_LOGS_FOR_PATTERN_ANALYSIS = 11; // 패턴 분석을 위한 최소 realtimeInput 이벤트 개수
+  private readonly MAX_SPACES_PER_WINDOW = 17; // 1초 동안 허용되는 총 스페이스바 입력 횟수
+  private readonly MACRO_DELTA_STD_DEV_THRESHOLD = 0.3; // 스페이스바 입력 횟수(delta)의 표준편차 임계값 (0.3 ~ 1.0 추천)
+  private readonly MIN_DELTAS_FOR_DELTA_PATTERN_ANALYSIS = 11; // 스페이스바 입력 횟수(delta) 패턴 분석을 위한 최소 delta 개수 (MIN_LOGS_FOR_PATTERN_ANALYSIS와 유사하게 설정)
 
   constructor(
     @Inject(forwardRef(() => RoomService)) private readonly roomService: RoomService,
@@ -406,10 +416,16 @@ export class GameService {
         throw new ForbiddenException('해당 방에 참여하지 않았습니다.');
       }
 
-      // 게임 참가자인지 확인
-      const playerExists = await this.gameRepository.participantExists(roomId, userId);
-      if (!playerExists) {
+      // 게임 참가자인지 확인 및 정보 조회
+      const participant = await this.gameRepository.getParticipant(roomId, userId);
+      if (!participant) {
         throw new ForbiddenException('게임 참가자가 아닙니다.');
+      }
+
+      // 입력 동결 상태 확인
+      if (participant.frozen_until && Date.now() < participant.frozen_until) {
+        const remainingMs = participant.frozen_until - Date.now();
+        throw new ForbiddenException(`입력이 제한되었습니다. ${Math.ceil(remainingMs / 1000)}초 후 다시 시도하세요.`);
       }
 
       // 게임 시작 여부 확인
@@ -421,6 +437,18 @@ export class GameService {
       // delta 값 검증
       const deltaNum = parseInt(delta, 10);
       if (isNaN(deltaNum)) throw new Error('Invalid delta value');
+
+      // 현재 방의 선택된 게임 정보 조회
+      const selectedGame = await this.gameRepository.getSelectedGame(roomId);
+
+      // '비커 채우기' 게임일 경우에만 매크로 감지 로직 적용
+      if (selectedGame?.id === this.BEAKER_GAME_ID) {
+        const isMacro = await this.detectMacro(roomId, userId, deltaNum);
+        if (isMacro) {
+          // applyMacroSanctions는 예외를 발생시키므로, 여기서 실행이 중단됨
+          await this.applyMacroSanctions(roomId, userId);
+        }
+      }
 
       // 현재 사용자의 점수 업데이트
       await this.gameRepository.updateScore(roomId, userId, deltaNum);
@@ -511,6 +539,94 @@ export class GameService {
         this.logger.error(`Redis 정리 실패: roomId=${roomId}, error=${errorMessage}`);
       }
     }
+  }
+
+  // ==================== 매크로 감지 ====================
+  /**
+   * 매크로 감지 시 "삼진 아웃" 제재 적용
+   * 이 메서드는 항상 예외 발생
+   */
+  private async applyMacroSanctions(roomId: string, userId: string): Promise<void> {
+    const violationCount = await this.gameRepository.incrementMacroViolationCount(roomId, userId);
+
+    if (violationCount >= 3) {
+      // 3회 감지: 영구 동결
+      this.logger.warn(`매크로 3회 감지 (영구 동결): User ${userId} in Room ${roomId}`);
+      const frozenUntil = Date.now() + this.STRIKE_3_FREEZE_MS;
+      await this.gameRepository.setPlayerFrozen(roomId, userId, frozenUntil);
+      throw new ForbiddenException('반복적인 비정상 입력으로 인해 이번 게임에서 영구적으로 입력이 차단됩니다.');
+    } else if (violationCount === 2) {
+      // 2회 감지: 3초 동결
+      this.logger.warn(`매크로 2회 감지 (${this.STRIKE_2_FREEZE_MS / 1000}초 동결): User ${userId} in Room ${roomId}`);
+      const frozenUntil = Date.now() + this.STRIKE_2_FREEZE_MS;
+      await this.gameRepository.setPlayerFrozen(roomId, userId, frozenUntil);
+      throw new ForbiddenException(
+        `두 번째 비정상적 입력이 감지되어 ${this.STRIKE_2_FREEZE_MS / 1000}초간 입력이 제한됩니다.`,
+      );
+    } else {
+      // 1회 감지: 경고
+      this.logger.warn(`매크로 1회 감지 (경고): User ${userId} in Room ${roomId}`);
+      throw new ForbiddenException('비정상적인 입력이 감지되었습니다. 반복 시 제재될 수 있습니다.');
+    }
+  }
+
+  /**
+   * 사용자 입력의 매크로 여부를 감지
+   * 총 스페이스바 입력 횟수, 스페이스바 입력 횟수(delta)의 표준편차를 분석하여 비정상적인 패턴 탐지
+   */
+  private async detectMacro(roomId: string, userId: string, currentDelta: number): Promise<boolean> {
+    const currentTime = Date.now();
+    await this.gameRepository.addInputTimestamp(roomId, userId, currentTime, currentDelta);
+    const inputLogs = await this.gameRepository.getInputTimestamps(roomId, userId);
+
+    // 데이터가 충분히 쌓이지 않았으면 감지하지 않음
+    if (inputLogs.length < this.MIN_LOGS_FOR_PATTERN_ANALYSIS) {
+      return false;
+    }
+
+    // 1. 총 스페이스바 입력 횟수 감지 - 실제 스페이스바 연타 횟수
+    // 특정 시간 윈도우 내의 총 스페이스바 입력 횟수를 검사합니다.
+    const relevantLogs = inputLogs.filter((log) => currentTime - log.timestamp <= this.MACRO_DETECTION_WINDOW_MS);
+    if (relevantLogs.length > 0) {
+      const totalSpaces = relevantLogs.reduce((sum, log) => sum + log.delta, 0);
+
+      if (totalSpaces > this.MAX_SPACES_PER_WINDOW) {
+        this.logger.warn(
+          `매크로 의심 (총 스페이스바 횟수): User ${userId} in Room ${roomId}. Total ${totalSpaces} spaces in ${this.MACRO_DETECTION_WINDOW_MS}ms. (Threshold: ${this.MAX_SPACES_PER_WINDOW})`,
+        );
+        return true;
+      }
+    }
+
+    // 2. 스페이스바 입력 횟수 (delta)의 패턴 분석 (표준편차)
+    // 각 realtimeInput 이벤트에 포함된 delta 값들의 표준편차를 계산하여 일관성을 확인
+    const deltasForSpaces = inputLogs.map((log) => log.delta);
+    if (deltasForSpaces.length >= this.MIN_DELTAS_FOR_DELTA_PATTERN_ANALYSIS) {
+      const stdDevSpaces = this.calculateStandardDeviation(deltasForSpaces);
+      const averageDelta = deltasForSpaces.reduce((sum, current) => sum + current, 0) / deltasForSpaces.length;
+
+      // 표준편차가 임계값보다 작고 평균 델타가 1.5를 초과하는 경우 매크로 의심
+      // 정상적인 느린 입력 및 약간의 불규칙성 허용
+      if (stdDevSpaces < this.MACRO_DELTA_STD_DEV_THRESHOLD && averageDelta > 1.5) {
+        this.logger.warn(
+          `매크로 의심 (스페이스바 횟수 패턴): User ${userId} in Room ${roomId}. StdDev: ${stdDevSpaces.toFixed(2)}, AvgDelta: ${averageDelta.toFixed(2)}`,
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+  /**
+   * 숫자 배열의 표준편차 계산
+   */
+  private calculateStandardDeviation(numbers: number[]): number {
+    if (numbers.length < 2) return 0; // 최소 2개 이상의 데이터가 있어야 유의미한 표준편차 계산 가능
+
+    const mean = numbers.reduce((sum, current) => sum + current, 0) / numbers.length;
+    const variance =
+      numbers.map((num) => (num - mean) ** 2).reduce((sum, current) => sum + current, 0) / numbers.length;
+    return Math.sqrt(variance);
   }
 
   // ==================== Public API (외부에서 사용하는 메서드) ====================

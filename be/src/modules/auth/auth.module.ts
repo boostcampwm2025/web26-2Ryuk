@@ -2,14 +2,16 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { MockAuthService } from './mock-auth.service';
 import { User } from '../user/user.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { GithubStrategy } from './github.strategy';
 import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtRefreshStrategy } from './jwt-refresh.strategy';
+import { JwtRefreshGuard } from './jwt-refresh.guard';
 
 @Module({
   imports: [
@@ -19,14 +21,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET');
-        if (!secret) {
-          throw new Error('JWT_SECRET not found in environment variables.');
-        }
+        const secret = configService.get<string>('JWT_ACCESS_SECRET');
+        if (!secret) throw Error('환경변수가 없습니다: JWT_ACCESS_SECRET');
         return {
           secret,
           signOptions: {
-            expiresIn: configService.get<string>('JWT_EXPIRATION_TIME', '1h') as JwtSignOptions['expiresIn'],
+            expiresIn: configService.get<string>('JWT_ACCESS_EXPIRES_IN', '1h') as JwtSignOptions['expiresIn'],
           },
         };
       },
@@ -34,7 +34,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, MockAuthService, GithubStrategy, GoogleStrategy, JwtStrategy],
-  exports: [AuthService, MockAuthService],
+  providers: [
+    AuthService,
+    GithubStrategy,
+    GoogleStrategy,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    JwtRefreshGuard,
+    JwtAuthGuard,
+  ],
+  exports: [AuthService],
 })
 export class AuthModule {}

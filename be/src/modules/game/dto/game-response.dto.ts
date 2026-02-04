@@ -20,6 +20,7 @@ export class GameParticipantDto {
   is_ready: boolean;
   score?: number;
   rank?: number;
+  frozen_until?: number;
 }
 
 // 게임 참가자 정보 (게임 플레이어)

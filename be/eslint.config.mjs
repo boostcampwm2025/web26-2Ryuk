@@ -37,6 +37,8 @@ export default [
         require: 'readonly',
         exports: 'readonly',
         console: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
 
         // ES2021
         Promise: 'readonly',

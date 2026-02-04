@@ -22,7 +22,7 @@ export default function RoomPage() {
   const params = useParams();
   const roomId = params.roomId as string;
 
-  const userId = authStore((s) => s.userId);
+  const myId = authStore((s) => s.id);
   const { status } = useResponsive();
 
   const { entry, game } = useRoom(roomId);
@@ -48,7 +48,7 @@ export default function RoomPage() {
 
   const { gotoRoomGameList } = useNavigation();
 
-  const isHost = storedHostId === userId;
+  const isHost = storedHostId === myId;
   const isGameButtonEnabled = isHost || isGameRecruiting;
 
   return (

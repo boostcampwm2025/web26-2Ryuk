@@ -26,7 +26,6 @@ import {
   ParticipantDto,
   RoomListResponseDto,
   RoomJoinInfoResponseDto,
-  GlobalChatRecentMessageDto,
   ParticipantDetailDto,
 } from './dto/room-response.dto';
 import { Server, Socket } from 'socket.io';
@@ -249,6 +248,13 @@ export class RoomService implements OnModuleInit {
       // 글로벌 방은 통과
       if (roomData.type === ROOM_TYPE.GLOBAL) {
         return;
+      }
+
+      // 블랙리스트 확인
+      const isBanned = await this.roomRepository.isUserInBlacklist(roomId, userId);
+      if (isBanned) {
+        logMessage(this.logger, LOG.ROOM.VALIDATION_ERROR(userId, roomId, '사용자가 블랙리스트에 있습니다.'));
+        throw new ForbiddenException('이 방에서 추방되었습니다.');
       }
 
       // 방 존재 여부 확인
@@ -503,6 +509,13 @@ export class RoomService implements OnModuleInit {
     for (const roomId of rooms) {
       await this.leaveRoomProcess(server, userId, roomId, client);
     }
+
+    // 모든 방에서 나간 후 user:${userId}:rooms Set이 비어있으면 삭제
+    const remainingRooms = await this.roomRepository.getUserRooms(userId);
+    if (remainingRooms.length === 0) {
+      // user:${userId}:rooms Set을 Redis에서 삭제
+      await this.roomRepository.deleteUserRoomsSet(userId);
+    }
   }
 
   /**
@@ -681,13 +694,6 @@ export class RoomService implements OnModuleInit {
   }
 
   /**
-   * 글로벌 채팅 최신 메시지 조회
-   */
-  async getGlobalChatRecents(roomId: string): Promise<GlobalChatRecentMessageDto[]> {
-    return await this.roomRepository.getGlobalChatRecents(roomId);
-  }
-
-  /**
    * 사용자 세션 저장
    */
   async saveUserSession(userId: string, rooms: string[]): Promise<void> {
@@ -706,5 +712,12 @@ export class RoomService implements OnModuleInit {
    */
   async clearUserSession(userId: string): Promise<void> {
     await this.roomRepository.clearUserSession(userId);
+  }
+
+  /**
+   * 사용자를 블랙리스트에 추가
+   */
+  async addUserToBlacklist(roomId: string, userId: string): Promise<void> {
+    return await this.roomRepository.addUserToBlacklist(roomId, userId);
   }
 }

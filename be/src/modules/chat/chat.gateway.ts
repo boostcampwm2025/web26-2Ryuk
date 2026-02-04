@@ -38,6 +38,34 @@ export class ChatGateway {
     private readonly authService: AuthService,
   ) {}
 
+  // 글로벌 채팅 최신 메시지 조회
+  @SubscribeMessage(WS_EVENTS_CHAT.GLOBAL_INIT)
+  async handleGlobalInit(@ConnectedSocket() client: Socket) {
+    try {
+      const userId = client.data.userId;
+      const roomId = await this.roomService.getUserGlobalRoom();
+      if (!roomId) {
+        logMessage(this.logger, LOG.CHAT.NOT_MEMBER_SEND(userId, 'global'));
+        client.emit(WS_EVENTS_ERROR.ERROR, createWsError('NOT_FOUND', '글로벌 채팅방에 참여하지 않았습니다.'));
+        return;
+      }
+      const currentParticipants = await this.roomService.getCurrentParticipants(roomId);
+      const recents = await this.chatService.getGlobalChatRecents(roomId, userId);
+      return {
+        messages: recents,
+        current_participants: currentParticipants,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      logMessage(this.logger, LOG.WS.GLOBAL_INIT_ERROR(errorMessage));
+
+      const errorResponse = createWsErrorResponse(error, '메시지 전송 중 문제가 발생했습니다.');
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
+    }
+  }
+
   // 글로벌 채팅 메시지 수신 및 브로드캐스트
   @SubscribeMessage(WS_EVENTS_CHAT.GLOBAL_SEND)
   async handleGlobalChat(@ConnectedSocket() client: Socket, @MessageBody() dto: GlobalChatSendDto) {

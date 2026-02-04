@@ -414,7 +414,7 @@ export class VoiceService {
    * [리스너 1] 새로운 목소리가 들어왔을 때
    */
   private static async handleNewProducer(data: VoiceProducerNewData) {
-    const myUserId = authStore.getState().userId;
+    const myUserId = authStore.getState().id;
     if (!this.roomId) return;
     if (data.roomId !== this.roomId) return;
     if (data.userId === myUserId) return;
