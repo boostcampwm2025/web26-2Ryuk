@@ -2,15 +2,18 @@ import { authStore } from '@/app/features/user/stores/auth';
 import { voiceStreamRegistry } from '@/app/features/voice/VoiceStreamRegistry';
 import { VoiceConverter } from '@/app/features/voice/dtos/converter';
 import type {
+  RoomParticipantJoinData,
   VoiceProducerClosedData,
   VoiceProducerNewData,
   VoiceProducerUpdateData,
 } from '@/app/features/voice/dtos/data';
 import type {
+  RoomParticipantJoinDto,
   VoiceProducerClosedDto,
   VoiceProducerNewDto,
   VoiceProducerUpdateDto,
 } from '@/app/features/voice/dtos/dto';
+import { voiceStore } from '@/app/features/voice/stores/voice';
 import { WS_EVENTS } from '@/app/services/events';
 import { WebRtcService } from '@/app/services/webRTC.service';
 import { WebSocketService } from '@/app/services/websocket.service';
@@ -57,6 +60,10 @@ export class VoiceService {
     VoiceService.handleProducerClosed(VoiceConverter.toVoiceProducerClosedData(dto));
   };
 
+  private static _boundUserJoined = (dto: RoomParticipantJoinDto) => {
+    VoiceService.handleUserJoined(VoiceConverter.toRoomParticipantJoinData(dto));
+  };
+
   private static registerVoiceListeners() {
     const socket = WebSocketService.getSocket();
     if (!socket) return;
@@ -66,6 +73,8 @@ export class VoiceService {
     socket.on(WS_EVENTS.VOICE_PRODUCER_UPDATE, VoiceService._boundProducerUpdate);
     socket.off(WS_EVENTS.VOICE_PRODUCER_CLOSED, VoiceService._boundProducerClosed);
     socket.on(WS_EVENTS.VOICE_PRODUCER_CLOSED, VoiceService._boundProducerClosed);
+    socket.off(WS_EVENTS.ROOM_PARTICIPANT_JOIN, VoiceService._boundUserJoined);
+    socket.on(WS_EVENTS.ROOM_PARTICIPANT_JOIN, VoiceService._boundUserJoined);
   }
 
   private static async init() {
@@ -93,6 +102,7 @@ export class VoiceService {
    */
   static async joinVoiceChannel(roomId: string) {
     await this.init();
+
     this.roomId = roomId;
 
     try {
@@ -245,6 +255,12 @@ export class VoiceService {
 
     this.emit({ type: 'producer-added', userId: myUserId });
 
+    const MyMicOn = voiceStore.getState().isMyMicOn;
+
+    if (!MyMicOn) {
+      await this.toggleMic(true);
+    }
+
     // 마이크 끄기 대비 (track 종료 이벤트)
     this.myProducer.on('trackended', () => {
       this.stopMic();
@@ -367,16 +383,9 @@ export class VoiceService {
       room_id: this.roomId,
     });
 
-    if (response.producers && Array.isArray(response.producers) && this.roomId) {
-      // 순차적으로 구독 (병렬로 하면 브라우저 부하가 올 수 있으니 순차 처리)
+    if (response.producers && Array.isArray(response.producers)) {
       for (const p of response.producers) {
-        await this.handleNewProducer(
-          VoiceConverter.toVoiceProducerNewData({
-            room_id: this.roomId!,
-            user_id: p.user_id,
-            producer_id: p.producer_id,
-          }),
-        );
+        await this.handleNewProducer(VoiceConverter.toVoiceProducerNewData(p));
       }
     }
   }
@@ -411,22 +420,48 @@ export class VoiceService {
   }
 
   /**
+   * 특정 유저의 기존 음성 세션(Consumer)을 완전히 정리합니다.
+   */
+  private static cleanupUserSession(userId: string) {
+    const oldConsumer = this.consumersByUser.get(userId);
+    if (oldConsumer) {
+      console.log(`[Voice] 유저(${userId})의 기존 세션을 정리합니다.`);
+
+      // 1. 매핑 데이터 제거
+      this.producerToUser.delete(oldConsumer.producerId);
+      this.consumersByUser.delete(userId);
+
+      // 2. 실제 객체 닫기 및 트랙 해제
+      oldConsumer.close();
+      voiceStreamRegistry.detachUser(userId);
+
+      // 3. UI 업데이트 알림
+      this.emit({ type: 'producer-removed', userId });
+    }
+  }
+
+  /**
    * [리스너 1] 새로운 목소리가 들어왔을 때
    */
   private static async handleNewProducer(data: VoiceProducerNewData) {
     const myUserId = authStore.getState().id;
     if (!this.roomId || data.roomId !== this.roomId || data.userId === myUserId) return;
 
-    // 핵심 수정: 기존에 이 유저의 Consumer가 있다면 먼저 파괴/제거
-    if (this.consumersByUser.has(data.userId)) {
-      console.log(`[Voice] 기존 유저(${data.userId})의 오래된 Consumer를 교체합니다.`);
-      const oldConsumer = this.consumersByUser.get(data.userId);
-      oldConsumer?.close(); // Mediasoup 객체 닫기
-      this.consumersByUser.delete(data.userId); // Map에서 제거
-      voiceStreamRegistry.detachUser(data.userId); // 스트림 해제
-    }
+    // 새로 생성하기 전에 기존 세션 청소
+    this.cleanupUserSession(data.userId);
 
+    // 일단 연결
     await this.consumeUser(data.userId, data.producerId);
+
+    // 자동 음소거 상태 반영
+    if (!data.isMicOn) {
+      const consumer = this.getConsumerByUserId(data.userId);
+      if (consumer) {
+        // 서버 요청 없이 로컬 상태만 pause (서버는 이미 paused 상태이므로)
+        consumer.pause();
+        this.emit({ type: 'producer-updated', userId: data.userId, isMicOn: false });
+      }
+    }
   }
 
   /**
@@ -461,6 +496,16 @@ export class VoiceService {
       this.emit({ type: 'producer-removed', userId: consumer.appData.userId as string });
     }
   }
+  /**
+   * [리스너 4] 유저가 방에 입장했을 때
+   */
+  private static handleUserJoined = (data: RoomParticipantJoinData) => {
+    const myUserId = authStore.getState().id;
+    if (data.userId === myUserId) return;
+
+    console.log(`[Voice] 유저(${data.userId}) 입장. 기존 세션 정리 시도.`);
+    this.cleanupUserSession(data.userId);
+  };
 
   /**
    * 유저 ID로 컨슈머를 찾아야 할 때 (예: producer 업데이트 이벤트)

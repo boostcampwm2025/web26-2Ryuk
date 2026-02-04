@@ -4,6 +4,7 @@ export type VoiceProducerNewData = {
   roomId: string;
   userId: string;
   producerId: string;
+  isMicOn: boolean;
 };
 
 export type VoiceProducerUpdateData = {
@@ -17,3 +18,8 @@ export type VoiceProducerClosedData = {
   roomId: string;
   producerId: string;
 };
+
+export interface RoomParticipantJoinData {
+  userId: string;
+  roomId: string;
+}
