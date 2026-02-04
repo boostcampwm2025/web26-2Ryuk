@@ -23,6 +23,8 @@ export class AuthService {
   private static currentAccessToken: string | null = null;
   private static refreshPromise: Promise<string | null> | null = null;
   private static sessionState: SessionState = 'active';
+  /** 세션 복구 직후(WebSocket 연결 후) 호출. 방 복원 등에서 사용. */
+  private static onSessionRestored: (() => void) | null = null;
 
   /**
    * refresh 401 등으로 세션 만료 확정 시 단일 진입점. idempotent.
@@ -64,8 +66,11 @@ export class AuthService {
     WebSocketService.setOnDisconnect((reason) => this.handleWebSocketDisconnect(reason));
 
     this.bindStorageListener();
-    if (this.sessionState === 'expired') return;
-    void this.restoreSession();
+    if (this.sessionState === 'expired') {
+      authStore.getState().setAuthInitDone(true);
+      return;
+    }
+    void this.restoreSession().finally(() => authStore.getState().setAuthInitDone(true));
   }
 
   /**
@@ -108,6 +113,11 @@ export class AuthService {
 
   static getAccessToken() {
     return this.currentAccessToken;
+  }
+
+  /** 세션 복구 직후 콜백 등록 (RoomProvider 등에서 방 복원용). 한 번만 등록 가능. */
+  static setOnSessionRestored(cb: (() => void) | null): void {
+    this.onSessionRestored = cb;
   }
 
   static canAttemptRefresh(): boolean {
@@ -177,6 +187,7 @@ export class AuthService {
   private static setUserSession(user: UserData, options?: RestoreSessionOptions) {
     this.sessionState = 'active';
     authStore.getState().setUser(user);
+    authStore.getState().setSessionRestored(true);
 
     if (options?.includeOptimisticIncrement) {
       globalChatService.incrementParticipantsOptimistic();
@@ -186,13 +197,15 @@ export class AuthService {
   }
 
   /**
-   * 로그인 완료 후 auth 상태와 무관하게 WebSocket 연결만 시도. 실패 시 로그만, 예외/상태 변경 없음.
+   * 로그인 완료 후 WebSocket 연결 시도. 성공 시 onSessionRestored 호출(방 복원 등).
+   * 실패 시 로그만, 예외/상태 변경 없음.
    */
   private static connectWebSocketFireAndForget(): void {
     void (async () => {
       try {
         WebSocketService.reconnect();
         await globalChatService.subscribe();
+        this.onSessionRestored?.();
       } catch {}
     })();
   }

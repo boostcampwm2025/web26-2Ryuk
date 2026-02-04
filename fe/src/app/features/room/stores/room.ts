@@ -25,6 +25,7 @@ const createEmptyRoomState = (): RoomState => ({
 interface RoomActions {
   replaceRoom: (room: RoomData) => void;
   updateRoom: (patch: Partial<RoomData>) => void;
+  updateHost: (hostId: string) => void;
   addParticipant: (participant: RoomParticipantData) => void;
   removeParticipant: (userId: string) => void;
   addPlayer: (player: GamePlayerData) => void;
@@ -44,6 +45,8 @@ export const roomStore = create<RoomStore>()(
 
         replaceRoom: (room) => set(() => ({ ...room })),
         updateRoom: (patch) => set((state) => ({ ...state, ...patch })),
+
+        updateHost: (hostId) => set((state) => ({ ...state, hostId })),
 
         addParticipant: (participant) =>
           set((state) => {

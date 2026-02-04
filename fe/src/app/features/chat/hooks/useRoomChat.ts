@@ -14,10 +14,16 @@ export function useRoomChat(roomId?: string, isJoined?: boolean) {
   const [chats, setChats] = useState<ChatReceiveData[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const storeRoomId = roomStore((s) => s.id);
+  const sessionRestored = authStore((s) => s.sessionRestored);
+  const myId = authStore((s) => s.id);
 
   useEffect(() => {
     const isInvalid = !roomId || !isJoined || storeRoomId !== roomId;
-
+    if (myId && !sessionRestored) {
+      setChats([]);
+      setIsConnected(false);
+      return;
+    }
     if (isInvalid) {
       setChats([]);
       setIsConnected(false);
@@ -41,7 +47,8 @@ export function useRoomChat(roomId?: string, isJoined?: boolean) {
         await roomChatService.subscribe(roomId);
         if (cancelled) return;
 
-        const { addParticipant, removeParticipant, updateRoom, resetRoom } = roomStore.getState();
+        const { addParticipant, removeParticipant, updateRoom, resetRoom, updateHost } =
+          roomStore.getState();
         const myId = authStore.getState().id;
 
         unsubscribeJoin = roomChatService.onJoin((data: RoomParticipantJoinData) => {
@@ -51,6 +58,7 @@ export function useRoomChat(roomId?: string, isJoined?: boolean) {
 
         unsubscribeLeave = roomChatService.onLeave((data: RoomParticipantLeaveData) => {
           removeParticipant(data.user.id);
+          updateHost(data.host.id);
         });
 
         unsubscribeUpdate = roomChatService.onUpdate((data: RoomParticipantUpdateData) => {
@@ -90,7 +98,7 @@ export function useRoomChat(roomId?: string, isJoined?: boolean) {
       unsubscribeUpdate?.();
       unsubscribeDelete?.();
     };
-  }, [roomId, isJoined, storeRoomId]);
+  }, [roomId, isJoined, storeRoomId, sessionRestored, myId]);
 
   return { chats, isConnected };
 }

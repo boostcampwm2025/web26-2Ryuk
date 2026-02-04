@@ -55,6 +55,7 @@ export class WebSocketService {
     }
 
     const token = accessTokenGetter?.() ?? null;
+
     const connectionOptions: any = {
       transports: ['websocket'],
       reconnection: false,

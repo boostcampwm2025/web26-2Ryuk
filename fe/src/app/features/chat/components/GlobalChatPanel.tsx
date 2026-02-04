@@ -15,6 +15,8 @@ export default function GlobalChatPanel() {
   const showPanel = chatPanelStore((state) => state.show);
   const isExpanded = chatPanelStore((state) => state.global.isExpanded);
   const prevExpandedRef = useRef(isExpanded);
+  const sessionRestored = authStore((state) => state.sessionRestored);
+  const authInitDone = authStore((state) => state.authInitDone);
 
   useEffect(() => showPanel('global'), []);
   useEffect(() => globalChatService.onUnreadChange(setIsUnread), []);
@@ -24,8 +26,13 @@ export default function GlobalChatPanel() {
     prevExpandedRef.current = isExpanded;
   }, [isExpanded]);
 
-  // WebSocket 연결 및 구독 — 연결 상태 콜백을 먼저 등록해 connect 이벤트를 놓치지 않음
+  // WebSocket 연결 및 구독
   useEffect(() => {
+    if (!sessionRestored && !authInitDone) {
+      setIsConnected(false);
+      return;
+    }
+
     const unsubscribeConnection = globalChatService.onConnectionChange((connected) =>
       setIsConnected(connected),
     );
@@ -56,7 +63,7 @@ export default function GlobalChatPanel() {
       unsubscribeParticipants();
       globalChatService.unsubscribe().catch(console.error);
     };
-  }, []);
+  }, [sessionRestored, authInitDone]);
 
   // 메시지 전송 핸들러
   const handleMessageSubmit = useCallback(async (message: string) => {

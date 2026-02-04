@@ -26,6 +26,7 @@ export function useRoom(roomId?: string): UseRoomResult {
   const prevRoomIdForToastRef = useRef<string>();
 
   const myId = authStore((state) => state.id);
+  const sessionRestored = authStore((state) => state.sessionRestored);
   const addParticipant = roomStore((state) => state.addParticipant);
   const removeParticipant = roomStore((state) => state.removeParticipant);
   const updateRoom = roomStore((state) => state.updateRoom);
@@ -47,13 +48,16 @@ export function useRoom(roomId?: string): UseRoomResult {
 
   const game = useGame(roomId);
 
-  // 입장 확정 후 채팅 및 게임 구독 (store와 URL 일치 시)
+  // 입장 확정 후 채팅 및 게임 구독 (store와 URL 일치 시).
+  // 세션 복구 후에만 연결해 비인증 WS 방지.
   useEffect(() => {
     const isEntered = entry.status === 'entered';
     if (!isEntered || !roomId) return;
 
     const storedRoomId = currentRoomId;
     if (storedRoomId !== roomId) return;
+
+    if (myId && !sessionRestored) return;
 
     //
     if (prevRoomIdForToastRef.current !== roomId) {
@@ -112,7 +116,7 @@ export function useRoom(roomId?: string): UseRoomResult {
       unsubLeave?.();
       unsubUpdate?.();
     };
-  }, [entry.status, entry.joinInfo, roomId, currentRoomId, myId]);
+  }, [entry.status, entry.joinInfo, roomId, currentRoomId, myId, sessionRestored]);
 
   useEffect(() => {
     const handleRoomRemoved = () => {

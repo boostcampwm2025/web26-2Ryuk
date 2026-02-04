@@ -325,9 +325,6 @@ export class GameService {
       // 게임 정보 삭제
       await this.gameRepository.deleteAllGameData(roomId);
 
-      // 해당 방의 모든 참여자에게 브로드캐스트
-      this.gameBroadcastService.broadcastGameClose(server, roomId, false);
-
       logMessage(this.logger, LOG.GAME.CLOSE(roomId, userId));
     } catch (error) {
       // 예외 발생 시 조용히 처리 (로그만 남김)
