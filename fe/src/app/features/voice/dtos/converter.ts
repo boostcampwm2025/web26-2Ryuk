@@ -1,14 +1,15 @@
-import type { VoiceProducerNewDto, VoiceProducerUpdateDto, VoiceProducerClosedDto } from './dto';
 import type {
+  VoiceProducerClosedData,
   VoiceProducerNewData,
   VoiceProducerUpdateData,
-  VoiceProducerClosedData,
 } from './data';
+import type { VoiceProducerClosedDto, VoiceProducerNewDto, VoiceProducerUpdateDto } from './dto';
 
 export const toVoiceProducerNewData = (dto: VoiceProducerNewDto): VoiceProducerNewData => ({
   roomId: dto.room_id,
   userId: dto.user_id,
   producerId: dto.producer_id,
+  isMicOn: dto.is_mic_on ?? true,
 });
 
 export const toVoiceProducerUpdateData = (

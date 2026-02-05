@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
 import { useModal } from '@/app/components/shared/modal/useModal';
-import { roomStore } from '@/app/features/room/stores/room';
-import roomService from '@/app/features/room/services/RoomService';
 import { roomChatService } from '@/app/features/chat/services/RoomChatService';
-import { voiceStore } from '@/app/features/voice/stores/voice';
 import type { UseRoomExitCallbacks, UseRoomExitResult } from '@/app/features/room/hooks/type';
+import roomService from '@/app/features/room/services/RoomService';
+import { roomStore } from '@/app/features/room/stores/room';
+import { VoiceService } from '@/app/features/voice/services/VoiceService';
+import { voiceStore } from '@/app/features/voice/stores/voice';
+import { useCallback, useRef } from 'react';
 
 const DELETE_MODAL_ID = 'delete-room-modal';
 const LEAVE_MODAL_ID = 'leave-room-modal';
@@ -21,9 +22,10 @@ export function useRoomExit(
   const { openModal, closeModal } = useModal();
 
   const handleLeaveRoom = useCallback(async () => {
-    await roomChatService.unsubscribe();
+    await VoiceService.leaveChannel();
     voiceStore.getState().reset();
     roomStore.getState().resetRoom();
+    await roomChatService.unsubscribe();
     callbacksRef.current.onLeaveSuccess();
   }, [roomId]);
 
@@ -31,6 +33,7 @@ export function useRoomExit(
     if (!roomId) return;
     roomChatService.clearSubscriptionOnly();
     voiceStore.getState().reset();
+    await VoiceService.leaveChannel();
     await roomService.deleteRoom(roomId);
     roomStore.getState().resetRoom();
     callbacksRef.current.onDeleteSuccess();

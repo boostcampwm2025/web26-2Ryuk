@@ -41,11 +41,11 @@
 <br clear="both" />
 
 <div align="center">
-<a href="https://rapid-bubble-113.notion.site/2fe207f233418064a95be845fe26ec3e">
+<a href="https://github.com/boostcampwm2025/web26-2Ryuk/releases">
   <img width="200" height="80" alt="release-note" src="https://github.com/user-attachments/assets/7a7c40db-213f-4d50-b507-0b8048c13002" />
 </a>
   <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
-<a href="https://github.com/boostcampwm2025/web26-2Ryuk/releases">
+<a href="https://rapid-bubble-113.notion.site/2fe207f233418064a95be845fe26ec3e">
   <img width="200" height="80" alt="patch-note" src="https://github.com/user-attachments/assets/ec0a7725-b687-46cd-98de-21faef418e8c" />
 </a>
 </div>
@@ -125,7 +125,7 @@
 <blockquote>
 <h2>문제 해결 과정이 궁금하다면?</h2>
 
-<div>최근 채팅 내역 중복 노출 문제 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/2ee207f2334180e6b251c2184f9395a9?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/2f3207f2334180c49c9fcbdb9950e8cb?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;최근 채팅 내역 중복 노출 문제</a></div>
 
 </blockquote>
 
@@ -144,7 +144,7 @@
 <blockquote>
 <h2>결정 사항이 궁금하다면?</h2>
 
-<div>채팅방 HTTP, WebSocket 책임 정의 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/HTTP-WebSocket-2fb207f233418027940ec5f6e464d2ef?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/HTTP-WebSocket-2fb207f233418027940ec5f6e464d2ef?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;채팅방 HTTP, WebSocket 책임 정의</a></div>
 
 </blockquote>
 
@@ -161,7 +161,7 @@
 <blockquote>
 <h2>결정 사항이 궁금하다면?</h2>
 
-<div>Redis Mediasoup 데이터 구조 전략 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/Redis-Mediasoup-2ed207f23341809aaf88dca67f3e2e13?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/Redis-Mediasoup-2ed207f23341809aaf88dca67f3e2e13?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;Redis Mediasoup 데이터 구조 전략</a></div>
 
 </blockquote>
 
@@ -206,9 +206,9 @@
 <blockquote>
 <h2>이런 문서도 있어요!</h2>
 
-<div>랭킹 페이지 표시 방식 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/2eb207f2334180eca00edf864ad78f36?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
-<div>게임 기록 저장 로직 최적화 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/N-1-2f5207f23341807c9f8be95cb244001e?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
-<div>음성 채팅 기능 성능 개선 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/2fb207f2334180f5bc83eab7a6136f38?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/2eb207f2334180eca00edf864ad78f36?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;랭킹 페이지 표시 방식</a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/N-1-2f5207f23341807c9f8be95cb244001e?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;게임 기록 저장 로직 최적화</a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/2fb207f2334180f5bc83eab7a6136f38?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;음성 채팅 기능 성능 개선</a></div>
 
 </blockquote>
 
@@ -231,7 +231,7 @@
 <blockquote>
 <h2>결정 사항이 궁금하다면?</h2>
 
-<div>비속어 필터링 로직 :&nbsp;&nbsp;&nbsp;<a target="_blank" href="https://rapid-bubble-113.notion.site/2fb207f2334180d7bea8d9d54f35acd6?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
+<div><a target="_blank" href="https://rapid-bubble-113.notion.site/2fb207f2334180d7bea8d9d54f35acd6?source=copy_link"><img width="20px" height="20px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" />&nbsp;비속어 필터링 로직</a></div>
 
 </blockquote>
 
@@ -378,6 +378,9 @@
 </span>
 
 
+<br clear="both" />
+<br clear="both" />
+<br clear="both" />
 <br clear="both" />
 <br clear="both" />
 <br clear="both" />
