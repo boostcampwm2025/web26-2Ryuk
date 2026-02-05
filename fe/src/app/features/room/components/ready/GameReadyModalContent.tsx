@@ -7,6 +7,7 @@ import OtherReadyStatusCardGrid from './OtherReadyStatusCardGrid';
 import SelectedGameCard from '@/app/features/game/components/SelectedGameCard';
 import { GameData, GamePlayerData } from '@/app/features/game/dtos/data';
 import * as TextButton from '@/app/components/shared/button/TextButton';
+import { useEffect, useState } from 'react';
 
 interface GameReadyModalContentProps {
   myStatus: GamePlayerData;
@@ -29,8 +30,19 @@ export default function GameReadyModalContent({
 }: GameReadyModalContentProps) {
   const currentPlayers = players.length + 1;
   const title = myStatus.isHost ? '게임 참가자 모집 중' : '게임에 참가하시겠어요?';
+  const [isStartButtonClicked, setIsStartButtonClicked] = useState(false);
+
+  // 게임이 변경되면 시작 버튼 클릭 상태 리셋
+  useEffect(() => {
+    setIsStartButtonClicked(false);
+  }, [selectedGame]);
 
   const gridPlayers = players.filter((p) => p.playerId !== myStatus.playerId);
+
+  const handleStartButtonClick = () => {
+    setIsStartButtonClicked(true);
+    onStart?.();
+  };
 
   const handleReadyChange = (isReady: boolean) => {
     if (myStatus.isHost) return;
@@ -72,8 +84,8 @@ export default function GameReadyModalContent({
             text="게임 시작"
             iconName="play"
             size="medium"
-            onClick={onStart}
-            disabled={!isGameStartEnabled}
+            onClick={handleStartButtonClick}
+            disabled={!isGameStartEnabled || isStartButtonClicked}
           />
         )}
         {!myStatus.isHost && myStatus.isReady && (
