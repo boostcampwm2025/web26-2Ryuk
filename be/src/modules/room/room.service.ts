@@ -1,37 +1,38 @@
 import {
   ConflictException,
   ForbiddenException,
+  forwardRef,
   HttpException,
+  HttpStatus,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
   OnModuleInit,
-  HttpStatus,
-  forwardRef,
-  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { GLOBAL_ROOM_ID, ROOM_TYPE, RoomType } from '@src/common/constants/constants';
-import { LOG, logMessage } from '@src/common/utils/log-messages';
-import { UUID } from 'node:crypto';
-import { User } from '@src/modules/user/user.entity';
 import { WS_EVENTS_ROOM } from '@src/common/constants/ws-events.constant';
-import { RoomRequestDto } from './dto/room.dto';
-import {
-  RoomCreateResponseDto,
-  RoomReadResponseDto,
-  RoomDeleteResponseDto,
-  ParticipantDto,
-  RoomListResponseDto,
-  RoomJoinInfoResponseDto,
-  ParticipantDetailDto,
-} from './dto/room-response.dto';
+import { LOG, logMessage } from '@src/common/utils/log-messages';
+import { User } from '@src/modules/user/user.entity';
+import { UUID } from 'crypto';
 import { Server, Socket } from 'socket.io';
+import { Repository } from 'typeorm';
 import { GameService } from '../game/game.service';
-import { RoomRepository } from './room.repository';
+import { VoiceService } from '../voice/voice.service';
+import {
+  ParticipantDetailDto,
+  ParticipantDto,
+  RoomCreateResponseDto,
+  RoomDeleteResponseDto,
+  RoomJoinInfoResponseDto,
+  RoomListResponseDto,
+  RoomReadResponseDto,
+} from './dto/room-response.dto';
+import { RoomRequestDto } from './dto/room.dto';
 import { RoomNotificationService } from './room-notification.service';
+import { RoomRepository } from './room.repository';
 
 @Injectable()
 export class RoomService implements OnModuleInit {
@@ -42,6 +43,7 @@ export class RoomService implements OnModuleInit {
     private readonly roomNotificationService: RoomNotificationService,
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @Inject(forwardRef(() => GameService)) private readonly gameService: GameService,
+    @Inject(forwardRef(() => VoiceService)) private readonly voiceService: VoiceService,
   ) {}
 
   onModuleInit() {
@@ -207,6 +209,9 @@ export class RoomService implements OnModuleInit {
     // 게임 실시간 브로드캐스트 타이머 정리
     this.gameService.stopRealtimeBroadcast(roomId);
 
+    // 방 삭제시 음성 라우터 정리
+    await this.voiceService.closeRouter(roomId);
+
     logMessage(this.logger, LOG.ROOM.ROOM_DELETED(roomId, hostId));
 
     return { id: roomId };
@@ -232,6 +237,9 @@ export class RoomService implements OnModuleInit {
     await this.roomRepository.deleteAllRoomKeys(roomId);
 
     this.gameService.stopRealtimeBroadcast(roomId);
+
+    // 방 삭제시 음성 라우터 정리
+    await this.voiceService.closeRouter(roomId);
 
     logMessage(this.logger, LOG.ROOM.ROOM_DELETED(roomId, 'FORCED'));
   }

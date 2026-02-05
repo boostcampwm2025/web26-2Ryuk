@@ -4,6 +4,7 @@ export type VoiceProducerNewData = {
   roomId: string;
   userId: string;
   producerId: string;
+  isMicOn: boolean;
 };
 
 export type VoiceProducerUpdateData = {

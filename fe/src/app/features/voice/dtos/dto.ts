@@ -4,6 +4,7 @@ export type VoiceProducerNewDto = {
   room_id: string;
   user_id: string;
   producer_id: string;
+  is_mic_on?: boolean;
 };
 
 export type VoiceProducerUpdateDto = {
