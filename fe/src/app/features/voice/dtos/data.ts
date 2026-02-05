@@ -18,8 +18,3 @@ export type VoiceProducerClosedData = {
   roomId: string;
   producerId: string;
 };
-
-export interface RoomParticipantJoinData {
-  userId: string;
-  roomId: string;
-}

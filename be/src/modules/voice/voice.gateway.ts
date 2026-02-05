@@ -257,11 +257,17 @@ export class VoiceGateway implements OnGatewayDisconnect {
   @SubscribeMessage('voice:room:leave')
   async handleLeaveVoiceRoom(@MessageBody() data: LeaveVoiceRoomDto, @ConnectedSocket() client: SocketWithAuth) {
     try {
-      const userId = await this._authorizeClient(client, data.room_id);
-      await this.voiceService.leaveRoom(userId, data.room_id);
+      const userId = client.data.userId;
+      const roomId = data.room_id;
+
+      if (userId && roomId) {
+        await this.voiceService.leaveRoom(userId, roomId);
+      }
+
       return { success: true };
     } catch (error) {
-      return { error: createWsErrorResponse(error, '음성 채팅방 나가기 중 오류가 발생했습니다.') };
+      // 나가는 로직에서 발생하는 에러는 무시하거나 최소화
+      return { success: false, message: error.message || '방 나가기 중 오류가 발생했습니다.' };
     }
   }
 

@@ -1,15 +1,9 @@
 import type {
-  RoomParticipantJoinData,
   VoiceProducerClosedData,
   VoiceProducerNewData,
   VoiceProducerUpdateData,
 } from './data';
-import type {
-  RoomParticipantJoinDto,
-  VoiceProducerClosedDto,
-  VoiceProducerNewDto,
-  VoiceProducerUpdateDto,
-} from './dto';
+import type { VoiceProducerClosedDto, VoiceProducerNewDto, VoiceProducerUpdateDto } from './dto';
 
 export const toVoiceProducerNewData = (dto: VoiceProducerNewDto): VoiceProducerNewData => ({
   roomId: dto.room_id,
@@ -56,13 +50,6 @@ export const toVoiceProducerClosedDto = (
   producer_id: data.producerId,
 });
 
-export const toRoomParticipantJoinData = (dto: RoomParticipantJoinDto): RoomParticipantJoinData => {
-  return {
-    userId: dto.user.user_id,
-    roomId: dto.room_id,
-  };
-};
-
 export const VoiceConverter = {
   toVoiceProducerNewData,
   toVoiceProducerNewDto,
@@ -70,5 +57,4 @@ export const VoiceConverter = {
   toVoiceProducerUpdateDto,
   toVoiceProducerClosedData,
   toVoiceProducerClosedDto,
-  toRoomParticipantJoinData,
 };

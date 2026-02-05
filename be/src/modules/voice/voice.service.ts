@@ -220,8 +220,8 @@ export class VoiceService implements OnModuleInit {
    * 이 Transport는 클라이언트와 mediasoup Router 간의 미디어 송수신 경로 역할
    */
   async createTransport(roomId: string, producing: boolean, client: SocketWithAuth) {
-    const router = await this.getOrCreateRouter(roomId);
     const userId = client.data.userId;
+    const router = await this.getOrCreateRouter(roomId);
 
     const webRtcTransportOptions = {
       listenIps: this.mediasoupListenIps,
@@ -336,6 +336,8 @@ export class VoiceService implements OnModuleInit {
       this.redisClient.sAdd(`mediasoup:room:${room_id}:user:${userId}:producers`, producer.id),
       // 사용자 단위 인덱스 (userId 기준으로 사용자의 모든 producer 조회용)
       this.redisClient.sAdd(`mediasoup:user:${userId}:producers`, producer.id),
+      // 방 단위 인덱스 (roomId 기준으로 방의 모든 producer 조회용)
+      this.redisClient.sAdd(`mediasoup:room:${room_id}:producers`, producer.id),
     ]).catch((err) => logMessage(this.logger, LOG.VOICE.REDIS_CLEANUP_ERROR(producer.id, String(err))));
 
     producer.on('@close', () => {
@@ -344,6 +346,7 @@ export class VoiceService implements OnModuleInit {
         this.redisClient.del(`mediasoup:producer:${producer.id}`),
         this.redisClient.sRem(`mediasoup:room:${room_id}:user:${userId}:producers`, producer.id),
         this.redisClient.sRem(`mediasoup:user:${userId}:producers`, producer.id),
+        this.redisClient.sRem(`mediasoup:room:${room_id}:producers`, producer.id),
       ]).catch((err) => logMessage(this.logger, LOG.VOICE.REDIS_CLEANUP_ERROR(producer.id, String(err))));
     });
 
@@ -480,46 +483,61 @@ export class VoiceService implements OnModuleInit {
     logMessage(this.logger, LOG.VOICE.PRODUCER_CLOSED(producerId, userId));
     return { success: true };
   }
-
-  /**
-   * 특정 방의 모든 활성 Producer 목록을 조회
-   */
   async getProducersForRoom(roomId: string): Promise<{ producer_id: string; user_id: string }[]> {
-    const userIds = await this.roomService.getRoomMemberIds(roomId);
-    if (userIds.length === 0) {
-      return [];
-    }
+    const producerIds = await this.redisClient.sMembers(`mediasoup:room:${roomId}:producers`);
 
-    const producerSetKeys = userIds.map((userId) => `mediasoup:room:${roomId}:user:${userId}:producers`);
+    const results = await Promise.all(
+      producerIds.map(async (id) => {
+        // [추가] Redis에만 있고 실제 서버 메모리에 없는 Producer는 가짜(찌꺼기)입니다.
+        if (!this.producers.has(id)) return null;
 
-    const multi = this.redisClient.multi();
-    producerSetKeys.forEach((key) => multi.sMembers(key));
-    const producerIdLists = (await multi.exec()) as unknown as string[][];
+        const info = await this.redisClient.hGetAll(`mediasoup:producer:${id}`);
+        return info && info.user_id ? { producer_id: id, user_id: info.user_id } : null;
+      }),
+    );
 
-    const allProducerIds = producerIdLists.flat().filter((id): id is string => !!id);
-    if (allProducerIds.length === 0) {
-      return [];
-    }
-
-    const producerPipeline = this.redisClient.multi();
-    allProducerIds.forEach((id) => producerPipeline.hGetAll(`mediasoup:producer:${id}`));
-    const producerDataArray = (await producerPipeline.exec()) as unknown as (Record<string, string> | null)[];
-
-    const activeProducers: { producer_id: string; user_id: string; is_mic_on: boolean }[] = [];
-    producerDataArray.forEach((data, i) => {
-      if (data && data.user_id) {
-        activeProducers.push({
-          producer_id: allProducerIds[i],
-          user_id: data.user_id,
-          is_mic_on: data.paused === 'false',
-        });
-      }
-    });
-
-    logMessage(this.logger, LOG.VOICE.PRODUCERS_FOR_ROOM_FETCHED(roomId, activeProducers.length));
-
-    return activeProducers;
+    return results.filter((item) => item !== null);
   }
+
+  // /**
+  //  * 특정 방의 모든 활성 Producer 목록을 조회
+  //  */
+  // async getProducersForRoom(roomId: string): Promise<{ producer_id: string; user_id: string }[]> {
+  //   const userIds = await this.roomService.getRoomMemberIds(roomId);
+  //   if (userIds.length === 0) {
+  //     return [];
+  //   }
+
+  //   const producerSetKeys = userIds.map((userId) => `mediasoup:room:${roomId}:user:${userId}:producers`);
+
+  //   const multi = this.redisClient.multi();
+  //   producerSetKeys.forEach((key) => multi.sMembers(key));
+  //   const producerIdLists = (await multi.exec()) as unknown as string[][];
+
+  //   const allProducerIds = producerIdLists.flat().filter((id): id is string => !!id);
+  //   if (allProducerIds.length === 0) {
+  //     return [];
+  //   }
+
+  //   const producerPipeline = this.redisClient.multi();
+  //   allProducerIds.forEach((id) => producerPipeline.hGetAll(`mediasoup:producer:${id}`));
+  //   const producerDataArray = (await producerPipeline.exec()) as unknown as (Record<string, string> | null)[];
+
+  //   const activeProducers: { producer_id: string; user_id: string; is_mic_on: boolean }[] = [];
+  //   producerDataArray.forEach((data, i) => {
+  //     if (data && data.user_id) {
+  //       activeProducers.push({
+  //         producer_id: allProducerIds[i],
+  //         user_id: data.user_id,
+  //         is_mic_on: data.paused === 'false',
+  //       });
+  //     }
+  //   });
+
+  //   logMessage(this.logger, LOG.VOICE.PRODUCERS_FOR_ROOM_FETCHED(roomId, activeProducers.length));
+
+  //   return activeProducers;
+  // }
 
   /**
    * 클라이언트의 WebRTC Transport를 종료하고 관련 리소스 정리
@@ -538,27 +556,25 @@ export class VoiceService implements OnModuleInit {
   async leaveRoom(userId: string, roomId: string): Promise<{ success: boolean }> {
     logMessage(this.logger, LOG.VOICE.VOICE_LEAVE_ROOM(userId, roomId));
 
-    // 1. 해당 방의 리소스 ID들을 가져옴
+    // 1. 삭제할 대상 ID 목록 확보
     const [tIds, pIds, cIds] = await Promise.all([
-      this.redisClient.sMembers(`mediasoup:room:${roomId}:user:${userId}:transports`),
-      this.redisClient.sMembers(`mediasoup:room:${roomId}:user:${userId}:producers`),
-      this.redisClient.sMembers(`mediasoup:room:${roomId}:user:${userId}:consumers`),
+      this.redisClient.sMembers(`mediasoup:user:${userId}:transports`),
+      this.redisClient.sMembers(`mediasoup:user:${userId}:producers`),
+      this.redisClient.sMembers(`mediasoup:user:${userId}:consumers`),
     ]);
 
+    this.logger.debug(`[LeaveRoom Debug] cIds 목록: ${JSON.stringify(cIds)}`);
+
+    await Promise.all([
+      ...cIds.map((id) => this.closeConsumerInternal(id)),
+      ...pIds.map((id) => this.closeProducerInternal(id)),
+      ...tIds.map((id) => this.closeTransportInternal(id)),
+    ]);
+
+    // 3. 이제 "관계(Index Set)"만 정리합니다.
+    // 개별 키(individualKeys)는 Internal에서 지웠으므로 여기서 또 지울 필요 없습니다.
     const multi = this.redisClient.multi();
 
-    // 2. 개별 리소스 키들을 모아서 한꺼번에 삭제 리스트에 추가
-    const individualKeys = [
-      ...pIds.map((id) => `mediasoup:producer:${id}`),
-      ...tIds.map((id) => `mediasoup:transport:${id}`),
-      ...cIds.map((id) => `mediasoup:consumer:${id}`),
-    ];
-
-    if (individualKeys.length > 0) {
-      multi.del(individualKeys);
-    }
-
-    // 3. 사용자-방 단위 인덱스 키 삭제
     const indexKeys = [
       `mediasoup:room:${roomId}:user:${userId}:transports`,
       `mediasoup:room:${roomId}:user:${userId}:producers`,
@@ -566,26 +582,20 @@ export class VoiceService implements OnModuleInit {
     ];
     multi.del(indexKeys);
 
-    // 4. 전역 사용자 인덱스에서 제거 (Spread 연산자 에러 방지)
     const userKey = `mediasoup:user:${userId}`;
-    if (pIds.length > 0) {
-      multi.sRem(`${userKey}:producers`, pIds);
-    }
-    if (tIds.length > 0) {
-      multi.sRem(`${userKey}:transports`, tIds);
-    }
-    if (cIds.length > 0) {
-      multi.sRem(`${userKey}:consumers`, cIds);
-    }
+    pIds.forEach((id) => multi.sRem(`${userKey}:producers`, id));
+    tIds.forEach((id) => multi.sRem(`${userKey}:transports`, id));
+    cIds.forEach((id) => multi.sRem(`${userKey}:consumers`, id));
 
-    // Redis 트랜잭션 실행
     await multi.exec();
 
-    // 5. 메모리 객체 정리 (Redis와 무관하게 동작)
-    tIds.forEach((id) => this.closeTransportInternal(id));
-    pIds.forEach((id) => this.closeProducerInternal(id));
-    cIds.forEach((id) => this.closeConsumerInternal(id));
+    // 4. 방에 아무도 없으면 라우터 종료
+    const activeMembers = await this.roomService.getRoomMemberIds(roomId);
+    if (activeMembers.length === 0) {
+      await this.closeRouter(roomId);
+    }
 
+    console.log(`[LeaveRoom] 유저 ${userId}가 방 ${roomId}의 모든 리소스를 정리했습니다.`);
     return { success: true };
   }
 
@@ -671,7 +681,7 @@ export class VoiceService implements OnModuleInit {
     this.consumers.set(consumer.id, consumer);
 
     // 7. Redis에 Consumer 메타데이터 저장
-    Promise.all([
+    await Promise.all([
       this.redisClient.hSet(`mediasoup:consumer:${consumer.id}`, {
         room_id: producerData.room_id,
         consuming_user_id: userId,
@@ -685,7 +695,7 @@ export class VoiceService implements OnModuleInit {
       this.redisClient.sAdd(`mediasoup:room:${producerData.room_id}:user:${userId}:consumers`, consumer.id),
       // 사용자 단위 인덱스 (userId 기준으로 사용자의 모든 consumer 조회용)
       this.redisClient.sAdd(`mediasoup:user:${userId}:consumers`, consumer.id),
-    ]).catch((err) => logMessage(this.logger, LOG.VOICE.REDIS_CLEANUP_ERROR(consumer.id, String(err))));
+    ]);
 
     // 8. @close 리스너 설정
     consumer.on('@close', () => {
@@ -710,36 +720,6 @@ export class VoiceService implements OnModuleInit {
     };
   }
 
-  /**
-   * 사용자가 소켓 연결을 끊었을 때 호출되어,
-   * 참여 중인 모든 방의 보이스 리소스를 정리합니다.
-   */
-  async cleanupUserResources(userId: string): Promise<void> {
-    const userKey = `mediasoup:user:${userId}`;
-    const [pIds, tIds, cIds] = await Promise.all([
-      this.redisClient.sMembers(`${userKey}:producers`),
-      this.redisClient.sMembers(`${userKey}:transports`),
-      this.redisClient.sMembers(`${userKey}:consumers`),
-    ]);
-
-    // 1. 개별 리소스 키를 먼저 삭제
-    const multi = this.redisClient.multi();
-    pIds.forEach((id) => multi.del(`mediasoup:producer:${id}`));
-    tIds.forEach((id) => multi.del(`mediasoup:transport:${id}`));
-    cIds.forEach((id) => multi.del(`mediasoup:consumer:${id}`));
-
-    // 2. 그 다음 인덱스 키를 지웁니다.
-    multi.del([userKey, `${userKey}:producers`, `${userKey}:transports`, `${userKey}:consumers`]);
-
-    // 3. 실행
-    await multi.exec();
-
-    // 4. 마지막으로 메모리 객체들을 닫기
-    cIds.forEach((id) => this.closeConsumerInternal(id));
-    pIds.forEach((id) => this.closeProducerInternal(id));
-    tIds.forEach((id) => this.closeTransportInternal(id));
-  }
-
   // Redis에서 Producer 메타데이터 조회
   async getProducerMetadata(producerId: string): Promise<Record<string, string>> {
     const producerData = await this.redisClient.hGetAll(`mediasoup:producer:${producerId}`);
@@ -751,26 +731,140 @@ export class VoiceService implements OnModuleInit {
     const transportData = await this.redisClient.hGetAll(`mediasoup:transport:${transportId}`);
     return transportData;
   }
+  /**
+   * 사용자가 소켓 연결을 끊었을 때 호출되어,
+   * 참여 중인 모든 방의 보이스 리소스를 정리합니다.
+   */
+  async cleanupUserResources(userId: string): Promise<void> {
+    const userKey = `mediasoup:user:${userId}`;
 
-  private closeProducerInternal(producerId: string): void {
-    const producer = this.producers.get(producerId);
-    if (producer) {
-      // .close()를 호출하면 생성 시 등록한 producer.on('@close')가 자동으로 실행됨
-      producer.close();
+    try {
+      // 1. Redis에서 유저가 점유 중인 리소스 ID 목록 조회
+      const [pIds, tIds, cIds] = await Promise.all([
+        this.redisClient.sMembers(`${userKey}:producers`),
+        this.redisClient.sMembers(`${userKey}:transports`),
+        this.redisClient.sMembers(`${userKey}:consumers`),
+      ]);
+
+      this.logger.log(`[Cleanup] 유저 ${userId} 정리 시작 (P:${pIds.length}, T:${tIds.length}, C:${cIds.length})`);
+
+      // 2. 개별 리소스 정리 (내부에서 방 인덱스까지 정리하도록 개선)
+      // await를 붙여서 삭제 순서를 보장합니다.
+      await Promise.allSettled([
+        ...cIds.map((id) => this.closeConsumerInternal(id)),
+        ...pIds.map((id) => this.closeProducerInternal(id)),
+        ...tIds.map((id) => this.closeTransportInternal(id)),
+      ]);
+
+      // 3. 유저 루트 키들 최종 삭제
+      await this.redisClient.del([userKey, `${userKey}:producers`, `${userKey}:transports`, `${userKey}:consumers`]);
+
+      this.logger.log(`[Cleanup] 유저 ${userId} 모든 리소스 정리 완료`);
+    } catch (error) {
+      this.logger.error(`[Cleanup] 유저 ${userId} 정리 중 에러 발생`, error.stack);
     }
   }
 
-  private closeTransportInternal(transportId: string): void {
-    const transport = this.transports.get(transportId);
-    if (transport) {
-      transport.close(); // transport.on('@close') 실행
-    }
-  }
+  // private async closeConsumerInternal(consumerId: string): Promise<void> {
+  //   const consumer = this.consumers.get(consumerId);
 
-  private closeConsumerInternal(consumerId: string): void {
+  //   // [추가] 인덱스 삭제를 위해 메타데이터 조회
+  //   const data = await this.redisClient.hGetAll(`mediasoup:consumer:${consumerId}`);
+
+  //   if (consumer) {
+  //     if (!consumer.closed) consumer.close();
+  //     this.consumers.delete(consumerId);
+  //   }
+
+  //   const multi = this.redisClient.multi();
+  //   multi.del(`mediasoup:consumer:${consumerId}`);
+  //   if (data.consuming_user_id) {
+  //     multi.sRem(`mediasoup:user:${data.consuming_user_id}:consumers`, consumerId);
+  //     if (data.room_id) {
+  //       multi.sRem(`mediasoup:room:${data.room_id}:user:${data.consuming_user_id}:consumers`, consumerId);
+  //     }
+  //   }
+  //   await multi.exec();
+  //   this.logger.debug(`[Internal] Consumer 정리 완료: ${consumerId}`);
+  // }
+
+  private async closeConsumerInternal(consumerId: string): Promise<void> {
+    // 1. 메모리 객체 우선 정리 (가장 중요)
     const consumer = this.consumers.get(consumerId);
     if (consumer) {
-      consumer.close(); // consumer.on('@close') 실행
+      if (!consumer.closed) consumer.close();
+      this.consumers.delete(consumerId);
     }
+
+    // 2. Redis 정리
+    try {
+      const multi = this.redisClient.multi();
+
+      // 기본 키 삭제
+      multi.del(`mediasoup:consumer:${consumerId}`);
+
+      // 만약 consumer 객체 내부 appData에 저장된 정보가 있다면 활용 (없어도 에러 안 남)
+      if (consumer?.appData) {
+        const { userId, roomId } = consumer.appData as { userId: string; roomId: string };
+
+        if (userId) {
+          multi.sRem(`mediasoup:user:${userId}:consumers`, consumerId);
+          if (roomId) {
+            multi.sRem(`mediasoup:room:${roomId}:user:${userId}:consumers`, consumerId);
+          }
+        }
+      }
+
+      await multi.exec();
+      this.logger.debug(`[Internal] Consumer 정리 완료: ${consumerId}`);
+    } catch (error) {
+      this.logger.error(`[Internal] Redis 삭제 실패: ${error.message}`);
+    }
+  }
+
+  private async closeProducerInternal(producerId: string): Promise<void> {
+    const producer = this.producers.get(producerId);
+
+    // [추가] 중요: 방 단위 Producer 인덱스 정리를 위해 메타데이터 조회
+    const data = await this.redisClient.hGetAll(`mediasoup:producer:${producerId}`);
+
+    if (producer) {
+      if (!producer.closed) producer.close();
+      this.producers.delete(producerId);
+    }
+
+    const multi = this.redisClient.multi();
+    multi.del(`mediasoup:producer:${producerId}`);
+    if (data.user_id) {
+      multi.sRem(`mediasoup:user:${data.user_id}:producers`, producerId);
+      if (data.room_id) {
+        // [핵심] 이 인덱스가 안 지워지면 다음 사람이 유령 Producer를 구독하려 함
+        multi.sRem(`mediasoup:room:${data.room_id}:producers`, producerId);
+        multi.sRem(`mediasoup:room:${data.room_id}:user:${data.user_id}:producers`, producerId);
+      }
+    }
+    await multi.exec();
+    this.logger.debug(`[Internal] Producer 정리 완료: ${producerId}`);
+  }
+
+  private async closeTransportInternal(transportId: string): Promise<void> {
+    const transport = this.transports.get(transportId);
+    const data = await this.redisClient.hGetAll(`mediasoup:transport:${transportId}`);
+
+    if (transport) {
+      if (!transport.closed) transport.close();
+      this.transports.delete(transportId);
+    }
+
+    const multi = this.redisClient.multi();
+    multi.del(`mediasoup:transport:${transportId}`);
+    if (data.user_id) {
+      multi.sRem(`mediasoup:user:${data.user_id}:transports`, transportId);
+      if (data.room_id) {
+        multi.sRem(`mediasoup:room:${data.room_id}:user:${data.user_id}:transports`, transportId);
+      }
+    }
+    await multi.exec();
+    this.logger.debug(`[Internal] Transport 정리 완료: ${transportId}`);
   }
 }

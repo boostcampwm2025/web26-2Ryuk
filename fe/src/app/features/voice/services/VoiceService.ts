@@ -2,13 +2,11 @@ import { authStore } from '@/app/features/user/stores/auth';
 import { voiceStreamRegistry } from '@/app/features/voice/VoiceStreamRegistry';
 import { VoiceConverter } from '@/app/features/voice/dtos/converter';
 import type {
-  RoomParticipantJoinData,
   VoiceProducerClosedData,
   VoiceProducerNewData,
   VoiceProducerUpdateData,
 } from '@/app/features/voice/dtos/data';
 import type {
-  RoomParticipantJoinDto,
   VoiceProducerClosedDto,
   VoiceProducerNewDto,
   VoiceProducerUpdateDto,
@@ -60,10 +58,6 @@ export class VoiceService {
     VoiceService.handleProducerClosed(VoiceConverter.toVoiceProducerClosedData(dto));
   };
 
-  private static _boundUserJoined = (dto: RoomParticipantJoinDto) => {
-    VoiceService.handleUserJoined(VoiceConverter.toRoomParticipantJoinData(dto));
-  };
-
   private static registerVoiceListeners() {
     const socket = WebSocketService.getSocket();
     if (!socket) return;
@@ -73,8 +67,6 @@ export class VoiceService {
     socket.on(WS_EVENTS.VOICE_PRODUCER_UPDATE, VoiceService._boundProducerUpdate);
     socket.off(WS_EVENTS.VOICE_PRODUCER_CLOSED, VoiceService._boundProducerClosed);
     socket.on(WS_EVENTS.VOICE_PRODUCER_CLOSED, VoiceService._boundProducerClosed);
-    socket.off(WS_EVENTS.ROOM_PARTICIPANT_JOIN, VoiceService._boundUserJoined);
-    socket.on(WS_EVENTS.ROOM_PARTICIPANT_JOIN, VoiceService._boundUserJoined);
   }
 
   private static async init() {
@@ -119,6 +111,8 @@ export class VoiceService {
 
       // (4) 수신용(Recv) Transport 생성
       await this.setupTransport(roomId, false);
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // (5) 내 마이크(Producer) 생성 및 전송 — 먼저 수행해 브라우저 마이크 권한/활성화 보장
       await this.startMic();
@@ -407,7 +401,9 @@ export class VoiceService {
         this.myProducer = undefined;
       }
       if (WebSocketService.isConnected()) {
-        await WebSocketService.request(WS_EVENTS.VOICE_ROOM_LEAVE, { room_id: roomIdToLeave });
+        await WebSocketService.request(WS_EVENTS.VOICE_ROOM_LEAVE, {
+          room_id: roomIdToLeave,
+        });
       }
     } catch {
       // 서버 에러(이미 퇴장 처리됨 등)여도 로컬 정리는 진행
@@ -447,9 +443,12 @@ export class VoiceService {
     const myUserId = authStore.getState().id;
     if (!this.roomId || data.roomId !== this.roomId || data.userId === myUserId) return;
 
-    // 새로 생성하기 전에 기존 세션 청소
-    this.cleanupUserSession(data.userId);
+    if (this.consumersByUser.has(data.userId)) {
+      console.log(`[Voice] 이미 구독 중인 유저입니다: ${data.userId}`);
+      return;
+    }
 
+    console.log(`[DEBUG] Consume 시도 - 상대ID: ${data.userId}, 프로듀서ID: ${data.producerId}`);
     // 일단 연결
     await this.consumeUser(data.userId, data.producerId);
 
@@ -496,16 +495,6 @@ export class VoiceService {
       this.emit({ type: 'producer-removed', userId: consumer.appData.userId as string });
     }
   }
-  /**
-   * [리스너 4] 유저가 방에 입장했을 때
-   */
-  private static handleUserJoined = (data: RoomParticipantJoinData) => {
-    const myUserId = authStore.getState().id;
-    if (data.userId === myUserId) return;
-
-    console.log(`[Voice] 유저(${data.userId}) 입장. 기존 세션 정리 시도.`);
-    this.cleanupUserSession(data.userId);
-  };
 
   /**
    * 유저 ID로 컨슈머를 찾아야 할 때 (예: producer 업데이트 이벤트)

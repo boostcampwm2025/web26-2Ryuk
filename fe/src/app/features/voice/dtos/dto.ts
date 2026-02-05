@@ -18,13 +18,3 @@ export type VoiceProducerClosedDto = {
   room_id: string;
   producer_id: string;
 };
-
-export interface RoomParticipantJoinDto {
-  room_id: string;
-  user: {
-    user_id: string;
-    nickname: string;
-    profile_image: string | null;
-  };
-  current_participants: string;
-}
