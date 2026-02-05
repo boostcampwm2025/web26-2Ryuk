@@ -29,3 +29,36 @@ export interface UseBeakerGameResult extends UseGameResult {
   myDropTrigger: number;
   opponentDropTrigger: number;
 }
+
+export type ReflexGameVariant = 'idle' | 'ready' | 'active' | 'success' | 'missed' | 'finished';
+
+export interface UseReflexGameResult {
+  variant: ReflexGameVariant;
+  totalScore: number;
+  displayText: string;
+  currentTriggerIndex: number;
+  remainingTriggers: number;
+  startGame: () => void;
+  handleClick: () => number | null;
+}
+
+export interface UseReflexGameOptions {
+  onMissedScore?: (score: number) => void;
+}
+
+export type BubbleGameVariant = 'idle' | 'growing' | 'exploding';
+
+export interface UseBubbleGameResult extends UseGameResult {
+  resetTrigger: number;
+  explodeTrigger: number;
+  myTrigger: number;
+  highestTrigger: number;
+  handleClick: () => void;
+  hasInput: boolean;
+  isExploded: boolean;
+  explodeTime: number;
+  lastScore: number | undefined;
+  explodeOffsetMs: number | undefined;
+  lastInputElapsedMs: number | undefined;
+  startTime: Date | undefined;
+}

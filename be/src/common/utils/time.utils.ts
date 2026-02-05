@@ -5,7 +5,7 @@ export function parseExpiresIn(expiresIn: string): number {
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
-  const value = parseInt(expiresIn, 10);
+  const value = Number.parseInt(expiresIn, 10);
   if (expiresIn.endsWith('s')) {
     return value * 1000;
   } else if (expiresIn.endsWith('m')) {

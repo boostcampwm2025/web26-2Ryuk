@@ -1,6 +1,6 @@
 {
   "name": "물방울톡",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "description": "누구나 가볍게 참여하고 자연스럽게 대화를 이어갈 수 있도록 돕는, 부담 없는 음성 기반 소셜 서비스",
   "workspaces": [
     "fe",
@@ -31,6 +31,11 @@
     "test:fe": "npm run test --workspace=fe",
     "test:be": "npm run test --workspace=be",
     "test": "npm run test --workspaces",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
     "migration:gen": "pnpm --filter be migration:gen",
     "migration:run": "pnpm --filter be migration:run",
     "migration:revert": "pnpm --filter be migration:revert",
@@ -72,6 +77,7 @@
     ]
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.0.0"

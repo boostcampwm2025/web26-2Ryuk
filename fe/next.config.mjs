@@ -1,5 +1,12 @@
+import { readFileSync } from 'fs';
+
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    APP_VERSION: packageJson.version,
+  },
   images: {
     remotePatterns: [
       { // GitHub User Content 이미지 추가

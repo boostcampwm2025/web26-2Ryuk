@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 export function loadEnv() {
   const nodeEnv = process.env.NODE_ENV || 'development';

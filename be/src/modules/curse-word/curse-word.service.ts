@@ -33,7 +33,8 @@ export class CurseWordService implements OnModuleInit {
     if (!message) {
       return { sanitized: message, hasCurse: false };
     }
-    // 캐시가 비어 있으면 갱신
+
+    // 캐시 검증 및 갱신
     if (this.cachedWords.length === 0) {
       await this.refreshCache();
     }
@@ -42,8 +43,20 @@ export class CurseWordService implements OnModuleInit {
     }
 
     const original = message;
+    const { normKoreanComplete, normKoreanWithJamo, normEnglish } = this.buildNormalizedTexts(original);
 
-    // 메시지를 한 번 훑으며 한글용/영문용 정규화 문자열과 매핑을 각각 만듦
+    if (normKoreanComplete.text.length === 0 && normKoreanWithJamo.text.length === 0 && normEnglish.text.length === 0) {
+      return { sanitized: original, hasCurse: false };
+    }
+
+    const mask = this.searchAndCreateMask(original, normKoreanComplete, normKoreanWithJamo, normEnglish);
+    return this.applyMaskToMessage(original, mask);
+  }
+
+  /**
+   * 메시지의 한글/영문 정규화 텍스트와 인덱스 맵 생성
+   */
+  private buildNormalizedTexts(original: string) {
     const buildNormalized = (predicate: (ch: string) => boolean) => {
       const chars: string[] = [];
       const map: number[] = [];
@@ -57,41 +70,86 @@ export class CurseWordService implements OnModuleInit {
       return { text: chars.join(''), map };
     };
 
-    // 한글 완성형 + 자모(초성, 중성) 포함
-    const normKorean = buildNormalized((ch) => /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(ch));
+    // 완성형만 추출 (씨ㅁ발 같은 변형도 잡기 위해)
+    const normKoreanComplete = buildNormalized((ch) => /[가-힣]/.test(ch));
+
+    // 완성형 + 자모음 추출 (ㅅㅂ 같은 자모음 비속어 잡기 위해)
+    const normKoreanWithJamo = buildNormalized((ch) => /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(ch));
+
     const normEnglish = buildNormalized((ch) => /[A-Za-z]/.test(ch));
 
-    if (normKorean.text.length === 0 && normEnglish.text.length === 0) {
-      return { sanitized: original, hasCurse: false };
-    }
+    return { normKoreanComplete, normKoreanWithJamo, normEnglish };
+  }
 
-    // 정규화된 문자열에서 비속어 검색 (긴 단어 우선)
+  /**
+   * 비속어를 검색하여 마스킹할 영역 표시
+   */
+  private searchAndCreateMask(
+    original: string,
+    normKoreanComplete: { text: string; map: number[] },
+    normKoreanWithJamo: { text: string; map: number[] },
+    normEnglish: { text: string; map: number[] },
+  ): boolean[] {
     const mask: boolean[] = new Array(original.length).fill(false);
+
     for (let idx = 0; idx < this.cachedWords.length; idx++) {
       const word = this.cachedWords[idx];
       if (!word) continue;
 
-      // 단어가 한글을 포함하면 한글 정규화 문자열을, 아니면 영문 정규화 문자열을 사용
-      // 한글 완성형 + 자모(초성, 중성) 포함
       const isKoreanWord = /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(word);
-      const target = isKoreanWord ? normKorean : normEnglish;
-      if (target.text.length === 0) continue;
+      const hasJamo = /[ㄱ-ㅎㅏ-ㅣ]/.test(word);
 
-      const pattern = this.cachedPatterns[idx];
-      let match: RegExpExecArray | null;
-      pattern.lastIndex = 0; // lastIndex 초기화
-      while ((match = pattern.exec(target.text)) !== null) {
-        const startNorm = match.index;
-        const endNorm = startNorm + word.length - 1;
-        const startOrig = target.map[startNorm];
-        const endOrig = target.map[endNorm];
-        // 원본에서 해당 구간(사이에 끼어든 문자 포함)을 마스킹
-        for (let i = startOrig; i <= endOrig; i++) mask[i] = true;
+      if (isKoreanWord) {
+        // 자모음을 포함한 비속어는 자모음 포함 버전으로 검색
+        if (hasJamo) {
+          this.markCurseWordInMask(word, idx, mask, original, normKoreanWithJamo);
+        } else {
+          // 완성형만으로 된 비속어는 완성형으로만 검색 (바ㅁ보 같은 변형도 잡기 위해)
+          this.markCurseWordInMask(word, idx, mask, original, normKoreanComplete);
+        }
+      } else {
+        // 영문 비속어
+        this.markCurseWordInMask(word, idx, mask, original, normEnglish);
       }
     }
 
-    // 마스킹 반영
-    let hasCurse = mask.some(Boolean);
+    return mask;
+  }
+
+  /**
+   * 특정 비속어를 마스크에 표시
+   */
+  private markCurseWordInMask(
+    word: string,
+    wordIdx: number,
+    mask: boolean[],
+    original: string,
+    target: { text: string; map: number[] },
+  ): void {
+    if (target.text.length === 0) return;
+
+    const pattern = this.cachedPatterns[wordIdx];
+    let match: RegExpExecArray | null;
+    pattern.lastIndex = 0; // lastIndex 초기화
+
+    while ((match = pattern.exec(target.text)) !== null) {
+      const startNorm = match.index;
+      const endNorm = startNorm + word.length - 1;
+      const startOrig = target.map[startNorm];
+      const endOrig = target.map[endNorm];
+
+      // 원본에서 해당 구간(사이에 끼어든 문자 포함)을 마스킹
+      for (let i = startOrig; i <= endOrig; i++) {
+        mask[i] = true;
+      }
+    }
+  }
+
+  /**
+   * 마스크 정보를 원본 메시지에 적용하여 결과 생성
+   */
+  private applyMaskToMessage(original: string, mask: boolean[]): SanitizeResult {
+    const hasCurse = mask.some(Boolean);
     const sanitized = hasCurse
       ? original
           .split('')
@@ -134,7 +192,7 @@ export class CurseWordService implements OnModuleInit {
     // 각 단어별 정규식 사전 컴파일
     this.cachedPatterns = this.cachedWords.map((word) => {
       const w = word.toLowerCase();
-      return new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      return new RegExp(w.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
     });
 
     this.logger.log(`비속어 캐시 갱신 완료: ${this.cachedWords.length}건`);

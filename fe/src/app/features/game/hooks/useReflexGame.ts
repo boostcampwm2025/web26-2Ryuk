@@ -2,26 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import Rules from '@/app/shared/rule';
-
-/**
- * Reflex 게임의 상태 타입
- * - 상태 전이는 UI와 로직 모두에서 기준이 됨
- */
-export type ReflexGameVariant = 'idle' | 'ready' | 'active' | 'success' | 'missed' | 'finished';
-
-export interface UseReflexGameResult {
-  variant: ReflexGameVariant;
-  totalScore: number;
-  displayText: string;
-  currentTriggerIndex: number;
-  remainingTriggers: number;
-  startGame: () => void;
-  handleClick: () => number | null;
-}
-
-export interface UseReflexGameOptions {
-  onMissedScore?: (score: number) => void;
-}
+import { ReflexGameVariant, UseReflexGameOptions, UseReflexGameResult } from './type';
 
 /**
  * 게임 전반 설정값 (기획 값이므로 Rules에서 관리)

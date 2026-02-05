@@ -21,6 +21,15 @@ const Rules = {
       MIN_REACTION_MS: 1,
       MAX_REACTION_MS: 1000,
     },
+    BUBBLE: {
+      HIGHEST_SCORE: 200,
+      MIN_DIFF_MS: 1,
+      MAX_DIFF_MS: 20_000,
+      INITIAL_RADIUS: 30,
+      RADIUS_STEP: 1,
+      STEP_INTERVAL_MS: 100,
+      TIMER_VISIBLE_MS: 3000,
+    },
   },
 } as const;
 

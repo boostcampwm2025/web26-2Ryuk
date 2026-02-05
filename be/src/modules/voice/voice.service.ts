@@ -13,16 +13,8 @@ import { ConfigService } from '@nestjs/config';
 import { LOG, logMessage } from '@src/common/utils/log-messages';
 import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import * as mediasoup from 'mediasoup';
-import {
-  Consumer,
-  Producer,
-  Router,
-  RtpCodecCapability,
-  TransportListenIp,
-  WebRtcTransport,
-  Worker,
-} from 'mediasoup/node/lib/types';
-import { cpus } from 'os'; // CPU 코어 수 확인용
+import { Consumer, Producer, Router, RtpCodecCapability, WebRtcTransport, Worker } from 'mediasoup/node/lib/types';
+import { cpus } from 'node:os'; // CPU 코어 수 확인용
 import { RedisClientType } from 'redis';
 import { Socket } from 'socket.io';
 import { RoomService } from '../room/room.service';
@@ -62,7 +54,7 @@ const mediaCodecs: RtpCodecCapability[] = [
 const NUM_WORKERS =
   process.env.MEDIASOUP_WORKER_NUM === 'auto'
     ? cpus().length
-    : parseInt(process.env.MEDIASOUP_WORKER_NUM || '1', 10) || 1;
+    : Number.parseInt(process.env.MEDIASOUP_WORKER_NUM || '1', 10) || 1;
 interface SocketWithAuth extends Socket {
   data: {
     userId: string;
@@ -71,19 +63,19 @@ interface SocketWithAuth extends Socket {
 
 @Injectable()
 export class VoiceService implements OnModuleInit {
-  private workers: Worker[] = []; // 워커 담을 배열
+  private readonly workers: Worker[] = []; // 워커 담을 배열
   private readonly numWorkers = NUM_WORKERS;
   private nextWorkerIdx = 0; // 라운드 로빈용 인덱스
   // roomId를 키로 실제 mediasoup Router 객체를 저장하는 맵 (프로세스 메모리)
-  private routers: Map<string, Router> = new Map();
+  private readonly routers: Map<string, Router> = new Map();
   // transportId를 키로 실제 mediasoup WebRtcTransport 객체를 저장하는 맵 (프로세스 메모리)
-  private transports: Map<string, WebRtcTransport> = new Map();
+  private readonly transports: Map<string, WebRtcTransport> = new Map();
   // producerId를 키로 실제 mediasoup Producer 객체를 저장하는 맵 (프로세스 메모리)
-  private producers: Map<string, Producer> = new Map();
+  private readonly producers: Map<string, Producer> = new Map();
   // consumerId를 키로 실제 mediasoup Consumer 객체를 저장하는 맵 (프로세스 메모리)
-  private consumers: Map<string, Consumer> = new Map();
+  private readonly consumers: Map<string, Consumer> = new Map();
 
-  private mediasoupListenIps: TransportListenIp[];
+  private mediasoupListenIps: Array<{ ip: string; announcedIp: string }>;
   private readonly logger = new Logger(VoiceService.name);
 
   constructor(

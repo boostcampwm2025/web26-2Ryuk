@@ -18,42 +18,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
 
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
-
-      // 응답이 객체인 경우
-      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        // 이미 success, code, message 구조를 가진 경우 그대로 사용
-        if ('success' in exceptionResponse && 'code' in exceptionResponse && 'message' in exceptionResponse) {
-          response.status(status).json(exceptionResponse);
-          return;
-        }
-
-        // 이미 success, message 구조를 가진 경우 (code 추가)
-        if ('success' in exceptionResponse && 'message' in exceptionResponse && !('code' in exceptionResponse)) {
-          const wsError = createWsErrorResponse(exception);
-          response.status(status).json({
-            ...exceptionResponse,
-            code: wsError.code,
-          });
-          return;
-        }
-
-        // NestJS 기본 형식: { statusCode, message, error }
-        if ('message' in exceptionResponse) {
-          const msg = (exceptionResponse as { message: string | string[] }).message;
-          message = Array.isArray(msg) ? msg.join(', ') : msg;
-        }
-      } else {
-        // 문자열 응답인 경우
-        message = String(exceptionResponse);
-      }
-    } else if (exception instanceof Error) {
-      // 일반 JavaScript 에러
-      message = exception.message || message;
-      this.logger.error(`예상치 못한 에러 발생: ${exception.message}`, exception.stack);
+    const maybeHandled = this.handleHttpException(exception, response);
+    if (maybeHandled?.handled) {
+      return;
     }
+
+    if (maybeHandled?.status) {
+      status = maybeHandled.status;
+    }
+
+    message = this.resolveMessage(exception, maybeHandled?.message ?? message);
 
     // 에러 로그 기록
     this.logger.error(
@@ -70,5 +44,68 @@ export class HttpExceptionFilter implements ExceptionFilter {
       code: errorCode.code,
       message: errorCode.message,
     });
+  }
+
+  private handleHttpException(
+    exception: unknown,
+    response: Response,
+  ): { handled: true } | { handled?: false; status?: number; message?: string } | undefined {
+    if (!(exception instanceof HttpException)) {
+      return undefined;
+    }
+
+    const status = exception.getStatus();
+    const exceptionResponse = exception.getResponse();
+
+    if (this.isObjectResponse(exceptionResponse)) {
+      if (this.hasSuccessCodeMessage(exceptionResponse)) {
+        response.status(status).json(exceptionResponse);
+        return { handled: true };
+      }
+
+      if (this.hasSuccessMessage(exceptionResponse) && !this.hasCode(exceptionResponse)) {
+        const wsError = createWsErrorResponse(exception);
+        response.status(status).json({
+          ...exceptionResponse,
+          code: wsError.code,
+        });
+        return { handled: true };
+      }
+
+      if ('message' in exceptionResponse) {
+        const msg = (exceptionResponse as { message: string | string[] }).message;
+        return { status, message: Array.isArray(msg) ? msg.join(', ') : msg };
+      }
+
+      return { status };
+    }
+
+    const message = typeof exceptionResponse === 'string' ? exceptionResponse : JSON.stringify(exceptionResponse);
+    return { status, message };
+  }
+
+  private resolveMessage(exception: unknown, fallback: string) {
+    if (exception instanceof Error) {
+      this.logger.error(`예상치 못한 에러 발생: ${exception.message}`, exception.stack);
+      return exception.message || fallback;
+    }
+
+    return fallback;
+  }
+
+  private isObjectResponse(response: unknown): response is Record<string, unknown> {
+    return typeof response === 'object' && response !== null;
+  }
+
+  private hasSuccessCodeMessage(response: Record<string, unknown>): boolean {
+    return 'success' in response && 'code' in response && 'message' in response;
+  }
+
+  private hasSuccessMessage(response: Record<string, unknown>): boolean {
+    return 'success' in response && 'message' in response;
+  }
+
+  private hasCode(response: Record<string, unknown>): boolean {
+    return 'code' in response;
   }
 }

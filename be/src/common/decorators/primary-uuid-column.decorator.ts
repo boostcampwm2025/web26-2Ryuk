@@ -1,7 +1,7 @@
 import { PrimaryColumn, PrimaryColumnOptions } from 'typeorm';
 
 export const uuidTransformer = {
-  to: (value: string) => (value ? Buffer.from(value.replace(/-/g, ''), 'hex') : value),
+  to: (value: string) => (value ? Buffer.from(value.replaceAll('-', ''), 'hex') : value),
   from: (value: Buffer) =>
     value ? value.toString('hex').replace(/(\w{8})(\w{4})(\w{4})(\w{4})(\w{12})/, '$1-$2-$3-$4-$5') : value,
 };

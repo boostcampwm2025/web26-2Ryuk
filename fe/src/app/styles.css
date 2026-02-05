@@ -1,7 +1,5 @@
 :root {
-  /* Font Family */
-  --pretendard:
-    -apple-system, BlinkMacSystemFont, 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  /* Page Dimensions */
 
   /* Primary Colors */
   --primary: #2b6cee;

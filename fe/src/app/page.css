@@ -23,9 +23,7 @@ body {
   width: 90vw;
   max-width: 1200px;
   margin: 0 60px;
-  height: var(--room-body-max-height);
-  min-height: var(--room-body-max-height);
-  max-height: var(--room-body-max-height);
+  height: 100%;
 }
 
 .page .go-back {

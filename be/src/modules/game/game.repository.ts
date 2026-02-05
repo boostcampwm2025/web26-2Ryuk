@@ -75,9 +75,9 @@ export class GameRepository {
         gameData.title,
         gameData.description,
         gameData.type,
-        parseInt(gameData.min_players, 10),
-        parseInt(gameData.max_players, 10),
-        parseInt(gameData.time, 10),
+        Number.parseInt(gameData.min_players, 10),
+        Number.parseInt(gameData.max_players, 10),
+        Number.parseInt(gameData.time, 10),
       );
 
       return gamePayload;
@@ -147,9 +147,9 @@ export class GameRepository {
       nickname: playerData.nickname || '',
       profile_image: playerData.profile_image || '',
       is_ready: playerData.is_ready === '1',
-      score: parseInt(playerData.score, 10) || 0,
-      rank: parseInt(playerData.rank, 10) || 0,
-      frozen_until: parseInt(playerData.frozen_until, 10) || 0,
+      score: Number.parseInt(playerData.score, 10) || 0,
+      rank: Number.parseInt(playerData.rank, 10) || 0,
+      frozen_until: Number.parseInt(playerData.frozen_until, 10) || 0,
     };
   }
 
@@ -170,9 +170,9 @@ export class GameRepository {
         nickname: playerData.nickname || '',
         profile_image: playerData.profile_image || '',
         is_ready: playerData.is_ready === '1',
-        score: parseInt(playerData.score, 10) || 0,
-        rank: parseInt(playerData.rank, 10) || 0,
-        frozen_until: parseInt(playerData.frozen_until, 10) || 0,
+        score: Number.parseInt(playerData.score, 10) || 0,
+        rank: Number.parseInt(playerData.rank, 10) || 0,
+        frozen_until: Number.parseInt(playerData.frozen_until, 10) || 0,
       });
     }
 
@@ -310,7 +310,7 @@ export class GameRepository {
   async getMacroViolationCount(roomId: string, userId: string): Promise<number> {
     const key = this.getMacroViolationKey(roomId, userId);
     const value = await this.redisClient.get(key);
-    return value ? parseInt(value, 10) : 0;
+    return value ? Number.parseInt(value, 10) : 0;
   }
 
   async addInputTimestamp(roomId: string, userId: string, timestamp: number, delta: number): Promise<void> {

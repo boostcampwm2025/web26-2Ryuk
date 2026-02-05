@@ -1,0 +1,141 @@
+.screen {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.timerWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 2s linear;
+}
+
+.timerWrapper[data-fade-out] {
+  opacity: 0;
+}
+
+.statsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.rankingWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: center;
+}
+
+.rankingLabel {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.rankingValue {
+  font: var(--heading-1);
+  color: var(--primary-6);
+}
+
+.scoreWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  justify-content: center;
+}
+
+.scoreLabel {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.scoreValue {
+  font: var(--heading-1);
+  color: var(--primary-6);
+}
+
+.gameContent {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bubbleArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-height: 200px;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.legend {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legendDot {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.legendDot[data-type='highest'] {
+  border: 2px dashed var(--error);
+  background: transparent;
+}
+
+.legendDot[data-type='my'] {
+  border: 2px dashed var(--secondary);
+  background: transparent;
+}
+
+.legendLabel {
+  font: var(--body-2);
+  color: var(--secondary);
+}
+
+.bubbleArea[data-pointer] {
+  cursor: pointer;
+}
+
+.bubbleArea:not([role='button']) {
+  cursor: default;
+  pointer-events: none;
+}
+
+.hint {
+  height: 30px;
+  font: var(--heading-1);
+  color: var(--secondary);
+  text-align: center;
+}
+
+.hint .sec {
+  font: var(--large-2);
+  color: var(--primary-6);
+}

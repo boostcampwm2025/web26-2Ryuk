@@ -38,3 +38,13 @@ export class RefreshTokenResponseDto {
     this.access_token = accessToken;
   }
 }
+
+export class MockLoginResponseDto {
+  access_token: string;
+  user: UserInfoResponseDto;
+
+  constructor(accessToken: string, user: UserInfoResponseDto) {
+    this.access_token = accessToken;
+    this.user = user;
+  }
+}
