@@ -264,7 +264,7 @@ export class RoomRepository {
   async getCurrentParticipants(roomId: string): Promise<number> {
     try {
       const current = await this.redisClient.hGet(`room:${roomId}`, 'current_participants');
-      return parseInt(current ?? '0', 10);
+      return Number.parseInt(current ?? '0', 10);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logMessage(this.logger, LOG.ROOM.PARTICIPANTS_FETCH_ERROR(roomId, errorMessage));

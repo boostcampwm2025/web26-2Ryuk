@@ -278,8 +278,8 @@ export class RoomService implements OnModuleInit {
       }
 
       // 정원 확인
-      const currentParticipants = parseInt(roomData.current_participants ?? '0', 10);
-      const maxParticipants = parseInt(roomData.max_participants ?? '0', 10);
+      const currentParticipants = Number.parseInt(roomData.current_participants ?? '0', 10);
+      const maxParticipants = Number.parseInt(roomData.max_participants ?? '0', 10);
 
       if (maxParticipants > 0 && currentParticipants >= maxParticipants) {
         logMessage(this.logger, LOG.ROOM.VALIDATION_ERROR(userId, roomId, '방 정원 초과'));
@@ -573,8 +573,8 @@ export class RoomService implements OnModuleInit {
           title: roomData.title ?? '',
           host_id: roomData.host_id ?? '',
           tags: tags ?? [],
-          current_participants: parseInt(roomData.current_participants ?? '0', 10),
-          max_participants: parseInt(roomData.max_participants ?? '0', 10),
+          current_participants: Number.parseInt(roomData.current_participants ?? '0', 10),
+          max_participants: Number.parseInt(roomData.max_participants ?? '0', 10),
           is_mic_available: roomData.is_mic_available === '1',
           is_private: roomData.is_private === '1',
           is_game_recruiting: roomData.isGameRecruiting === '1',
@@ -644,8 +644,8 @@ export class RoomService implements OnModuleInit {
       title: roomData.title || '',
       tags: tags || [],
       host_id: hostId,
-      current_participants: parseInt(roomData.current_participants || '0', 10),
-      max_participants: parseInt(roomData.max_participants || '0', 10),
+      current_participants: Number.parseInt(roomData.current_participants || '0', 10),
+      max_participants: Number.parseInt(roomData.max_participants || '0', 10),
       is_mic_available: roomData.is_mic_available === '1',
       is_private: roomData.is_private === '1',
       is_game_recruiting: isRecruiting === '1',

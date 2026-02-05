@@ -204,6 +204,8 @@ export const componentRelations: ComponentRelation[] = [
   { id: 'logo', title: 'Logo', category: 'sprite', children: ['logo-image'] },
   { id: 'sprite-animation', title: 'SpriteAnimation', category: 'sprite' },
   { id: 'water-drop', title: 'WaterDrop', category: 'sprite' },
+  { id: 'water-drop-burst', title: 'WaterDropBurst', category: 'sprite' },
+  { id: 'exploding-bubble', title: 'ExplodingBubble', category: 'feature' },
 ];
 
 export function getComponentRelation(id: string): ComponentRelation | undefined {
@@ -295,6 +297,7 @@ export const featureSections = [
   { id: 'game-card', title: 'GameCard' },
   { id: 'game-card-grid', title: 'GameCardGrid' },
   { id: 'beaker-fill-view', title: 'BeakerFillView' },
+  { id: 'exploding-bubble', title: 'ExplodingBubble' },
   { id: 'game-dropdown', title: 'GameDropdown' },
 ];
 
@@ -303,4 +306,5 @@ export const spriteSections = [
   { id: 'logo', title: 'Logo' },
   { id: 'sprite-animation', title: 'SpriteAnimation' },
   { id: 'water-drop', title: 'WaterDrop' },
+  { id: 'water-drop-burst', title: 'WaterDropBurst' },
 ];

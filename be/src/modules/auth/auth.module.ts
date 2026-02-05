@@ -22,7 +22,7 @@ import { JwtRefreshGuard } from './jwt-refresh.guard';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_ACCESS_SECRET');
-        if (!secret) throw Error('환경변수가 없습니다: JWT_ACCESS_SECRET');
+        if (!secret) throw new Error('환경변수가 없습니다: JWT_ACCESS_SECRET');
         return {
           secret,
           signOptions: {

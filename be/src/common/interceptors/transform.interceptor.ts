@@ -18,7 +18,7 @@ export interface Response<T> {
  */
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const shouldBypass = this.reflector.getAllAndOverride<boolean>(BYPASS_TRANSFORM_KEY, [

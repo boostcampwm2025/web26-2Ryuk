@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import './globals.css';
 import useNavigation from './hooks/useNavigation';
 
 /**

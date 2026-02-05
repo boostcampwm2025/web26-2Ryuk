@@ -1,7 +1,11 @@
 :root {
-  /* Font Family */
-  --pretendard:
-    -apple-system, BlinkMacSystemFont, 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  /* Page Dimensions */
+  --page-header-height: 64px;
+  --page-vertical-padding: 160px;
+  --room-body-max-height: max(
+    0px,
+    calc(100vh - var(--page-header-height) - var(--page-vertical-padding))
+  );
 
   /* Primary Colors */
   --primary: #2b6cee;

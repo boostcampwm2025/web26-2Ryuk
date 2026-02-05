@@ -3,6 +3,12 @@
 import styles from './heroSection.module.css';
 import { LogoImage } from '@/app/components/sprite/logo/Logo';
 import SpriteAnimation from '@/app/components/sprite/spriteAnimation/SpriteAnimation';
+import Icon from '@/app/components/shared/icon/Icon';
+import { PATCH_NOTE_LINK } from '@/app/shared/routes';
+import Link from 'next/link';
+
+// 빌드 시점에 next.config.mjs에서 주입된 버전
+const version = process.env.APP_VERSION;
 
 export default function HeroSection() {
   return (
@@ -28,6 +34,19 @@ export default function HeroSection() {
       </div>
       <div className={styles.imageWrapper}>
         <SpriteAnimation variant="default" size="medium" />
+      </div>
+      <div className={styles.patchNoteWapper}>
+        <div className={styles.version}>
+          <span>{version && `v${version}`}</span>
+        </div>
+        <Link
+          className={`${styles.patchNoteButton} clickable`}
+          href={PATCH_NOTE_LINK}
+          target="_blank"
+        >
+          <Icon name="note" size="small" />
+          <span>패치노트 보기</span>
+        </Link>
       </div>
     </div>
   );

@@ -55,107 +55,17 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   async handleConnection(@ConnectedSocket() client: Socket) {
     try {
-      // 미들웨어(redis-io.adapter.ts)에서 이미 인증 처리가 완료되었으므로
-      // socket.data에서 인증 정보를 가져옴
-      // 미들웨어에서 헤더의 authentication도 처리하므로 여기서는 이미 설정된 값을 사용
       const userId = client.data.userId as string | undefined;
       const isAuthenticated = client.data.authenticated as boolean | undefined;
-
-      // 연결 로그
       logMessage(this.logger, LOG.WS.CONNECT(client.id, userId));
-
       const globalRoomId = GLOBAL_ROOM_ID;
 
-      // 글로벌 방 처리 (인증/비인증 모두)
-      if (globalRoomId) {
-        // Socket.io room 참여
-        try {
-          await client.join(globalRoomId);
-          if (isAuthenticated && userId) {
-            logMessage(this.logger, LOG.WS.SOCKET_IO_JOIN_AUTH(userId, globalRoomId));
-          } else {
-            logMessage(this.logger, LOG.WS.SOCKET_IO_JOIN_UNAUTH(client.id, globalRoomId));
-          }
-        } catch (joinError) {
-          const errorMessage = joinError instanceof Error ? joinError.message : String(joinError);
-          logMessage(this.logger, LOG.WS.SOCKET_IO_JOIN_ERROR(errorMessage));
-        }
+      await this.handleGlobalRoomConnection(client, userId, isAuthenticated, globalRoomId);
 
-        // 인증된 사용자는 Redis 상태 업데이트
-        if (isAuthenticated && userId) {
-          try {
-            const isInRoom = await this.roomService.isUserInRoom(userId, globalRoomId);
-            if (!isInRoom) {
-              await this.roomService.joinRoom(userId, globalRoomId);
-              logMessage(this.logger, LOG.WS.REDIS_JOIN(userId, globalRoomId));
-            }
-
-            // 참여자 수 조회 및 브로드캐스트
-            const currentParticipants = await this.roomService.getCurrentParticipants(globalRoomId);
-            await this.roomService.notifyParticipantsUpdated(this.server, globalRoomId, currentParticipants);
-          } catch (checkError) {
-            const errorMessage = checkError instanceof Error ? checkError.message : String(checkError);
-            logMessage(this.logger, LOG.WS.ROOM_PARTICIPATION_CHECK_ERROR(errorMessage));
-          }
-        }
-      }
-
-      // 인증된 사용자의 경우 세션 복구 및 로컬 방 재참여 처리
       if (isAuthenticated && userId) {
-        // 기존 disconnect 타이머 취소 (재연결됨)
-        const existingTimer = this.disconnectTimers.get(userId);
-        if (existingTimer) {
-          clearTimeout(existingTimer);
-          this.disconnectTimers.delete(userId);
-        }
-
-        // 세션 복구: 이전에 참여했던 방 목록 가져오기
-        const previousRooms = await this.roomService.getUserSession(userId);
-        const roomsToRestore = previousRooms.length > 0 ? previousRooms : [];
-
-        // 세션 복구: 이전에 참여했던 로컬 방에 재참여
-        for (const roomId of roomsToRestore) {
-          // 글로벌 방은 이미 처리했으므로 스킵
-          if (roomId === globalRoomId) continue;
-
-          const isInRoom = await this.roomService.isUserInRoom(userId, roomId);
-          if (isInRoom) continue;
-
-          // 방 존재 여부 확인
-          const roomExists = await this.roomService.roomExists(roomId);
-          if (!roomExists) continue;
-
-          // Socket.io room에 재참여
-          await client.join(roomId);
-
-          // Redis 상태 복구
-          await this.roomService.joinRoom(userId, roomId);
-
-          // 클라이언트에게 직접 room:join 전송 (ACK (X) event push (O))
-          const currentParticipants = await this.roomService.getCurrentParticipants(roomId);
-          client.emit(WS_EVENTS_ROOM.JOIN, { room_id: roomId, current_participants: currentParticipants });
-        }
-
-        // 세션 복구 완료 후 세션 정보 삭제
-        if (roomsToRestore.length > 0) {
-          await this.roomService.clearUserSession(userId);
-        }
-
-        // 최종 연결 상태 로그
-        logMessage(this.logger, LOG.WS.AUTH_CONNECT(userId));
+        await this.handleAuthenticatedReconnection(client, userId, globalRoomId);
       } else {
-        // 비인증 사용자 최종 연결 상태 로그
-        logMessage(this.logger, LOG.WS.UNAUTH_CONNECT(client.id));
-
-        // JWT 만료 등으로 인증 실패했으나 Redis에 유령 세션 정보가 남아있는 경우 정리
-        if (userId) {
-          const userRooms = await this.roomService.getUserRooms(userId);
-          if (userRooms && userRooms.length > 0) {
-            logMessage(this.logger, LOG.WS.CLEANUP_STALE_SESSION(userId));
-            await this.roomService.leaveAllRooms(this.server, userId);
-            await this.roomService.clearUserSession(userId); // 혹시 모를 세션 정보 정리
-          }
-        }
+        await this.handleUnauthenticatedConnection(client, userId);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -163,6 +73,129 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       logMessage(this.logger, LOG.WS.CONNECTION_HANDLE_ERROR(errorMessage, errorStack));
     }
+  }
+
+  /**
+   * 글로벌 방 처리 (인증/비인증 모두)
+   */
+  private async handleGlobalRoomConnection(
+    client: Socket,
+    userId: string | undefined,
+    isAuthenticated: boolean | undefined,
+    globalRoomId: string | undefined,
+  ) {
+    if (!globalRoomId) return;
+
+    await this.joinGlobalRoom(client, userId, isAuthenticated, globalRoomId);
+
+    if (!isAuthenticated || !userId) return;
+
+    await this.updateAuthenticatedUserGlobalRoomState(userId, globalRoomId);
+  }
+
+  private async joinGlobalRoom(
+    client: Socket,
+    userId: string | undefined,
+    isAuthenticated: boolean | undefined,
+    globalRoomId: string,
+  ) {
+    try {
+      await client.join(globalRoomId);
+      if (isAuthenticated && userId) {
+        logMessage(this.logger, LOG.WS.SOCKET_IO_JOIN_AUTH(userId, globalRoomId));
+      } else {
+        logMessage(this.logger, LOG.WS.SOCKET_IO_JOIN_UNAUTH(client.id, globalRoomId));
+      }
+    } catch (joinError) {
+      const errorMessage = joinError instanceof Error ? joinError.message : String(joinError);
+      logMessage(this.logger, LOG.WS.SOCKET_IO_JOIN_ERROR(errorMessage));
+    }
+  }
+
+  private async updateAuthenticatedUserGlobalRoomState(userId: string, globalRoomId: string) {
+    try {
+      const isInRoom = await this.roomService.isUserInRoom(userId, globalRoomId);
+      if (!isInRoom) {
+        await this.roomService.joinRoom(userId, globalRoomId);
+        logMessage(this.logger, LOG.WS.REDIS_JOIN(userId, globalRoomId));
+      }
+
+      const currentParticipants = await this.roomService.getCurrentParticipants(globalRoomId);
+      await this.roomService.notifyParticipantsUpdated(this.server, globalRoomId, currentParticipants);
+    } catch (checkError) {
+      const errorMessage = checkError instanceof Error ? checkError.message : String(checkError);
+      logMessage(this.logger, LOG.WS.ROOM_PARTICIPATION_CHECK_ERROR(errorMessage));
+    }
+  }
+
+  /**
+   * 인증된 사용자의 세션 복구 및 로컬 방 재참여 처리
+   */
+  private async handleAuthenticatedReconnection(client: Socket, userId: string, globalRoomId: string | undefined) {
+    this.cancelDisconnectTimer(userId);
+
+    const roomsToRestore = await this.getRoomsToRestore(userId);
+
+    await this.restoreRooms(client, userId, roomsToRestore, globalRoomId);
+
+    if (roomsToRestore.length > 0) {
+      await this.roomService.clearUserSession(userId);
+    }
+
+    logMessage(this.logger, LOG.WS.AUTH_CONNECT(userId));
+  }
+
+  private cancelDisconnectTimer(userId: string) {
+    const existingTimer = this.disconnectTimers.get(userId);
+    if (!existingTimer) return;
+
+    clearTimeout(existingTimer);
+    this.disconnectTimers.delete(userId);
+  }
+
+  private async getRoomsToRestore(userId: string): Promise<string[]> {
+    const previousRooms = await this.roomService.getUserSession(userId);
+    return previousRooms.length > 0 ? previousRooms : [];
+  }
+
+  private async restoreRooms(
+    client: Socket,
+    userId: string,
+    roomsToRestore: string[],
+    globalRoomId: string | undefined,
+  ) {
+    for (const roomId of roomsToRestore) {
+      if (roomId === globalRoomId) continue;
+
+      const isInRoom = await this.roomService.isUserInRoom(userId, roomId);
+      if (isInRoom) continue;
+
+      const roomExists = await this.roomService.roomExists(roomId);
+      if (!roomExists) continue;
+
+      await client.join(roomId);
+      await this.roomService.joinRoom(userId, roomId);
+
+      const currentParticipants = await this.roomService.getCurrentParticipants(roomId);
+      client.emit(WS_EVENTS_ROOM.JOIN, { room_id: roomId, current_participants: currentParticipants });
+    }
+  }
+
+  /**
+   * 비인증 사용자 연결 처리 및 유령 세션 정리
+   */
+  private async handleUnauthenticatedConnection(client: Socket, userId: string | undefined) {
+    logMessage(this.logger, LOG.WS.UNAUTH_CONNECT(client.id));
+
+    if (!userId) return;
+
+    const userRooms = await this.roomService.getUserRooms(userId);
+    const hasStaleSession = userRooms && userRooms.length > 0;
+    if (!hasStaleSession) return;
+
+    logMessage(this.logger, LOG.WS.CLEANUP_STALE_SESSION(userId));
+    await this.roomService.leaveAllRooms(this.server, userId);
+    await this.roomService.clearUserSession(userId);
   }
 
   // 웹소켓 연결 해제 처리

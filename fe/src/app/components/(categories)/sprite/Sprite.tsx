@@ -158,6 +158,18 @@ export default function SpriteComponents() {
           </div>
         </div>
       </section>
+
+      <section id="water-drop-burst" className={styles.section}>
+        <h2 className={styles.sectionTitle}>WaterDropBurst</h2>
+        <ComponentRelations componentId="water-drop-burst" />
+        <div className={styles.showcaseBlock}>
+          <div className={styles.iconRow}>
+            <Component>
+              <SpriteAnimation variant="burst" size="large" loop={false} />
+            </Component>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

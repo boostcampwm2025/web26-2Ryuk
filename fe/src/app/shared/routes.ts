@@ -24,3 +24,6 @@ export const ROUTES = {
   ranking: (roomId: string, gameId: string) => `/room/${roomId}/game/${gameId}/ranking`,
   profile: (id: string) => `/profile/${id}`,
 } as const;
+
+export const PATCH_NOTE_LINK =
+  'https://rapid-bubble-113.notion.site/2fe207f233418064a95be845fe26ec3e';

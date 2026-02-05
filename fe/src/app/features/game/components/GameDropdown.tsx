@@ -5,10 +5,7 @@ import { DropdownProps } from '@/app/components/shared/dropdown/type';
 import GAMES from '@/app/shared/constant';
 import styles from './gameDropdown.module.css';
 
-const gameItems = [
-  { value: GAMES.BEAKER.ID, label: GAMES.BEAKER.TITLE },
-  { value: GAMES.REFLEX.ID, label: GAMES.REFLEX.TITLE },
-];
+const gameItems = GAMES.values().map((game) => ({ value: game.ID, label: game.TITLE }));
 
 type BaseProps = Omit<DropdownProps, 'items'>;
 

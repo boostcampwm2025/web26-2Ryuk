@@ -63,10 +63,14 @@ export const LOG = {
       message: `방 참여 확인 실패: ${error}`,
       level: 'error',
     }),
-    CONNECTION_HANDLE_ERROR: (error: string, stack?: string): LogMessage => ({
-      message: `연결 처리 중 예상치 못한 에러: ${error}${stack ? `\n${stack}` : ''}`,
-      level: 'error',
-    }),
+    CONNECTION_HANDLE_ERROR: (error: string, stack?: string): LogMessage => {
+      const stackInfo = stack ? `\n${stack}` : '';
+
+      return {
+        message: `연결 처리 중 예상치 못한 에러: ${error}${stackInfo}`,
+        level: 'error',
+      };
+    },
     GLOBAL_ROOM_LEAVE_ERROR: (error: string): LogMessage => ({
       message: `글로벌 방 퇴장 처리 실패: ${error}`,
       level: 'error',
@@ -79,14 +83,22 @@ export const LOG = {
       message: `방 채팅 처리 중 에러 발생: ${error}`,
       level: 'error',
     }),
-    ROOM_JOIN_HANDLE_ERROR: (error: string, stack?: string): LogMessage => ({
-      message: `방 입장 처리 중 에러 발생: ${error}${stack ? `\n${stack}` : ''}`,
-      level: 'error',
-    }),
-    ROOM_LEAVE_HANDLE_ERROR: (error: string, stack?: string): LogMessage => ({
-      message: `방 퇴장 처리 중 에러 발생: ${error}${stack ? `\n${stack}` : ''}`,
-      level: 'error',
-    }),
+    ROOM_JOIN_HANDLE_ERROR: (error: string, stack?: string): LogMessage => {
+      const stackInfo = stack ? `\n${stack}` : '';
+
+      return {
+        message: `방 입장 처리 중 에러 발생: ${error}${stackInfo}`,
+        level: 'error',
+      };
+    },
+    ROOM_LEAVE_HANDLE_ERROR: (error: string, stack?: string): LogMessage => {
+      const stackInfo = stack ? `\n${stack}` : '';
+
+      return {
+        message: `방 퇴장 처리 중 에러 발생: ${error}${stackInfo}`,
+        level: 'error',
+      };
+    },
     LOGOUT: (userId: string): LogMessage => ({
       message: `사용자 로그아웃: userId=${userId} (WebSocket 연결 유지, 참여자 수에서 제외)`,
       level: 'log',
@@ -95,10 +107,14 @@ export const LOG = {
       message: `로그아웃 처리 중 에러 발생: ${error}`,
       level: 'error',
     }),
-    VOICE_HANDLE_ERROR: (error: string, stack?: string): LogMessage => ({
-      message: `Voice Gateway 처리 중 에러 발생: ${error}${stack ? `\n${stack}` : ''}`,
-      level: 'error',
-    }),
+    VOICE_HANDLE_ERROR: (error: string, stack?: string): LogMessage => {
+      const stackInfo = stack ? `\n${stack}` : '';
+
+      return {
+        message: `Voice Gateway 처리 중 에러 발생: ${error}${stackInfo}`,
+        level: 'error',
+      };
+    },
     CLEANUP_STALE_SESSION: (userId: string): LogMessage => ({
       message: `만료된 JWT로 인한 유령 세션 정리: userId=${userId}`,
       level: 'warn',

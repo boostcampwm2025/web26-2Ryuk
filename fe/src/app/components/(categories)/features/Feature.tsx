@@ -36,6 +36,7 @@ import MyReadyStatusCard from '@/app/features/room/components/ready/MyReadyStatu
 import OtherReadyStatusCard from '@/app/features/room/components/ready/OtherReadyStatusCard';
 import OtherReadyStatusCardGrid from '@/app/features/room/components/ready/OtherReadyStatusCardGrid';
 import BeakerFillViewShowcase from '@/app/features/game/components/beaker/BeakerFillViewShowcase';
+import ExplodingBubbleShowcase from '@/app/components/(categories)/features/ExplodingBubbleShowcase';
 import ReactionTargetView from '@/app/features/game/components/reflex/ReactionTargetView';
 import ReactionTargetCard from '@/app/features/game/components/reflex/ReactionTargetCard';
 import RealtimeRoomsSection from '@/app/features/room/components/RealtimeRoomsSection';
@@ -575,6 +576,14 @@ export default function FeatureComponents() {
           <Component fullWidth>
             <ReactionTargetCard />
           </Component>
+        </div>
+      </section>
+
+      <section id="exploding-bubble" className={styles.section}>
+        <h2 className={styles.sectionTitle}>ExplodingBubble</h2>
+        <ComponentRelations componentId="exploding-bubble" />
+        <div className={styles.showcaseBlock}>
+          <ExplodingBubbleShowcase />
         </div>
       </section>
 

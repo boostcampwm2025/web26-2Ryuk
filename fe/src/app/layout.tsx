@@ -1,12 +1,13 @@
 import './globals.css';
+import { pretendard } from './fonts';
 import AuthProvider from '@/app/providers/AuthProvider';
 import RoomProvider from '@/app/providers/RoomProvider';
 import LoadingProvider from '@/app/providers/LoadingProvider';
-import ModalEventDelegation from '@/app/components/shared/modal/ModalEventDelegation';
-import Toast from '@/app/components/shared/toast/Toast';
 import Header from './components/layout/header/Header';
 import { RootLayoutProps } from './type';
 import { metadataConfig } from './meta';
+import Toast from './components/shared/toast/Toast';
+import ModalEventDelegation from './components/shared/modal/ModalEventDelegation';
 
 export const metadata = metadataConfig;
 
@@ -15,7 +16,8 @@ export const metadata = metadataConfig;
  */
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={pretendard.className}>
+      <head></head>
       <body>
         <ModalEventDelegation />
         <AuthProvider>

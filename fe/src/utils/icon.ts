@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join } from 'node:path';
 
 /**
  * SVG 파일에서 아이콘 목록을 동적으로 추출하는 유틸리티 클래스

@@ -32,7 +32,7 @@ export class GameRecordController {
     @Query('page') pageQuery: string | undefined,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ): Promise<GameRecordRankResponseDto> {
-    const page = pageQuery ? parseInt(pageQuery, 10) : undefined;
+    const page = pageQuery ? Number.parseInt(pageQuery, 10) : undefined;
     try {
       return await this.gameRecordService.getGameRecordsRanking(nickname, gameId, page, limit);
     } catch (error) {

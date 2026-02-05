@@ -364,6 +364,8 @@
 
 /* Page Navigation */
 .pageNavigation {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 16px;
   margin-bottom: 32px;

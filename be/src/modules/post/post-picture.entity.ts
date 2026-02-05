@@ -26,7 +26,7 @@ export class PostPicture {
     type: 'bigint',
     transformer: {
       to: (value: number) => value, // DB에 저장할 땐 숫자 그대로
-      from: (value: string) => parseInt(value, 10), // DB에서 읽어올 땐 string을 숫자로 변환
+      from: (value: string) => Number.parseInt(value, 10), // DB에서 읽어올 땐 string을 숫자로 변환
     },
   })
   size: number;

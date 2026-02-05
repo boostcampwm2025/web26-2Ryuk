@@ -1,7 +1,7 @@
-import { Controller, Post, Get, UseGuards, Req, Res, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Get, UseGuards, Req, Res, UnauthorizedException, Body } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { GetMeResponseDto, RefreshTokenResponseDto } from './dto/auth-response.dto';
+import { GetMeResponseDto, RefreshTokenResponseDto, MockLoginResponseDto } from './dto/auth-response.dto';
 import { Response } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { BypassTransform } from '@src/common/decorators/bypass-transform.decorator';
@@ -87,5 +87,46 @@ export class AuthController {
       expires: new Date(0),
     });
     return { success: true, message: '로그아웃 되었습니다.' };
+  }
+
+  /**
+   * 개발/테스트용 Mock 로그인
+   * POST /api/auth/mock/login
+   * E2E 테스트에서 사용
+   */
+  @Post('mock/login')
+  @BypassTransform()
+  async mockLogin(@Body() body: { userId?: string }, @Res({ passthrough: true }) res: Response) {
+    const { userId } = body;
+
+    // userId가 제공된 경우 해당 사용자 조회, 없으면 첫 번째 사용자 사용
+    let user;
+    if (userId) {
+      user = await this.authService.findUserEntityById(userId);
+    } else {
+      // 첫 번째 사용자 조회 (테스트용)
+      user = await this.authService.findFirstUser();
+      if (!user) {
+        throw new UnauthorizedException('사용자를 찾을 수 없습니다. 먼저 사용자를 생성해주세요.');
+      }
+    }
+
+    if (!user?.email) {
+      throw new UnauthorizedException('유효하지 않은 사용자입니다.');
+    }
+
+    // Access Token과 Refresh Token 발급
+    const accessToken = this.authService.issueAccessToken({
+      id: user.id,
+      email: user.email,
+    });
+    const refreshToken = this.authService.issueRefreshToken(user.id);
+
+    // Refresh Token을 쿠키로 설정 (실제 OAuth 플로우와 동일)
+    res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService));
+
+    const userInfo = await this.authService.getUserById(user.id);
+
+    return new MockLoginResponseDto(accessToken, userInfo);
   }
 }

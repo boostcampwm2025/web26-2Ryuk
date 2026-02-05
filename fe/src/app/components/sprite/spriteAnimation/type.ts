@@ -1,4 +1,4 @@
-export type SpriteAnimationVariant = 'default' | 'drop';
+export type SpriteAnimationVariant = 'default' | 'drop' | 'burst';
 export type SpriteAnimationSize = 'small' | 'medium' | 'large';
 
 export interface SpriteAnimationProps {
@@ -6,4 +6,5 @@ export interface SpriteAnimationProps {
   size: SpriteAnimationSize;
   autoPlay?: boolean;
   loop?: boolean;
+  onEnd?: () => void;
 }

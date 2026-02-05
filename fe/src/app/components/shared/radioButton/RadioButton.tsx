@@ -15,7 +15,7 @@ export default function RadioButton({
   const [selected, setSelected] = useState(initialSelected);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const index = parseInt(event.target.value, 10);
+    const index = Number.parseInt(event.target.value, 10);
     setSelected(index);
     onChange?.(index);
   };

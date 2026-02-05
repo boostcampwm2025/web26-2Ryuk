@@ -10,8 +10,8 @@ export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
   private pubClient: RedisClientType;
   private subClient: RedisClientType;
-  private jwtService: JwtService;
-  private authService: AuthService;
+  private readonly jwtService: JwtService;
+  private readonly authService: AuthService;
   private readonly logger = new Logger(RedisIoAdapter.name);
 
   constructor(app: INestApplicationContext) {
@@ -159,10 +159,7 @@ export class RedisIoAdapter extends IoAdapter {
 
     socket.on('disconnect', async () => {
       const currentId = await this.pubClient.get(sessionKey);
-      if (currentId === socket.id) {
-        await this.pubClient.del(sessionKey);
-      } else {
-      }
+      if (currentId === socket.id) await this.pubClient.del(sessionKey);
     });
   }
 }

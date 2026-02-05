@@ -5,7 +5,7 @@ import { LOG, logMessage } from '@src/common/utils/log-messages';
 export class GameTimerService {
   private readonly logger = new Logger(GameTimerService.name);
   private readonly REALTIME_BROADCAST_INTERVAL_MS = 300; // 300ms 주기로 상태 브로드캐스트
-  private realtimeBroadcastTimers: Map<string, NodeJS.Timeout> = new Map(); // 방별 브로드캐스트 타이머
+  private readonly realtimeBroadcastTimers: Map<string, NodeJS.Timeout> = new Map(); // 방별 브로드캐스트 타이머
   private readonly gameEndTimers: Map<string, NodeJS.Timeout> = new Map(); // 방별 게임 종료 타이머
 
   /**

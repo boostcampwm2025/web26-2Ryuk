@@ -1,6 +1,6 @@
 import { DataSourceOptions } from 'typeorm';
 import { loadEnv } from '@src/config/env';
-import * as path from 'path';
+import * as path from 'node:path';
 
 // 공통 ENV 로더 사용
 loadEnv();

@@ -16,6 +16,7 @@ interface GameStoreState {
   averageScore: number;
   ranks: string[];
   selectedGame?: GameData;
+  isMePlaying: boolean;
 }
 
 interface GameStoreActions {
@@ -28,6 +29,7 @@ interface GameStoreActions {
   setAverageScore: (averageScore: number) => void;
   setRanks: (ranks: string[]) => void;
   setSelectedGame: (game?: GameData) => void;
+  setIsMePlaying: (isMePlaying: boolean) => void;
   reset: () => void;
 }
 
@@ -50,6 +52,7 @@ const initialState: GameStoreState = {
   averageScore: 0,
   ranks: [],
   selectedGame: undefined,
+  isMePlaying: false,
 };
 
 export const gameStore = create<GameStore>()(
@@ -65,6 +68,7 @@ export const gameStore = create<GameStore>()(
       setAverageScore: (averageScore: number) => set({ averageScore }),
       setRanks: (ranks: string[]) => set({ ranks }),
       setSelectedGame: (selectedGame?: GameData) => set({ selectedGame }),
+      setIsMePlaying: (isMePlaying: boolean) => set({ isMePlaying }),
       reset: () => {
         removePersistedGameState();
         set(initialState);
@@ -83,6 +87,7 @@ export const gameStore = create<GameStore>()(
         averageScore: state.averageScore,
         ranks: state.ranks,
         selectedGame: state.selectedGame,
+        isMePlaying: state.isMePlaying,
       }),
       // Date 객체 복구 처리
       onRehydrateStorage: () => (state) => {

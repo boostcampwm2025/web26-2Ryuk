@@ -17,7 +17,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
   return (
     <>
       {children}
-      {roomId && !isRoomPage && <LocalChatPanel />}
+      {roomId && !isRoomPage && <LocalChatPanel key={roomId} />}
       {roomId && <VoiceAudioLayer />}
     </>
   );

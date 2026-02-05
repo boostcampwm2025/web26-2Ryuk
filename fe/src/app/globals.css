@@ -1,6 +1,5 @@
 @import './styles.css';
 @import './page.css';
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 :root {
   --pretendard:
@@ -43,7 +42,7 @@ body {
 .clickable {
   position: relative;
   cursor: pointer;
-  transition: all .2s ease-in-out;
+  transition: all 0.2s ease-in-out;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -54,7 +53,7 @@ body {
   background: transparent;
   border-radius: inherit;
   pointer-events: none;
-  transition: all .2s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .clickable:hover::after {
@@ -65,8 +64,8 @@ body {
   background: var(--clickable-overlay-active);
 }
 
-.clickable:active { 
-  transform: scale(var(--clickable-overlay-scale)); 
+.clickable:active {
+  transform: scale(var(--clickable-overlay-scale));
 }
 
 .clickable:focus-visible::after {
@@ -88,3 +87,4 @@ body {
   background: transparent;
   transform: none;
 }
+

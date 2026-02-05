@@ -96,3 +96,35 @@
   width: 24px;
   height: 24px;
 }
+
+
+.patchNoteWapper {
+  position: absolute;
+  right: 32px;
+  bottom: 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.version {
+  font: var(--body-1);
+  color: var(--primary-4);
+}
+
+.patchNoteButton {
+  font: var(--body-1);
+  color: var(--neutral-1);
+  text-decoration: none;
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  border-radius: 52px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-2) 40%, transparent);
+  background: color-mix(in srgb, var(--primary-2) 20%, transparent);
+}
+
+.patchNoteButton svg {
+  color: var(--neutral-1);
+}

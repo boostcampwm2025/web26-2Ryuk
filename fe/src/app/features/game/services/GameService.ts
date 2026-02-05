@@ -6,6 +6,7 @@ import { HttpService } from '@/app/services/http.service';
 import { ApiResponse } from '@/app/features/room/services/type';
 import { API_BASE } from '@/app/services/api.constants';
 import { GameConverter } from '@/app/features/game/dtos/converter';
+import { toastStore } from '@/app/components/shared/toast/toast.store';
 import * as data from '@/app/features/game/dtos/data';
 import * as dto from '@/app/features/game/dtos/dto';
 import * as type from './type';
@@ -264,6 +265,19 @@ class GameService {
       this.resultCallbacks.forEach((cb) => cb(data));
     };
 
+    const errorHandler = (error: any) => {
+      console.error('[GameService] WebSocket error received:', error);
+      console.log(
+        '[GameService] Error type:',
+        typeof error,
+        'Keys:',
+        error ? Object.keys(error) : 'null',
+      );
+      const message = error?.message || '게임 처리 중 오류가 발생했습니다.';
+      console.log('[GameService] Extracted message:', message);
+      toastStore.getState().showErrorToast(message);
+    };
+
     this.eventHandlers.set(WS_EVENTS.GAME_PLAYER_JOIN, joinHandler);
     this.eventHandlers.set(WS_EVENTS.GAME_PLAYER_LEAVE, leaveHandler);
     this.eventHandlers.set(WS_EVENTS.GAME_PLAYER_RECRUIT, recruitHandler);
@@ -274,6 +288,7 @@ class GameService {
     this.eventHandlers.set(WS_EVENTS.GAME_PLAYER_START, startHandler);
     this.eventHandlers.set(WS_EVENTS.GAME_PLAYER_REALTIME, realtimeHandler);
     this.eventHandlers.set(WS_EVENTS.GAME_PLAYER_RESULT, resultHandler);
+    this.eventHandlers.set(WS_EVENTS.ERROR, errorHandler);
 
     this.eventHandlers.forEach((handler, event) => {
       WebSocketService.on(event, handler);

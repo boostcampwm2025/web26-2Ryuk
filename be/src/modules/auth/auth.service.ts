@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomBytes } from 'node:crypto';
 import { User } from '../user/user.entity';
 import { UserInfoResponseDto, UserWithRoleResponseDto } from './dto/auth-response.dto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
@@ -40,80 +41,24 @@ export class AuthService {
 
   // 랜덤 문자열 생성 헬퍼 함수
   private generateRandomSuffix(length: number = 4): string {
-    // 기본 길이 4
-    return Math.random()
-      .toString(36)
-      .substring(2, 2 + length);
+    return randomBytes(Math.ceil(length / 2))
+      .toString('hex')
+      .substring(0, length);
   }
 
   async validateOAuthUser(profile: OAuthUser): Promise<User> {
     const { githubId, googleId, email, nickname, profileImage } = profile;
 
-    // 1. githubId 또는 googleId로 기존 사용자 조회
-    let user: User | null = null;
-    if (githubId) {
-      user = await this.userRepository.findOne({ where: { github_id: githubId } });
-    } else if (googleId) {
-      user = await this.userRepository.findOne({ where: { google_id: googleId } });
-    }
+    // OAuth ID로 기존 사용자 조회
+    let user = await this.findUserByOAuthId(githubId, googleId);
+    if (user) return user;
 
-    if (user) {
-      // 기존 사용자가 있으면 반환
-      return user;
-    }
+    // 이메일로 기존 사용자 조회 및 연동
+    user = await this.findAndLinkUserByEmail(email, githubId, googleId);
+    if (user) return user;
 
-    // 2. 이메일로 기존 사용자 조회 (동일 이메일로 다른 소셜 로그인 시도 시 연동)
-    if (email) {
-      user = await this.userRepository.findOne({ where: { email } });
-      if (user) {
-        // 기존 이메일 사용자가 다른 OAuth 연동을 시도하는 경우
-        if (githubId && !user.github_id) {
-          user.github_id = githubId;
-        }
-        if (googleId && !user.google_id) {
-          user.google_id = googleId;
-        }
-        return this.userRepository.save(user);
-      }
-    }
-
-    // 3. 신규 사용자 생성
-    let initialNickname = nickname || `user-${githubId || googleId || 'oauth'}`; // 초기 닉네임 설정
-
-    // 닉네임이 너무 길 경우 50자 이내로 자르기
-    const MAX_NICKNAME_LENGTH = 50;
-    if (initialNickname.length > MAX_NICKNAME_LENGTH) {
-      initialNickname = initialNickname.substring(0, MAX_NICKNAME_LENGTH);
-    }
-
-    let finalNickname = initialNickname;
-
-    // 닉네임 중복 처리 로직 (랜덤 접미사 사용)
-    const maxAttempts = 10; // 무한 루프 방지를 위한 최대 시도 횟수
-    const SUFFIX_LENGTH = 4; // 접미사 길이
-    const HYPHEN_LENGTH = 1; // 하이픈 길이
-
-    for (let i = 0; i < maxAttempts; i++) {
-      const userWithSameNickname = await this.userRepository.findOne({ where: { nickname: finalNickname } });
-      if (!userWithSameNickname) {
-        break;
-      }
-      // 중복 시 랜덤 접미사를 붙여 다시 시도
-      // 접미사 추가 후에도 MAX_NICKNAME_LENGTH를 넘지 않도록 initialNickname을 자름
-      const availableLengthForBase = MAX_NICKNAME_LENGTH - (SUFFIX_LENGTH + HYPHEN_LENGTH);
-      const truncatedInitialNickname = initialNickname.substring(0, availableLengthForBase);
-
-      finalNickname = `${truncatedInitialNickname}-${this.generateRandomSuffix(SUFFIX_LENGTH)}`;
-
-      if (i === maxAttempts - 1) {
-        // 최대 시도 횟수를 초과
-        this.logger.error(
-          `"${initialNickname}" 닉네임에 대해 ${maxAttempts}회 시도 후에도 고유 닉네임 생성에 실패했습니다.`,
-        );
-        throw new InternalServerErrorException('다중 시도 후에도 고유 닉네임 생성에 실패했습니다.');
-      }
-    }
-
+    // 신규 사용자 생성
+    const finalNickname = await this.generateUniqueNickname(nickname, githubId, googleId);
     const newUser = this.userRepository.create({
       email,
       github_id: githubId || null,
@@ -123,6 +68,71 @@ export class AuthService {
     } as User);
 
     return this.userRepository.save(newUser);
+  }
+
+  private async findUserByOAuthId(githubId?: string, googleId?: string): Promise<User | null> {
+    if (githubId) {
+      return this.userRepository.findOne({ where: { github_id: githubId } });
+    }
+    if (googleId) {
+      return this.userRepository.findOne({ where: { google_id: googleId } });
+    }
+    return null;
+  }
+
+  private async findAndLinkUserByEmail(email?: string, githubId?: string, googleId?: string): Promise<User | null> {
+    if (!email) return null;
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) return null;
+
+    let updated = false;
+    if (githubId && !user.github_id) {
+      user.github_id = githubId;
+      updated = true;
+    }
+    if (googleId && !user.google_id) {
+      user.google_id = googleId;
+      updated = true;
+    }
+
+    return updated ? this.userRepository.save(user) : user;
+  }
+
+  private async generateUniqueNickname(nickname?: string, githubId?: string, googleId?: string): Promise<string> {
+    const MAX_NICKNAME_LENGTH = 50;
+    const SUFFIX_LENGTH = 4;
+    const HYPHEN_LENGTH = 1;
+
+    let initialNickname = nickname || `user-${githubId || googleId || 'oauth'}`;
+    if (initialNickname.length > MAX_NICKNAME_LENGTH) {
+      initialNickname = initialNickname.substring(0, MAX_NICKNAME_LENGTH);
+    }
+
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      const candidateNickname =
+        i === 0
+          ? initialNickname
+          : this.buildNicknameWithSuffix(initialNickname, MAX_NICKNAME_LENGTH, SUFFIX_LENGTH, HYPHEN_LENGTH);
+      const exists = await this.userRepository.findOne({ where: { nickname: candidateNickname } });
+
+      if (!exists) return candidateNickname;
+      if (i === maxAttempts - 1) this.throwNicknameGenerationError(initialNickname, maxAttempts);
+    }
+
+    return initialNickname; // unreachable
+  }
+
+  private buildNicknameWithSuffix(base: string, maxLength: number, suffixLen: number, hyphenLen: number): string {
+    const availableLength = maxLength - (suffixLen + hyphenLen);
+    const truncated = base.substring(0, availableLength);
+    return `${truncated}-${this.generateRandomSuffix(suffixLen)}`;
+  }
+
+  private throwNicknameGenerationError(nickname: string, attempts: number): never {
+    this.logger.error(`"${nickname}" 닉네임에 대해 ${attempts}회 시도 후에도 고유 닉네임 생성에 실패했습니다.`);
+    throw new InternalServerErrorException('다중 시도 후에도 고유 닉네임 생성에 실패했습니다.');
   }
 
   async login(user: JwtTokenUser) {
@@ -173,6 +183,13 @@ export class AuthService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('존재하지 않는 사용자입니다.');
     return user;
+  }
+
+  /**
+   * 첫 번째 사용자 조회 (테스트용)
+   */
+  async findFirstUser(): Promise<User | null> {
+    return this.userRepository.findOne({ where: {}, order: { create_date: 'ASC' } });
   }
 
   /**

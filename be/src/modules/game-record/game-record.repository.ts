@@ -86,7 +86,7 @@ export class GameRecordRepository {
     const achieveDate = new Date();
 
     await this.repository.manager.transaction(async (manager) => {
-      const validResults = results.filter((item) => !isNaN(item.score));
+      const validResults = results.filter((item) => !Number.isNaN(item.score));
 
       if (validResults.length === 0) {
         this.logger.warn(`유효한 게임 기록이 없음: roomId=${roomId}`);
