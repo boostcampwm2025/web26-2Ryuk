@@ -1,5 +1,7 @@
-import dynamic from 'next/dynamic';
+'use client';
+
 import './globals.css';
+import dynamic from 'next/dynamic';
 import AuthProvider from '@/app/providers/AuthProvider';
 import RoomProvider from '@/app/providers/RoomProvider';
 import LoadingProvider from '@/app/providers/LoadingProvider';
