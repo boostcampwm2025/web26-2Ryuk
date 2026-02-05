@@ -1,20 +1,13 @@
-import dynamic from 'next/dynamic';
 import './globals.css';
+import { pretendard } from './fonts';
 import AuthProvider from '@/app/providers/AuthProvider';
 import RoomProvider from '@/app/providers/RoomProvider';
 import LoadingProvider from '@/app/providers/LoadingProvider';
 import Header from './components/layout/header/Header';
 import { RootLayoutProps } from './type';
 import { metadataConfig } from './meta';
-
-// ModalEventDelegation 컴포넌트를 동적으로 임포트
-const DynamicModalEventDelegation = dynamic(
-  () => import('@/app/components/shared/modal/ModalEventDelegation'),
-  { ssr: false }, // 클라이언트 측에서만 로드
-);
-
-// Toast 컴포넌트를 동적으로 임포트
-const DynamicToast = dynamic(() => import('@/app/components/shared/toast/Toast'), { ssr: false });
+import Toast from './components/shared/toast/Toast';
+import ModalEventDelegation from './components/shared/modal/ModalEventDelegation';
 
 export const metadata = metadataConfig;
 
@@ -23,16 +16,16 @@ export const metadata = metadataConfig;
  */
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={pretendard.className}>
       <head></head>
       <body>
-        <DynamicModalEventDelegation />
+        <ModalEventDelegation />
         <AuthProvider>
           <RoomProvider>
             <LoadingProvider>
               <Header />
               <div className="page">{children}</div>
-              <DynamicToast />
+              <Toast />
             </LoadingProvider>
           </RoomProvider>
         </AuthProvider>

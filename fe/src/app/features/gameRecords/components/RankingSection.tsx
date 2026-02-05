@@ -26,7 +26,6 @@ export default function RankingSection() {
     setPodium(data.podium);
   };
 
-  // 사용자 상호 작용 시 새 데이터를 가져옴
   useEffect(() => {
     fetchPodium(selectedGameId);
   }, [selectedGameId]);

@@ -18,7 +18,6 @@ import { modalStore } from '@/app/components/shared/modal/modal.store';
 import { gameRecordService } from '@/app/features/game/services/GameRecordService';
 import { GameRecordConverter } from '@/app/features/gameRecords/dtos/converter';
 import PageIndicator from '@/app/components/shared/pageIndicator/PageIndicator';
-import '@/app/page.css';
 
 export default function GameRankingPage() {
   const params = useParams();
