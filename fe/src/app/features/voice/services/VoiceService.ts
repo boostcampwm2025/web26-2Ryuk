@@ -163,7 +163,7 @@ export class VoiceService {
       transport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
         try {
           const data = await WebSocketService.request(WS_EVENTS.VOICE_PRODUCER_CREATE, {
-            room_id: roomId,
+            room_id: this.roomId,
             transport_id: transport.id,
             kind,
             rtp_parameters: rtpParameters,
@@ -443,13 +443,23 @@ export class VoiceService {
     const myUserId = authStore.getState().id;
     if (!this.roomId || data.roomId !== this.roomId || data.userId === myUserId) return;
 
-    if (this.consumersByUser.has(data.userId)) {
-      console.log(`[Voice] 이미 구독 중인 유저입니다: ${data.userId}`);
-      return;
+    const existingConsumer = this.consumersByUser.get(data.userId);
+
+    if (existingConsumer) {
+      // 기존 프로듀서 ID와 새로 들어온 프로듀서 ID가 같다면 이미 잘 연결된 상태
+      if (existingConsumer.producerId === data.producerId) {
+        console.log(`[Voice] 이미 동일한 프로듀서를 구독 중입니다: ${data.userId}`);
+        return;
+      }
+
+      // ID가 다르다면 (새로고침 등으로 바뀜), 기존 세션 정리 후 재연결
+      console.log(`[Voice] 유저(${data.userId})의 프로듀서가 변경되었습니다. 재연결을 시도합니다.`);
+      this.cleanupUserSession(data.userId);
     }
 
     console.log(`[DEBUG] Consume 시도 - 상대ID: ${data.userId}, 프로듀서ID: ${data.producerId}`);
-    // 일단 연결
+
+    // 신규/갱신 연결
     await this.consumeUser(data.userId, data.producerId);
 
     // 자동 음소거 상태 반영
