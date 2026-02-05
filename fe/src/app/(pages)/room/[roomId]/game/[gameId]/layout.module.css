@@ -1,9 +1,9 @@
 .wrapper {
   overflow: hidden;
+  height: var(--room-body-max-height, calc(100vh - 64px - 160px));
+  max-height: var(--room-body-max-height, calc(100vh - 64px - 160px));
   display: flex;
   flex-direction: column;
-  align-items: center;
   min-height: 0;
   width: 100%;
-  height: 100%;
 }

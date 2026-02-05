@@ -27,14 +27,9 @@ export default function RankingSection({ initialRanking }: { initialRanking: Gam
     setPodium(data.podium);
   };
 
-  // 사용자 상호 작용 시 새 데이터를 가져옴
   useEffect(() => {
-    if (selectedGameId === defaultGameId) {
-      setPodium(initialRanking.podium);
-    } else {
-      fetchPodium(selectedGameId);
-    }
-  }, [selectedGameId, initialRanking]);
+    fetchPodium(selectedGameId);
+  }, [selectedGameId]);
 
   const selectedGameTitle = useMemo(() => {
     const entry = gameMetaList.find((game) => game.ID === selectedGameId);
