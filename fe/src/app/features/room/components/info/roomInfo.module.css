@@ -47,6 +47,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  gap: 24px;
 }
 
 .disconnected .icon {

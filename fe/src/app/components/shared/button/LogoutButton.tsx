@@ -1,21 +1,17 @@
 'use client';
 
 import { GhostTextButton } from './TextButton';
-import { authStore, type AuthStore } from '@/app/features/user/stores/auth';
-import useNavigation from '@/app/hooks/useNavigation';
+import { AuthService } from '@/app/features/user/services/AuthService';
 import { roomStore } from '@/app/features/room/stores/room';
 import { useToast } from '../toast/useToast';
 
 export default function LogoutButton() {
-  const { goHome } = useNavigation();
-  const logout = authStore((state: AuthStore) => state.logout);
   const { showSuccessToast } = useToast();
 
   const handleLogout = () => {
-    logout();
-    showSuccessToast('로그아웃 되었습니다.');
     roomStore.getState().resetRoom();
-    goHome();
+    AuthService.logout();
+    showSuccessToast('로그아웃 되었습니다.');
   };
 
   return <GhostTextButton text="로그아웃" size="small" onClick={handleLogout} />;

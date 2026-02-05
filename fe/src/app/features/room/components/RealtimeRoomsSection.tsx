@@ -17,7 +17,7 @@ import useNavigation from '@/app/hooks/useNavigation';
 import { useModal } from '@/app/components/shared/modal/useModal';
 import { roomStore } from '../stores/room';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { authStore, AuthStore } from '@/app/features/user/stores/auth';
+import { authStore } from '@/app/features/user/stores/auth';
 import { useToast } from '@/app/components/shared/toast/useToast';
 import { TextTooltip, TooltipTrigger } from '@/app/components/shared/tooltip/TextTooltip';
 
@@ -29,7 +29,7 @@ export default function RealtimeRoomsSection() {
   const { showSuccessToast } = useToast();
   const roomId = roomStore((state) => state.id);
   const replaceRoom = roomStore((state) => state.replaceRoom);
-  const isAuthenticated = authStore((state: AuthStore) => state.isAuthenticated);
+  const isAuthenticated = Boolean(authStore((state) => state.id));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

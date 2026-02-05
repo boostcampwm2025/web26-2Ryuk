@@ -15,14 +15,9 @@ import { REDIS_CLIENT } from '@src/providers/redis/redis.provider';
 import { RedisClientType } from 'redis';
 import { LOG, logMessage } from '@src/common/utils/log-messages';
 import { GLOBAL_ROOM_ID, USER_SESSION_EXPIRATION_TIME } from '@src/common/constants/constants';
-import {
-  WS_EVENTS_AUTH,
-  WS_EVENTS_ROOM,
-  WS_EVENTS_CHAT,
-  WS_EVENTS_GAME,
-} from '@src/common/constants/ws-events.constant';
+import { WS_EVENTS_AUTH, WS_EVENTS_ROOM } from '@src/common/constants/ws-events.constant';
 import { GameService } from './modules/game/game.service';
-import { GameCloseBroadcastDto } from './modules/game/dto/game-response.dto';
+import { ChatService } from './modules/chat/chat.service';
 
 @UseFilters(new WsExceptionFilter()) // 필터
 @WebSocketGateway({ namespace: '/' })
@@ -44,9 +39,10 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(AppGateway.name);
-  private disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
+  private readonly disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(
+    private readonly chatService: ChatService,
     private readonly roomService: RoomService,
     private readonly gameService: GameService,
     @Inject(REDIS_CLIENT) private readonly redisClient: RedisClientType,
@@ -102,9 +98,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
             logMessage(this.logger, LOG.WS.ROOM_PARTICIPATION_CHECK_ERROR(errorMessage));
           }
         }
-
-        // 글로벌 룸 최신 메시지 전송 (인증/비인증 모두)
-        await this.sendGlobalChatRecents(client, globalRoomId, userId || null);
       }
 
       // 인증된 사용자의 경우 세션 복구 및 로컬 방 재참여 처리
@@ -207,8 +200,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (keys.length === 0) {
           // game hash 정보 삭제
           await this.redisClient.del(`room:${localRoomId}:game`);
-          // 게임 모집 종료 브로드캐스트
-          this.server.to(localRoomId).emit(WS_EVENTS_GAME.PLAYER_CLOSE, new GameCloseBroadcastDto(false));
         }
       }
     }
@@ -225,6 +216,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (stillDisconnected) {
         await this.roomService.leaveAllRooms(this.server, userId);
         await this.roomService.clearUserSession(userId);
+        // user:${userId}:rooms Set을 Redis에서 삭제
+        await this.redisClient.del(`user:${userId}:rooms`);
 
         const globalRoomId = GLOBAL_ROOM_ID;
         if (globalRoomId) {
@@ -274,6 +267,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 모든 세션 삭제
       await this.roomService.clearUserSession(userId);
       await this.redisClient.del(`user:session:${userId}`);
+      await this.redisClient.del(`user:${userId}:rooms`);
 
       // 참여자 수 조회 및 브로드캐스트
       const currentParticipants = await this.roomService.getCurrentParticipants(globalRoomId);
@@ -283,39 +277,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logMessage(this.logger, LOG.WS.LOGOUT_ERROR(errorMessage));
-    }
-  }
-
-  // 글로벌 룸 입장 시 최신 메시지 및 참여자 수 전송
-  private async sendGlobalChatRecents(client: Socket, roomId: string, userId: string | null): Promise<void> {
-    try {
-      const [recents, currentParticipants] = await Promise.all([
-        this.roomService.getGlobalChatRecents(roomId),
-        this.roomService.getCurrentParticipants(roomId),
-      ]);
-
-      const messages = recents.map((msg) => ({
-        message: msg.content,
-        sender: {
-          role: msg.role,
-          nickname: msg.nickname,
-          profile_image: msg.profile_image,
-          is_me: userId ? msg.sender_id === userId : false,
-        },
-        timestamp: msg.create_date,
-      }));
-
-      client.emit(WS_EVENTS_CHAT.GLOBAL_INIT, {
-        messages,
-        current_participants: currentParticipants,
-      });
-
-      this.logger.debug(
-        `글로벌 채팅 최신 메시지 전송: roomId=${roomId}, userId=${userId || 'anonymous'}, count=${recents.length}`,
-      );
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`글로벌 채팅 최신 메시지 전송 실패: ${errorMessage}`);
     }
   }
 }

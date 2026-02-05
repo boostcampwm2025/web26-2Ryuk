@@ -48,7 +48,6 @@
 <br />
 <br />
 
-
 ### 2. 텍스트 채팅
 #### &nbsp;&nbsp; 2-1. 전체 채팅
 
@@ -59,6 +58,9 @@
 <br clear="left" />
 <br />
 
+- 문제 해결: [최근 채팅 내역 중복 노출 문제](https://rapid-bubble-113.notion.site/2ee207f2334180e6b251c2184f9395a9?source=copy_link)
+
+<br />
 
 ####  &nbsp;&nbsp; 2-2. 대화방 채팅
   
@@ -68,11 +70,19 @@
 
 <br clear="left" />
 <br />
+
+- 결정 사항: [채팅방 HTTP, WebScoket 책임 정의](https://rapid-bubble-113.notion.site/HTTP-WebSocket-2fb207f233418027940ec5f6e464d2ef?source=copy_link)
+
+<br />
 <br />
 
 #### 3. 음성 채팅
 
 &nbsp;&nbsp; 실시간 텍스트 채팅은 물론, WebRTC 기반의 선명한 음성 채팅으로도 소통할 수 있습니다.
+
+<br />
+
+- 결정 사항: [Redis Mediasoup 데이터 구조 전략](https://rapid-bubble-113.notion.site/Redis-Mediasoup-2ed207f23341809aaf88dca67f3e2e13?source=copy_link)
 
 <br />
 
@@ -94,6 +104,12 @@
 
 <br clear="left" />
 <br />
+
+- 결정 사항: [랭킹 페이지 표시 방식](https://rapid-bubble-113.notion.site/2eb207f2334180eca00edf864ad78f36?source=copy_link)
+- 최적화: [게임 기록 저장 로직 최적화](https://rapid-bubble-113.notion.site/N-1-2f5207f23341807c9f8be95cb244001e?source=copy_link)
+- 개선: [음성 채팅 기능 성능 개선](https://rapid-bubble-113.notion.site/2fb207f2334180f5bc83eab7a6136f38?source=copy_link)
+
+<br />
 <br />
 
 #### 5. 안전한 대화 환경
@@ -106,9 +122,28 @@
 <br clear="left" />
 <br />
 <br />
+
+- 결정 사항: [비속어 필터링 로직](https://rapid-bubble-113.notion.site/2fb207f2334180d7bea8d9d54f35acd6?source=copy_link)
+
+<br />
 <br />
 
-## 📄 프로젝트 문서
+## 📄 우리 프로젝트가 더 궁금하다면?
+
+우리 프로젝트에 대한 심층적인 정보는 아래 Wiki 또는 Notion 문서를 참고해주세요.
+
+- [기획서](https://github.com/boostcampwm2025/web26-2Ryuk/wiki/%EA%B8%B0%ED%9A%8D%EC%84%9C)
+- [디자인 시스템](https://github.com/boostcampwm2025/web26-2Ryuk/wiki/%EB%94%94%EC%9E%90%EC%9D%B8-%EC%8B%9C%EC%8A%A4%ED%85%9C)
+- [폴더 구조](https://github.com/boostcampwm2025/web26-2Ryuk/wiki/%ED%8F%B4%EB%8D%94-%EA%B5%AC%EC%A1%B0)
+- [컴포넌트 설계 철학](https://github.com/boostcampwm2025/web26-2Ryuk/wiki/%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8-%EC%84%A4%EA%B3%84-%EC%B2%A0%ED%95%99)
+- [컴포넌트 구조](https://github.com/boostcampwm2025/web26-2Ryuk/wiki/%EC%BB%B4%ED%8F%AC%EB%84%8C%ED%8A%B8-%EA%B5%AC%EC%A1%B0)
+- [도메인별 기술 문서 인덱스](https://github.com/boostcampwm2025/web26-2Ryuk/wiki/%EB%8F%84%EB%A9%94%EC%9D%B8%EB%B3%84-%EA%B8%B0%EC%88%A0-%EB%AC%B8%EC%84%9C-%EC%9D%B8%EB%8D%B1%EC%8A%A4)
+- [API 명세](https://rapid-bubble-113.notion.site/API-2e0207f2334180a6b745f9ffdabb3391?source=copy_link)
+- [DB Schema](https://rapid-bubble-113.notion.site/DB-2df207f23341807da4eef6ac7e1cc19f?source=copy_link)
+- [이슈 해결 과정](https://rapid-bubble-113.notion.site/2cb207f2334180e8b3a5c889b8449a3a?v=2cb207f2334180fabf59000c34c5fb47&source=copy_link)
+- [논의 및 결정 사항](https://rapid-bubble-113.notion.site/2e8207f2334180babadee83d5391e7e2?v=2e8207f2334180d19aa2000cd4f2bb4f&source=copy_link)
+
+<br />
 
 <div>
 <a target="_blank" href="https://rapid-bubble-113.notion.site/TEAM-2Ryuk-2c3207f2334180df9885fc1c9faaffd6">
@@ -122,7 +157,7 @@
 </a>
 </div>
 
-
+<br />
 <br />
 
 ## 🛠️ 기술 스택

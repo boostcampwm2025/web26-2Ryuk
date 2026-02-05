@@ -31,9 +31,9 @@ export default function RankingPage() {
   const [total, setTotal] = useState(0);
   const [podium, setPodium] = useState<GamePlayerResultItemData[]>([]);
   const [rankings, setRankings] = useState<GamePlayerResultItemData[]>([]);
-  const nickname = authStore((state) => state.user?.nickname);
+  const nickname = authStore((state) => state.nickname);
 
-  const myId = authStore((state) => state.userId);
+  const myId = authStore((state) => state.id);
   const requestIdRef = useRef(0);
   const { gotoRanking } = useNavigation();
 

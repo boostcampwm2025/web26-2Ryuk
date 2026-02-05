@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { GameRecord } from '@src/modules/game-record/game-record.entity';
 import { GameRecordRankItemDto } from '@src/modules/game-record/dto/game-record-response.dto';
+import { GameResultItemDto } from '@src/modules/game/dto/game-response.dto';
+import { LOG, logMessage } from '@src/common/utils/log-messages';
 
 @Injectable()
 export class GameRecordRepository {
+  private readonly logger = new Logger(GameRecordRepository.name);
+
   constructor(@InjectRepository(GameRecord) private readonly repository: Repository<GameRecord>) {}
 
   /**
@@ -70,5 +74,75 @@ export class GameRecordRepository {
   paginate<T>(items: T[], page: number, limit: number): T[] {
     const start = (page - 1) * limit;
     return items.slice(start, start + limit);
+  }
+
+  /**
+   * 게임 기록 저장
+   * - 최고 점수 기준으로 upsert
+   * - 트랜잭션 처리로 all or nothing 보장
+   * - N+1 문제 해결: 벌크 조회 -> 메모리 필터링 -> 벌크 저장
+   */
+  async saveGameRecords(roomId: string, gameId: string, results: GameResultItemDto[]): Promise<void> {
+    const achieveDate = new Date();
+
+    await this.repository.manager.transaction(async (manager) => {
+      const validResults = results.filter((item) => !isNaN(item.score));
+
+      if (validResults.length === 0) {
+        this.logger.warn(`유효한 게임 기록이 없음: roomId=${roomId}`);
+        return;
+      }
+
+      // 모든 user_id에 대한 기존 기록을 한 번에 조회 (N+1 -> 1번 쿼리)
+      const userIds = validResults.map((item) => item.player_id);
+      const existingRecords = await manager.find(GameRecord, {
+        where: {
+          game_id: gameId,
+          user_id: In(userIds),
+        },
+      });
+
+      // 기존 기록을 Map으로 변환 (빠른 조회)
+      const existingRecordMap = new Map<string, GameRecord>();
+      existingRecords.forEach((record) => {
+        existingRecordMap.set(record.user_id, record);
+      });
+
+      // 메모리에서 비교하여 신규 생성 / 업데이트 분리
+      const recordsToInsert: GameRecord[] = [];
+      const recordsToUpdate: GameRecord[] = [];
+
+      for (const item of validResults) {
+        const existingRecord = existingRecordMap.get(item.player_id);
+
+        if (!existingRecord) {
+          // 기존 기록 없음 -> 신규 생성
+          recordsToInsert.push(
+            manager.create(GameRecord, {
+              user_id: item.player_id,
+              game_id: gameId,
+              score: item.score,
+              achieve_date: achieveDate,
+            }),
+          );
+        } else if (item.score > existingRecord.score) {
+          // 기존 기록보다 점수가 높음 -> 업데이트
+          existingRecord.score = item.score;
+          existingRecord.achieve_date = achieveDate;
+          recordsToUpdate.push(existingRecord);
+        }
+        // 기존 점수가 더 높거나 같으면 아무것도 안 함
+      }
+
+      // 벌크 저장 (insert + update를 각각 한 번씩)
+      if (recordsToInsert.length > 0) {
+        await manager.save(GameRecord, recordsToInsert);
+      }
+      if (recordsToUpdate.length > 0) {
+        await manager.save(GameRecord, recordsToUpdate);
+      }
+    });
+
+    logMessage(this.logger, LOG.GAME.RESULT_BROADCAST(roomId, results));
   }
 }

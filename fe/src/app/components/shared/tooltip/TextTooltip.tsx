@@ -15,11 +15,12 @@ export function TextTooltip({ text, anchorId }: TextTooltipProps) {
 
   useEffect(() => {
     const anchor = document.querySelector<HTMLElement>(`[data-anchor="${anchorId}"]`);
-    if (!anchor || !tooltipRef.current) return;
+    if (!anchor) return;
 
     const updatePosition = () => {
+      if (!tooltipRef.current) return;
       const anchorRect = anchor.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current!.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
       const gap = 8;
 
@@ -50,11 +51,21 @@ export function TextTooltip({ text, anchorId }: TextTooltipProps) {
     anchor.addEventListener('mouseenter', handleEnter);
     anchor.addEventListener('mouseleave', handleLeave);
 
+    let resizeObserver: ResizeObserver | undefined;
+    if (visible && tooltipRef.current) {
+      requestAnimationFrame(() => {
+        updatePosition();
+        resizeObserver = new ResizeObserver(() => updatePosition());
+        resizeObserver.observe(tooltipRef.current!);
+      });
+    }
+
     return () => {
       anchor.removeEventListener('mouseenter', handleEnter);
       anchor.removeEventListener('mouseleave', handleLeave);
+      resizeObserver?.disconnect();
     };
-  }, [anchorId]);
+  }, [anchorId, visible]);
 
   const style = {
     '--tooltip-top': `${coords.top}px`,

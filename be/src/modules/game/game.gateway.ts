@@ -55,12 +55,8 @@ export class GameGateway {
     } catch (error) {
       // 모든 예외를 일관되게 처리
       const errorResponse = createWsErrorResponse(error, '게임 모집 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -81,12 +77,8 @@ export class GameGateway {
       return await this.gameService.joinGame(this.server, dto.room_id, userId);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 참가 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -107,12 +99,8 @@ export class GameGateway {
       await this.gameService.selectGame(this.server, dto.room_id, userId, dto.game_id);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 선택 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -133,12 +121,8 @@ export class GameGateway {
       await this.gameService.readyGame(this.server, dto.room_id, userId);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 준비 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -159,12 +143,8 @@ export class GameGateway {
       await this.gameService.unreadyGame(this.server, dto.room_id, userId);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 준비 해제 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -185,12 +165,8 @@ export class GameGateway {
       await this.gameService.startGame(this.server, dto.room_id, userId);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 시작 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -211,12 +187,8 @@ export class GameGateway {
       await this.gameService.closeGame(this.server, dto.room_id, userId);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 모집 닫기 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -237,12 +209,8 @@ export class GameGateway {
       await this.gameService.leaveGame(this.server, dto.room_id, userId);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 나가기 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 
@@ -263,12 +231,8 @@ export class GameGateway {
       await this.gameService.handleRealtimeInput(this.server, dto.room_id, userId, dto.delta);
     } catch (error) {
       const errorResponse = createWsErrorResponse(error, '게임 실시간 입력 처리 중 문제가 발생했습니다.');
-      try {
-        client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
-        return;
-      } catch (emitError) {
-        this.logger.warn('에러 메시지 전송 실패', emitError);
-      }
+      client.emit(WS_EVENTS_ERROR.ERROR, errorResponse);
+      return;
     }
   }
 }

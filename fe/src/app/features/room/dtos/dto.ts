@@ -103,6 +103,19 @@ export type RoomParticipantLeaveDto = {
   current_participants: string;
 };
 
+export type RoomParticipantUpdateDto = {
+  room_id: string;
+  title: string;
+  tags: string[];
+  host_id: string;
+  current_participants: number;
+  max_participants: number;
+  participants: RoomParticipantDto[];
+  is_mic_available: boolean;
+  is_private: boolean;
+  create_date: string;
+};
+
 export type RoomParticipantDeleteDto = {
   room_id: string;
 };

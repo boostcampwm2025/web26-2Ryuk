@@ -15,6 +15,12 @@ env:
   DOCKER_IMAGE_FRONTEND: ${{ secrets.DOCKER_IMAGE_NAME }}-frontend
   DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '~/project' }}
   API_PORT: ${{ secrets.API_PORT }}
+  JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+  JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
+  JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+  JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
+  FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+  BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL }}
 
 jobs:
   deploy:
@@ -80,8 +86,11 @@ jobs:
             MEDIASOUP_LISTEN_IP,
             GITHUB_CLIENT_ID,
             GITHUB_CLIENT_SECRET,
-            JWT_SECRET,
-            JWT_EXPIRATION_TIME,
+            JWT_ACCESS_SECRET,
+            JWT_ACCESS_EXPIRES_IN,
+            JWT_REFRESH_SECRET,
+            JWT_REFRESH_EXPIRES_IN,
+            FRONTEND_URL,
             BACKEND_BASE_URL,
             GOOGLE_CLIENT_ID,
             GOOGLE_CLIENT_SECRET
@@ -116,8 +125,11 @@ jobs:
           MEDIASOUP_LISTEN_IP: '0.0.0.0'
           GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID}}
           GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_EXPIRATION_TIME: ${{ secrets.JWT_EXPIRATION_TIME }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
           BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL}}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}

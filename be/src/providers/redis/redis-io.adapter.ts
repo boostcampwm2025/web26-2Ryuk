@@ -3,18 +3,14 @@ import { JwtService } from '@nestjs/jwt';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { AuthService } from '@src/modules/auth/auth.service';
-import { MockAuthService } from '@src/modules/auth/mock-auth.service';
-import { parse } from 'cookie';
 import { RedisClientType } from 'redis';
 import { ServerOptions, Socket } from 'socket.io';
-import type { ExtendedError } from 'socket.io/dist/namespace';
 
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
   private pubClient: RedisClientType;
   private subClient: RedisClientType;
   private jwtService: JwtService;
-  private mockAuthService: MockAuthService;
   private authService: AuthService;
   private readonly logger = new Logger(RedisIoAdapter.name);
 
@@ -23,10 +19,6 @@ export class RedisIoAdapter extends IoAdapter {
     // JWT 인증 서비스
     this.jwtService = app.get(JwtService);
     this.authService = app.get(AuthService);
-    // 개발 환경: Mock 인증
-    if (process.env.NODE_ENV !== 'production') {
-      this.mockAuthService = new MockAuthService();
-    }
   }
 
   async connectToRedis(pubClient: RedisClientType): Promise<void> {
@@ -57,90 +49,65 @@ export class RedisIoAdapter extends IoAdapter {
     server.adapter(this.adapterConstructor);
 
     /**
-     * WebSocket 인증 미들웨어
+     * WebSocket 인증 미들웨어 (Access Token 전용, 연결은 항상 허용)
+     * - 토큰 있음 + 검증 성공: socket.data.userId, authenticated = true, 세션 처리
+     * - 토큰 없음 또는 검증 실패: authenticated = false 만 설정, 연결 차단 없음
+     * - 권한 검사는 Gateway 이벤트 단위에서 수행
      */
-    server.use(async (socket: Socket, next: (err?: ExtendedError) => void) => {
+    server.use(async (socket: Socket, next: (err?: Error) => void) => {
       try {
         const authResult = await this.authenticateSocket(socket);
 
-        // 인증 성공 시
         if (authResult.isAuthenticated && authResult.userId) {
-          // DB 사용자 존재 여부 확인
           await this.authService.getUserById(authResult.userId);
-          // 세션 처리
           await this.handleAuthenticatedSession(server, socket, authResult.userId, authResult.originalUserId);
+          socket.data.authenticated = true;
+          socket.data.userId = authResult.userId;
         } else {
-          // 인증 실패 시 (비로그인 사용자)
           socket.data.authenticated = false;
         }
-
-        // 모든 경우에 연결을 허용
-        next();
       } catch (error) {
-        // DB 조회 실패 등 예상치 못한 오류 발생 시에만 연결 거부
         this.logger.error(`웹소켓 인증 미들웨어 오류 (socket ${socket.id}): ${error.message}`, error.stack);
-        next(new Error('인증 처리 중 오류가 발생했습니다.'));
+        socket.data.authenticated = false;
       }
+      next();
     });
 
     return server;
   }
 
   /**
-   * 소켓 인증 처리 (JWT)
+   * WebSocket 인증: Access Token만 사용 (쿠키/Refresh Token 미사용)
+   * - handshake.auth.token (권장) 또는 handshake.query.token
+   * - JWT_ACCESS_SECRET으로만 검증
    */
   private async authenticateSocket(socket: Socket): Promise<{
     userId: string | null;
     isAuthenticated: boolean;
-    originalUserId?: string; // 로그용 원본 ID
+    originalUserId?: string;
   }> {
-    let token: string | null = null;
-
-    // 1. httpOnly 쿠키에서 토큰 추출 (가장 먼저 확인)
-    const cookieHeader = socket.handshake.headers.cookie;
-    if (cookieHeader) {
-      const cookies = parse(cookieHeader);
-      // 'accessToken' 쿠키가 undefined일 경우 null로 할당하여 타입 오류 방지
-      token = cookies.accessToken || null;
-    }
-
-    // 토큰을 여러 소스에서 확인 (쿠키에 토큰이 없는 경우)
-    if (!token) {
-      // 2. Socket.io auth 객체 (연결 시 auth 옵션)
-      const authToken = socket.handshake.auth?.token as string;
-
-      // 3. HTTP 헤더 (Postman 등에서 헤더로 보낼 경우)
-      const headerAuth = socket.handshake.headers.authorization as string;
-      const headerAuthentication = socket.handshake.headers.authentication as string;
-
-      // 헤더에서 Bearer 토큰 형식 제거 (Bearer token 또는 직접 token)
-      const getTokenFromHeader = (header: string | undefined): string | null => {
-        if (!header) return null;
-        // "Bearer token" 형식이면 "Bearer " 제거
-        return header.startsWith('Bearer ') ? header.substring(7) : header;
-      };
-
-      // 토큰 우선순위: auth.token > Authorization 헤더 > Authentication 헤더
-      token = authToken || getTokenFromHeader(headerAuth) || getTokenFromHeader(headerAuthentication);
-    }
+    const authToken = socket.handshake.auth?.token as string | undefined;
+    const queryToken = typeof socket.handshake.query?.token === 'string' ? socket.handshake.query.token : undefined;
+    const token = authToken || queryToken || null;
 
     if (!token) {
       return { userId: null, isAuthenticated: false };
     }
 
-    // 토큰이 있는 경우, JWT 검증을 시도
     try {
-      const payload = this.jwtService.verify(token, { secret: process.env.JWT_SECRET as string });
+      const payload = this.jwtService.verify(token, {
+        secret: process.env.JWT_ACCESS_SECRET as string,
+      });
       if (payload?.sub) {
         return { userId: payload.sub, isAuthenticated: true, originalUserId: payload.sub };
       }
     } catch (error) {
-      // JWT 검증에 실패하면(만료, 서명 오류 등), 바로 인증 실패로 간주
-      this.logger.warn(`JWT 검증 실패 (socket ${socket.id}): ${error.message}. 토큰: ${token?.substring(0, 10)}...`);
+      this.logger.warn(
+        `웹소켓 JWT 검증 실패 (socket ${socket.id}): ${error.message}. 토큰: ${token.substring(0, 10)}...`,
+      );
       return { userId: null, isAuthenticated: false };
     }
 
-    // 유효한 payload 구조가 아닌 경우
     return { userId: null, isAuthenticated: false };
   }
 

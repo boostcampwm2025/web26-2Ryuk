@@ -33,6 +33,7 @@ export const WS_EVENTS_ROOM = {
   PARTICIPANT_JOIN: 'room:participant:join',
   PARTICIPANT_LEAVE: 'room:participant:leave',
   PARTICIPANT_DELETE: 'room:participant:delete',
+  ROOM_UPDATED: 'room:participant:update',
 } as const;
 
 /**

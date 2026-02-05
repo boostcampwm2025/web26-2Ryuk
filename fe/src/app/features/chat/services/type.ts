@@ -16,6 +16,7 @@ export type RecentsCallback = (messages: ChatReceiveData[]) => void;
 
 export type JoinCallback = (data: data.RoomParticipantJoinData) => void;
 export type LeaveCallback = (data: data.RoomParticipantLeaveData) => void;
+export type UpdateCallback = (data: data.RoomParticipantUpdateData) => void;
 export type DeleteCallback = (data: data.RoomParticipantDeleteData) => void;
 export type BanCallback = (data: data.RoomBanData) => void;
 

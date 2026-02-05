@@ -4,6 +4,7 @@ import { WebSocketService } from '@/app/services/websocket.service';
 import { WS_EVENTS } from '@/app/services/events';
 import { HttpService } from '@/app/services/http.service';
 import { ApiResponse } from '@/app/features/room/services/type';
+import { API_BASE } from '@/app/services/api.constants';
 import { GameConverter } from '@/app/features/game/dtos/converter';
 import * as data from '@/app/features/game/dtos/data';
 import * as dto from '@/app/features/game/dtos/dto';
@@ -139,8 +140,12 @@ class GameService {
     WebSocketService.send(WS_EVENTS.GAME_START, dto);
   }
 
+  /**
+   * 게임 목록 조회
+   * GET /api/games/all
+   */
   async getGameList(): Promise<data.GameListResponseData> {
-    const uri = '/api/games/all';
+    const uri = `${API_BASE}/games/all`;
     const response = await HttpService.get<ApiResponse<dto.GameListResponseDto>>(uri);
     if (!response.data) return GameConverter.toGameListData({ games: [] });
     if (!response.success) throw new Error(response.message);

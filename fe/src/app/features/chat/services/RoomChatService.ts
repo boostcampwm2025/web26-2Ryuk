@@ -23,6 +23,7 @@ export class RoomChatService {
   private recentsCallbacks = new Set<callback.RecentsCallback>();
   private joinCallbacks = new Set<callback.JoinCallback>();
   private leaveCallbacks = new Set<callback.LeaveCallback>();
+  private updateCallbacks = new Set<callback.UpdateCallback>();
   private deleteCallbacks = new Set<callback.DeleteCallback>();
   private banCallbacks = new Set<callback.BanCallback>();
   private unreadCallbacks = new Set<(isUnread: boolean) => void>();
@@ -175,6 +176,11 @@ export class RoomChatService {
     return () => this.leaveCallbacks.delete(cb);
   }
 
+  onUpdate(cb: callback.UpdateCallback): () => void {
+    this.updateCallbacks.add(cb);
+    return () => this.updateCallbacks.delete(cb);
+  }
+
   onDelete(cb: callback.DeleteCallback): () => void {
     this.deleteCallbacks.add(cb);
     return () => this.deleteCallbacks.delete(cb);
@@ -236,6 +242,13 @@ export class RoomChatService {
       this.leaveCallbacks.forEach((cb) => cb(data));
     };
 
+    // room:participant:update
+    const updateHandler = (dto: roomDto.RoomParticipantUpdateDto) => {
+      const data = RoomConverter.toRoomParticipantUpdateData(dto);
+      if (data.roomId !== this.roomId) return;
+      this.updateCallbacks.forEach((cb) => cb(data));
+    };
+
     // room:participant:delete
     const deleteHandler = (dto: roomDto.RoomParticipantDeleteDto) => {
       const data = RoomConverter.toRoomParticipantDeleteData(dto);
@@ -260,6 +273,7 @@ export class RoomChatService {
     this.eventHandlers.set(WS_EVENTS.CONNECT, connectHandler);
     this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_JOIN, joinHandler);
     this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_LEAVE, leaveHandler);
+    this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_UPDATE, updateHandler);
     this.eventHandlers.set(WS_EVENTS.ROOM_PARTICIPANT_DELETE, deleteHandler);
     this.eventHandlers.set(WS_EVENTS.ROOM_BAN, banHandler);
     this.eventHandlers.set(WS_EVENTS.CHAT_ROOM_NEW_MESSAGE, messageHandler);

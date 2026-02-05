@@ -1,10 +1,19 @@
-import { Injectable, NotFoundException, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { UserInfoResponseDto, UserWithRoleResponseDto } from './dto/auth-response.dto';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { parseExpiresIn } from '@src/common/utils/time.utils';
+import { buildRefreshCookieOptions } from '@src/common/utils/refresh.utils';
+import { Response } from 'express';
 
 interface OAuthUser {
   githubId?: string;
@@ -12,6 +21,11 @@ interface OAuthUser {
   email?: string;
   nickname?: string;
   profileImage?: string;
+}
+
+interface JwtTokenUser {
+  id: string;
+  email: string;
 }
 
 @Injectable()
@@ -111,12 +125,31 @@ export class AuthService {
     return this.userRepository.save(newUser);
   }
 
-  async login(user: User) {
-    const payload = { sub: user.id, email: user.email };
-    const expiresIn = this.configService.get<string>('JWT_EXPIRATION_TIME') || '1h'; // 환경 변수 사용, 기본값 '1h'
+  async login(user: JwtTokenUser) {
+    const accessToken = this.issueAccessToken(user);
+    const refreshToken = this.issueRefreshToken(user.id);
     return {
-      accessToken: this.jwtService.sign(payload, { expiresIn: expiresIn as JwtSignOptions['expiresIn'] }),
+      accessToken,
+      refreshToken,
     };
+  }
+
+  issueAccessToken(user: JwtTokenUser): string {
+    const secret = this.configService.get<string>('JWT_ACCESS_SECRET');
+    if (!secret) throw new InternalServerErrorException('환경변수가 없습니다: JWT_ACCESS_SECRET');
+
+    const expiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN', '1h') as JwtSignOptions['expiresIn'];
+    const payload = { sub: user.id, email: user.email };
+    return this.jwtService.sign(payload, { secret, expiresIn });
+  }
+
+  issueRefreshToken(userId: string): string {
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!secret) {
+      throw new InternalServerErrorException('환경변수가 없습니다: JWT_REFRESH_SECRET');
+    }
+    const expiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '30d') as JwtSignOptions['expiresIn'];
+    return this.jwtService.sign({ sub: userId }, { secret, expiresIn });
   }
 
   /**
@@ -136,6 +169,12 @@ export class AuthService {
     return new UserInfoResponseDto(user);
   }
 
+  async findUserEntityById(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('존재하지 않는 사용자입니다.');
+    return user;
+  }
+
   /**
    * userId로 사용자 정보 조회 (role 포함)
    * 채팅 등에서 사용자 정보와 role이 모두 필요한 경우 사용
@@ -151,5 +190,42 @@ export class AuthService {
     }
 
     return new UserWithRoleResponseDto(user);
+  }
+
+  /**
+   * JWT 토큰 만료시간 조회
+   */
+  public getJwtExpirationInMs(): number {
+    const jwtExpirationTimeStr = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '30d');
+    return parseExpiresIn(jwtExpirationTimeStr);
+  }
+
+  /**
+   * 액세스 토큰을 HttpOnly 쿠키로 설정
+   */
+  public setAccessTokenCookie(res: Response, accessToken: string): void {
+    const expiresInMs = this.getJwtExpirationInMs();
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: true, // sameSite: 'none' 일 때 필수 (프로덕션 환경에서 true)
+      sameSite: 'none',
+      expires: new Date(Date.now() + expiresInMs),
+      path: '/',
+    });
+  }
+
+  /**
+   * OAuth 로그인 후 JWT를 발급하고 쿠키를 설정한 뒤 프론트엔드로 리다이렉션
+   */
+  public async handleOAuthLogin(user: User, res: Response): Promise<void> {
+    if (!user?.email) throw new UnauthorizedException();
+
+    const { refreshToken } = await this.login({
+      id: user.id,
+      email: user.email,
+    });
+    res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService));
+
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
   }
 }

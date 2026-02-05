@@ -13,6 +13,7 @@ export const WS_EVENTS = {
   ROOM_BAN: 'room:ban',
   ROOM_PARTICIPANT_LEAVE: 'room:participant:leave',
   ROOM_PARTICIPANT_JOIN: 'room:participant:join',
+  ROOM_PARTICIPANT_UPDATE: 'room:participant:update',
   ROOM_PARTICIPANT_DELETE: 'room:participant:delete',
 
   // 방 채팅 이벤트

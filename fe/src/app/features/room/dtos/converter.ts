@@ -10,6 +10,7 @@ import {
   RoomListDto,
   RoomParticipantJoinDto,
   RoomParticipantLeaveDto,
+  RoomParticipantUpdateDto,
   RoomParticipantDeleteDto,
   RoomUpdateRequestDto,
   RoomValidateJoinRequestDto,
@@ -28,6 +29,7 @@ import {
   RoomBanData,
   RoomParticipantJoinData,
   RoomParticipantLeaveData,
+  RoomParticipantUpdateData,
   RoomParticipantDeleteData,
   RoomUpdateRequestData,
   RoomValidateJoinRequestData,
@@ -204,6 +206,25 @@ export const toRoomParticipantLeaveData = (
   currentParticipants: Number(dto.current_participants),
 });
 
+export const toRoomParticipantUpdateData = (
+  dto: RoomParticipantUpdateDto,
+): RoomParticipantUpdateData => ({
+  roomId: dto.room_id,
+  title: dto.title,
+  tags: dto.tags,
+  hostId: dto.host_id,
+  currentParticipants: Number(dto.current_participants),
+  maxParticipants: Number(dto.max_participants),
+  participants: dto.participants.map((p) => ({
+    userId: p.user_id,
+    nickname: p.nickname,
+    profileImage: p.profile_image,
+  })),
+  isMicAvailable: dto.is_mic_available,
+  isPrivate: dto.is_private,
+  createDate: new Date(dto.create_date),
+});
+
 export const toRoomParticipantDeleteData = (
   dto: RoomParticipantDeleteDto,
 ): RoomParticipantDeleteData => ({
@@ -231,5 +252,6 @@ export const RoomConverter = {
   toRoomBanDto,
   toRoomBanData,
   toRoomParticipantLeaveData,
+  toRoomParticipantUpdateData,
   toRoomParticipantDeleteData,
 };

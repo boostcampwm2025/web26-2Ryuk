@@ -165,8 +165,67 @@
 .panelSection .sectionAvatars {
   display: flex;
   align-items: center;
+  gap: 16px;
+  overflow: visible;
+  flex-wrap: wrap;
+}
+
+.panelSection .sectionAvatars .selfAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panelSection .sectionAvatars .avatarDivider {
+  width: 1px;
+  height: 48px;
+  background: var(--neutral-3);
+  flex-shrink: 0;
+}
+
+.panelSection .sectionAvatars .otherAvatarGroup {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  overflow-x: auto;
+  overflow: visible;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+.panelSection .sectionAvatars .avatarWrapper {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.panelSection .sectionAvatars .avatarWrapper .overlay {
+  position: absolute;
+  display: flex;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background: #00000088;
+  pointer-events: none;
+  justify-content: center;
+  align-items: center;
+  transition: opacity .2s ease-in-out;
+}
+
+.panelSection .sectionAvatars .avatarWrapper .overlay svg {
+  color: var(--error);
+}
+
+.panelSection .sectionAvatars .avatarWrapper.muted .overlay {
+  opacity: 1;
 }
 
 .chattingArea {

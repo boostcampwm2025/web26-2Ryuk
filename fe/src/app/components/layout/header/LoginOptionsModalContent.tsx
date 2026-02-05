@@ -6,15 +6,7 @@ import { GoogleAuthButton, GithubAuthButton } from '@/app/features/auth/componen
 import * as IconCircle from '@/app/components/shared/icon/IconCircle';
 
 export default function LoginOptionsModalContent() {
-  // const login = authStore((state: AuthStore) => state.login);
   const { closeModal } = useModal();
-
-  /* MbwtAuthButton */
-  // const handleMockLogin = async () => {
-  //   const randomId = `J${String(Math.floor(Math.random() * 307) + 1).padStart(3, '0')}`;
-  //   await login(randomId);
-  //   closeModal('login-options');
-  // };
 
   const handleGitHubLogin = () => {
     window.location.href = '/api/auth/github';

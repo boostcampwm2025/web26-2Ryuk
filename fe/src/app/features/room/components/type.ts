@@ -37,6 +37,7 @@ export interface RoomInfoProps {
   isMicAvailable: boolean;
   isPrivate: boolean;
   onEditClick?: () => void;
+  onCopyLinkClick?: () => void;
   isConnected?: boolean;
 }
 

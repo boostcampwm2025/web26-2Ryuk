@@ -74,6 +74,26 @@ export class RoomNotificationService {
   }
 
   /**
+   * 방 정보 업데이트 알림
+   */
+  async notifyRoomUpdated(server: Server, roomId: string, existingHostId: string): Promise<void> {
+    const roomData = await this.roomRepository.getRoomData(roomId);
+    const tags = await this.roomRepository.getTags(roomId);
+    server.to(roomId).emit(WS_EVENTS_ROOM.ROOM_UPDATED, {
+      room_id: roomId,
+      title: roomData.title,
+      tags: tags ?? [],
+      host_id: existingHostId,
+      current_participants: await this.roomRepository.getCurrentParticipants(roomId),
+      max_participants: roomData.max_participants,
+      participants: await this.roomRepository.getAllMemberDetails(roomId),
+      is_mic_available: roomData.is_mic_available === '1',
+      is_private: roomData.is_private === '1',
+      create_date: roomData.create_date,
+    });
+  }
+
+  /**
    * 방 삭제 알림
    */
   async notifyRoomDeleted(server: Server, roomId: string): Promise<void> {

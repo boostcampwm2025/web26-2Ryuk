@@ -3,7 +3,7 @@
 import CSSUtil from '@/utils/css';
 import styles from './roomInfo.module.css';
 import { SecondaryChip } from '@/app/components/shared/chip/Chip';
-import { GhostIconButton } from '@/app/components/shared/icon/IconButton';
+import { OutlineIconButton } from '@/app/components/shared/icon/IconButton';
 import Icon from '@/app/components/shared/icon/Icon';
 import { RoomInfoProps } from '@/app/features/room/components/type';
 import * as IconCircle from '@/app/components/shared/icon/IconCircle';
@@ -16,6 +16,7 @@ export default function RoomInfo({
   isMicAvailable,
   isPrivate,
   onEditClick,
+  onCopyLinkClick,
   isConnected,
 }: RoomInfoProps) {
   const hasTags = tags.length > 0;
@@ -67,10 +68,21 @@ export default function RoomInfo({
         <>
           <TooltipTrigger dataAnchor="roominfo-update">
             {isHost && isConnected && (
-              <GhostIconButton name="pencil" size="medium" onClick={onEditClick} />
+              <OutlineIconButton name="pencil" size="medium" onClick={onEditClick} />
             )}
           </TooltipTrigger>
           <TextTooltip anchorId="roominfo-update" text="대화방 정보를 수정할 수 있어요" />
+        </>
+        <>
+          <TooltipTrigger dataAnchor="roominfo-copylink">
+            {isConnected && (
+              <OutlineIconButton name="link" size="medium" onClick={onCopyLinkClick} />
+            )}
+          </TooltipTrigger>
+          <TextTooltip
+            anchorId="roominfo-copylink"
+            text="대화방 링크를 복사해서 친구에게 공유해보세요"
+          />
         </>
       </div>
     </div>

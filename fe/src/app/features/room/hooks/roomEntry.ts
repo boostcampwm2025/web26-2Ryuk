@@ -31,7 +31,7 @@ export function useRoomEntry(
 
   const runEntryFlow = async () => {
     const roomId = targetRoomId;
-    const userId = authStore.getState().userId;
+    const userId = authStore.getState().id;
     if (!roomId || !userId) return;
 
     const myRoomId = roomStore.getState().id;
@@ -82,7 +82,7 @@ export function useRoomEntry(
       entryInProgressRef.current = false;
     }
 
-    const userId = authStore.getState().userId;
+    const userId = authStore.getState().id;
     if (!userId) return;
 
     if (entryInProgressRef.current) return;

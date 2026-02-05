@@ -252,6 +252,13 @@ export class RoomRepository {
   }
 
   /**
+   * 사용자 참여 방 목록 Set을 Redis에서 삭제 (user:${userId}:rooms)
+   */
+  async deleteUserRoomsSet(userId: string): Promise<void> {
+    await this.redisClient.del(`user:${userId}:rooms`);
+  }
+
+  /**
    * 현재 참여자 수 조회
    */
   async getCurrentParticipants(roomId: string): Promise<number> {
@@ -367,24 +374,33 @@ export class RoomRepository {
   }
 
   /**
-   * 글로벌 채팅 최신 메시지 조회
-   */
-  async getGlobalChatRecents(roomId: string): Promise<any[]> {
-    try {
-      const recentsKey = `room:${roomId}:recents`;
-      const messages = await this.redisClient.lRange(recentsKey, 0, -1);
-      return messages.map((msg) => JSON.parse(msg));
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`글로벌 채팅 최신 메시지 조회 실패: ${errorMessage}`);
-      return [];
-    }
-  }
-
-  /**
    * 게임 관련 필드 조회
    */
   async getGameField(roomId: string, field: string): Promise<string | null> {
     return await this.redisClient.hGet(`room:${roomId}:game`, field);
+  }
+
+  // ==================== 블랙리스트 관리 ====================
+  /**
+   * 키 생성 헬퍼
+   */
+  private getBlacklistKey(roomId: string): string {
+    return `room:${roomId}:blacklist`;
+  }
+
+  /**
+   * 사용자를 블랙리스트에 추가
+   */
+  async addUserToBlacklist(roomId: string, userId: string): Promise<void> {
+    const blacklistKey = this.getBlacklistKey(roomId);
+    await this.redisClient.sAdd(blacklistKey, userId);
+  }
+
+  /**
+   * 사용자가 블랙리스트에 존재 여부 조회
+   */
+  async isUserInBlacklist(roomId: string, userId: string): Promise<boolean> {
+    const blacklistKey = this.getBlacklistKey(roomId);
+    return Boolean(await this.redisClient.sIsMember(blacklistKey, userId));
   }
 }

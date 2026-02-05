@@ -12,7 +12,11 @@ import { roomChatService } from '@/app/features/chat/services/RoomChatService';
 import { globalChatService } from '@/app/features/chat/services/GlobalChatService';
 import { gameService } from '@/app/features/game/services/GameService';
 import { authStore } from '@/app/features/user/stores/auth';
-import { RoomParticipantJoinData, RoomParticipantLeaveData } from '@/app/features/room/dtos/data';
+import {
+  RoomParticipantJoinData,
+  RoomParticipantLeaveData,
+  RoomParticipantUpdateData,
+} from '@/app/features/room/dtos/data';
 
 export function useRoom(roomId?: string): UseRoomResult {
   const { showSuccessToast, showErrorToast } = useToast();
@@ -21,9 +25,11 @@ export function useRoom(roomId?: string): UseRoomResult {
   const hasShownEnterToastRef = useRef(false);
   const prevRoomIdForToastRef = useRef<string>();
 
-  const myId = authStore((state) => state.userId);
+  const myId = authStore((state) => state.id);
+  const sessionRestored = authStore((state) => state.sessionRestored);
   const addParticipant = roomStore((state) => state.addParticipant);
   const removeParticipant = roomStore((state) => state.removeParticipant);
+  const updateRoom = roomStore((state) => state.updateRoom);
   const resetRoom = roomStore((state) => state.resetRoom);
 
   const currentRoomId = roomStore((s) => s.id);
@@ -42,13 +48,16 @@ export function useRoom(roomId?: string): UseRoomResult {
 
   const game = useGame(roomId);
 
-  // 입장 확정 후 채팅 및 게임 구독 (store와 URL 일치 시)
+  // 입장 확정 후 채팅 및 게임 구독 (store와 URL 일치 시).
+  // 세션 복구 후에만 연결해 비인증 WS 방지.
   useEffect(() => {
     const isEntered = entry.status === 'entered';
     if (!isEntered || !roomId) return;
 
     const storedRoomId = currentRoomId;
     if (storedRoomId !== roomId) return;
+
+    if (myId && !sessionRestored) return;
 
     //
     if (prevRoomIdForToastRef.current !== roomId) {
@@ -61,6 +70,7 @@ export function useRoom(roomId?: string): UseRoomResult {
 
     let unsubJoin: () => void;
     let unsubLeave: () => void;
+    let unsubUpdate: () => void;
 
     (async () => {
       await globalChatService.ensureConnected();
@@ -78,6 +88,20 @@ export function useRoom(roomId?: string): UseRoomResult {
         removeParticipant(data.user.id);
       });
 
+      unsubUpdate = roomChatService.onUpdate((data: RoomParticipantUpdateData) => {
+        updateRoom({
+          maxParticipants: data.maxParticipants,
+          currentParticipants: data.currentParticipants,
+          participants: data.participants,
+          title: data.title,
+          tags: data.tags,
+          hostId: data.hostId,
+          isMicAvailable: data.isMicAvailable,
+          isPrivate: data.isPrivate,
+          createDate: data.createDate,
+        });
+      });
+
       await gameService.subscribe(roomId);
     })();
 
@@ -90,8 +114,9 @@ export function useRoom(roomId?: string): UseRoomResult {
       cancelled = true;
       unsubJoin?.();
       unsubLeave?.();
+      unsubUpdate?.();
     };
-  }, [entry.status, entry.joinInfo, roomId, currentRoomId, myId]);
+  }, [entry.status, entry.joinInfo, roomId, currentRoomId, myId, sessionRestored]);
 
   useEffect(() => {
     const handleRoomRemoved = () => {

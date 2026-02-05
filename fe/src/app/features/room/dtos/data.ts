@@ -108,6 +108,19 @@ export type RoomParticipantLeaveData = {
   currentParticipants: number;
 };
 
+export type RoomParticipantUpdateData = {
+  roomId: string;
+  title: string;
+  tags: string[];
+  hostId: string;
+  currentParticipants: number;
+  maxParticipants: number;
+  participants: RoomParticipantData[];
+  isMicAvailable: boolean;
+  isPrivate: boolean;
+  createDate: Date;
+};
+
 export type RoomParticipantDeleteData = {
   roomId: string;
 };

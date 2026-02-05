@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { roomStore } from '@/app/features/room/stores/room';
 import { roomChatService } from '@/app/features/chat/services/RoomChatService';
 import { authStore } from '@/app/features/user/stores/auth';
+import { AuthService } from '@/app/features/user/services/AuthService';
 import roomService from '@/app/features/room/services/RoomService';
 import { voiceSessionManager } from '@/app/features/voice/services/VoiceSessionManager';
 
@@ -26,8 +27,11 @@ export default function RoomProvider({ children }: RoomProviderProps) {
 
       if (!isAuthHydrated || !isRoomHydrated) return;
 
-      const { isAuthenticated } = authStore.getState();
-      if (!isAuthenticated) return;
+      const hasAuthSession = Boolean(authStore.getState().id);
+      if (!hasAuthSession) return;
+
+      // 토큰이 없으면 아직 세션 복구(refresh) 전 → 나중에 onSessionRestored로 재시도
+      if (!AuthService.getAccessToken()) return;
 
       const storedRoomId = roomStore.getState().id;
       if (!storedRoomId) return;
@@ -41,6 +45,7 @@ export default function RoomProvider({ children }: RoomProviderProps) {
         const { roomId } = await roomService.getMyCurrentRoom();
         beRoomId = roomId;
       } catch {
+        hasRestored.current = false;
         roomStore.getState().resetRoom();
         roomChatService.clearSubscriptionOnly();
         voiceDeferredByRestoreRef.current = false;
@@ -48,6 +53,7 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       }
 
       if (!beRoomId) {
+        hasRestored.current = false;
         roomStore.getState().resetRoom();
         roomChatService.clearSubscriptionOnly();
         voiceDeferredByRestoreRef.current = false;
@@ -55,6 +61,7 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       }
 
       if (storedRoomId !== beRoomId) {
+        hasRestored.current = false;
         roomStore.getState().resetRoom();
         roomChatService.clearSubscriptionOnly();
         voiceDeferredByRestoreRef.current = false;
@@ -65,6 +72,9 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       voiceSessionManager.start(beRoomId);
       voiceDeferredByRestoreRef.current = false;
     };
+
+    // 세션 복구 직후(WebSocket 연결 후) 방 복원 시도
+    AuthService.setOnSessionRestored(restoreRoomConnection);
 
     // 이미 hydration 완료된 경우
     restoreRoomConnection();
@@ -77,18 +87,28 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       if (!roomStore.persist.hasHydrated()) {
         const unsubRoom = roomStore.persist.onFinishHydration(restoreRoomConnection);
         return () => {
+          AuthService.setOnSessionRestored(null);
           unsubAuth();
           unsubRoom();
         };
       }
 
-      return unsubAuth;
+      return () => {
+        AuthService.setOnSessionRestored(null);
+        unsubAuth();
+      };
     }
 
     // RoomStore hydration 완료 대기
     if (!roomStore.persist.hasHydrated()) {
-      return roomStore.persist.onFinishHydration(restoreRoomConnection);
+      const unsubRoom = roomStore.persist.onFinishHydration(restoreRoomConnection);
+      return () => {
+        AuthService.setOnSessionRestored(null);
+        unsubRoom();
+      };
     }
+
+    return () => AuthService.setOnSessionRestored(null);
   }, []);
 
   // 음성 세션

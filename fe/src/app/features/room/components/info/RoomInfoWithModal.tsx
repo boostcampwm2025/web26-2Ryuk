@@ -31,7 +31,7 @@ export default function RoomInfoWithModal({
   maxParticipants = 2,
 }: RoomInfoWithModalProps) {
   const { openModal, closeModal } = useModal();
-  const { showSuccessToast } = useToast();
+  const { showSuccessToast, showErrorToast } = useToast();
   const isJoined = Boolean(roomStore((state) => state.id));
   const { isConnected } = useRoomChat(roomId, isJoined);
 
@@ -65,6 +65,44 @@ export default function RoomInfoWithModal({
     isPrivate,
   };
 
+  const copyUrlToClipboard = async (url: string) => {
+    const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+
+    if (clipboard?.writeText) {
+      await clipboard.writeText(url);
+      return;
+    }
+
+    if (typeof document === 'undefined' || !document.body) {
+      throw new Error('clipboard not available');
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = url;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    if (!successful) {
+      throw new Error('clipboard fallback failed');
+    }
+  };
+
+  const handleCopyLinkClick = async () => {
+    if (typeof window === 'undefined') {
+      showErrorToast('현재 브라우저에서는 링크를 복사할 수 없어요.');
+      return;
+    }
+    await copyUrlToClipboard(window.location.href);
+    showSuccessToast('대화방 링크가 복사되었습니다!');
+  };
+
   return (
     <>
       <RoomInfo
@@ -74,6 +112,7 @@ export default function RoomInfoWithModal({
         isMicAvailable={isMicAvailable}
         isPrivate={isPrivate}
         onEditClick={handleEditClick}
+        onCopyLinkClick={handleCopyLinkClick}
         isConnected={isConnected}
       />
       <Modal id={modalId}>

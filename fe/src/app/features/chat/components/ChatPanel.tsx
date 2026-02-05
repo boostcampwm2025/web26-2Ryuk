@@ -200,7 +200,7 @@ export default function ChatPanel({
     requestAnimationFrame(scrollToBottom);
   };
 
-  const isAuthenticated = authStore((s) => s.isAuthenticated);
+  const isAuthenticated = Boolean(authStore((state) => state.id));
 
   const className = CSSUtil.buildCls(
     styles.chatPanel,
