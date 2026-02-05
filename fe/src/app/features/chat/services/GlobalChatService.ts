@@ -8,7 +8,6 @@ import { WebSocketService } from '@/app/services/websocket.service';
 import { authStore } from '@/app/features/user/stores/auth';
 import * as callback from './type';
 import { chatPanelStore } from '@/app/features/chat/stores/chatPanel';
-import { toastStore } from '@/app/components/shared/toast/toast.store';
 
 export class GlobalChatService implements callback.ChatChannel {
   private messageCallbacks: Set<callback.MessageCallback> = new Set();
@@ -176,7 +175,6 @@ export class GlobalChatService implements callback.ChatChannel {
       this.notifyParticipants(this.currentParticipants);
     };
     const onInit = (dto: chatDto.GlobalChatInitDto) => this.handleGlobalChatInit(dto);
-    const onError = (error: any) => this.handleError(error);
 
     this.connectionHandlers.push(
       { event: wsEvents.WS_EVENTS.CONNECT, handler: onConnect },
@@ -184,7 +182,6 @@ export class GlobalChatService implements callback.ChatChannel {
       { event: wsEvents.WS_EVENTS.CHAT_GLOBAL_NEW_MESSAGE, handler: onMessage },
       { event: wsEvents.WS_EVENTS.CHAT_GLOBAL_PARTICIPANTS_UPDATED, handler: onParticipants },
       { event: wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT, handler: onInit },
-      { event: wsEvents.WS_EVENTS.ERROR, handler: onError },
     );
 
     this.connectionHandlers.forEach(({ event, handler }) => {
@@ -217,20 +214,6 @@ export class GlobalChatService implements callback.ChatChannel {
 
     this.notifyInit(this.currentParticipants, this.messages);
     this.notifyParticipants(this.currentParticipants);
-  }
-
-  private handleError(error: any): void {
-    console.error('[GlobalChatService] WebSocket error:', error);
-
-    // 모든 웹소켓 에러 토스트 메시지
-    let message = '오류가 발생했습니다.'; // 기본 메시지
-    if (typeof error === 'string') {
-      message = error;
-    } else if (typeof error === 'object' && error !== null && typeof error.message === 'string') {
-      message = error.message;
-    }
-
-    toastStore.getState().showErrorToast(message);
   }
 
   private notifyMessage(message: chatData.ChatReceiveData): void {

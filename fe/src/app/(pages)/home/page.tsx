@@ -14,7 +14,7 @@ const defaultGameId = GAMES.BEAKER.ID;
 async function getRooms(): Promise<RoomData[]> {
   try {
     const res = await fetch(`${INTERNAL_API_BASE}/rooms/all`, {
-      next: { revalidate: 10 }, // 10초마다 재검증
+      next: { revalidate: 0 }, // 매 요청마다 재검증
     });
     if (!res.ok) return [];
     const data = await res.json();
@@ -30,7 +30,7 @@ async function getGameRecords(): Promise<GameRecordListData> {
   const emptyData = { total: 0, page: 1, podium: [], rankings: [] };
   try {
     const res = await fetch(`${INTERNAL_API_BASE}/game-records/${defaultGameId}?page=1&limit=3`, {
-      next: { revalidate: 10 }, // 10초마다 재검증
+      next: { revalidate: 0 },
     });
     if (!res.ok) return emptyData;
     const data = await res.json();
