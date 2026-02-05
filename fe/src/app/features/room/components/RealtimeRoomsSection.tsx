@@ -21,11 +21,11 @@ import { authStore } from '@/app/features/user/stores/auth';
 import { useToast } from '@/app/components/shared/toast/useToast';
 import { TextTooltip, TooltipTrigger } from '@/app/components/shared/tooltip/TextTooltip';
 
-export default function RealtimeRoomsSection({ initialRooms }: { initialRooms: RoomData[] }) {
+export default function RealtimeRoomsSection() {
   const { isDesktop } = useResponsive();
   const { gotoRoom } = useNavigation();
   const { closeModal } = useModal();
-  const [rooms, setRooms] = useState<RoomData[]>(initialRooms);
+  const [rooms, setRooms] = useState<RoomData[]>([]);
   const { showSuccessToast } = useToast();
   const roomId = roomStore((state) => state.id);
   const replaceRoom = roomStore((state) => state.replaceRoom);
@@ -38,6 +38,10 @@ export default function RealtimeRoomsSection({ initialRooms }: { initialRooms: R
     const roomsData = roomsDto.rooms.map(RoomConverter.toData);
     setRooms(roomsData);
   }, []);
+
+  useEffect(() => {
+    loadRooms();
+  }, [loadRooms]);
 
   const handleSearch = async (query: string) => {
     const roomsDto = await roomService.searchRooms(query);

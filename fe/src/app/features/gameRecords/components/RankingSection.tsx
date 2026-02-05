@@ -10,15 +10,14 @@ import GAMES from '@/app/shared/constant';
 import { gameRecordService } from '@/app/features/game/services/GameRecordService';
 import { GameRecordConverter } from '@/app/features/gameRecords/dtos/converter';
 import { GamePlayerResultItemData } from '@/app/features/game/dtos/data';
-import { GameRecordListData } from '../dtos/data';
 import useNavigation from '@/app/hooks/useNavigation';
 
 const defaultGameId = GAMES.BEAKER.ID;
 const gameMetaList = [GAMES.BEAKER, GAMES.REFLEX];
 
-export default function RankingSection({ initialRanking }: { initialRanking: GameRecordListData }) {
+export default function RankingSection() {
   const [selectedGameId, setSelectedGameId] = useState(defaultGameId);
-  const [podium, setPodium] = useState<GamePlayerResultItemData[]>(initialRanking.podium);
+  const [podium, setPodium] = useState<GamePlayerResultItemData[]>([]);
   const { gotoRanking } = useNavigation();
 
   const fetchPodium = async (gameId: string) => {
@@ -29,12 +28,8 @@ export default function RankingSection({ initialRanking }: { initialRanking: Gam
 
   // 사용자 상호 작용 시 새 데이터를 가져옴
   useEffect(() => {
-    if (selectedGameId === defaultGameId) {
-      setPodium(initialRanking.podium);
-    } else {
-      fetchPodium(selectedGameId);
-    }
-  }, [selectedGameId, initialRanking]);
+    fetchPodium(selectedGameId);
+  }, [selectedGameId]);
 
   const selectedGameTitle = useMemo(() => {
     const entry = gameMetaList.find((game) => game.ID === selectedGameId);
