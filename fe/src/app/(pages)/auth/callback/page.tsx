@@ -15,7 +15,14 @@ export default function AuthCallbackPage() {
       } catch {
         AuthService.logout({ skipApi: true });
       } finally {
-        router.replace(ROUTES.HOME);
+        // 1순위: 백엔드가 OAuth state 로 전달한 query param
+        const queryRedirect = new URLSearchParams(window.location.search).get('redirect');
+        // 2순위: 프론트에서 OAuth 전 저장한 sessionStorage
+        const storageRedirect = sessionStorage.getItem('auth-redirect');
+        sessionStorage.removeItem('auth-redirect');
+
+        const redirectPath = queryRedirect || storageRedirect || ROUTES.HOME;
+        router.replace(redirectPath);
       }
     };
 
