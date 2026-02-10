@@ -5,6 +5,7 @@ import { UseGameResult } from '@/app/features/game/hooks/type';
 export type RoomEntryStatus =
   | 'idle'
   | 'checking'
+  | 'need-login'
   | 'need-password'
   | 'entered'
   | 'failed'

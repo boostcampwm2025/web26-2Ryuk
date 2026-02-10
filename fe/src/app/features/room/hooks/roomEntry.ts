@@ -23,6 +23,8 @@ export function useRoomEntry(
   const [status, setStatus] = useState<RoomEntryStatus>('idle');
   const [joinInfo, setJoinInfo] = useState<RoomJoinInfoData | null>(null);
 
+  const authInitDone = authStore((s) => s.authInitDone);
+
   const callbacksRef = useRef(callbacks);
   callbacksRef.current = callbacks;
 
@@ -83,13 +85,14 @@ export function useRoomEntry(
     }
 
     const userId = authStore.getState().id;
-    if (!userId) return;
+
+    if (!userId && authInitDone) return setStatus('need-login');
 
     if (entryInProgressRef.current) return;
     entryInProgressRef.current = true;
 
     runEntryFlow();
-  }, [targetRoomId]);
+  }, [targetRoomId, authInitDone]);
 
   const confirmEntryWithPassword = async (password: string) => {
     if (!targetRoomId || status !== 'need-password') return;

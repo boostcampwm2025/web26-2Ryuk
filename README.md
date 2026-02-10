@@ -1,16 +1,28 @@
 <!-- Hero -->
 <img width="2544" alt="hero" src="https://github.com/user-attachments/assets/dd8fbb81-311b-4873-88c9-45ac8f3cebad" />
 
-<br />
+<br clear="both" />
+<br clear="both" />
+<br clear="both" />
 
-<br clear="left" />
+<div align="center">
+  <a href="https://moolbangwool.duckdns.org/home">
+    <img width="200" height="80" alt="service-button" src="https://github.com/user-attachments/assets/a19fc81e-ddef-44fe-8f60-f1f7d8901c7a" />
+  </a>
+  <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+  <a href="https://rapid-bubble-113.notion.site/TEAM-2Ryuk-2c3207f2334180df9885fc1c9faaffd6?pvs=74">
+    <img width="200" height="80" alt="notion-button" src="https://github.com/user-attachments/assets/5857b2b4-6ab2-401b-a714-90eb819428c0" />
+  </a>
+  <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+  <a href="https://github.com/boostcampwm2025/web26-2Ryuk/wiki">
+    <img width="200" height="80" alt="wiki-button" src="https://github.com/user-attachments/assets/9c269c30-4e5a-420a-aa72-c28e50e6401b" />
+  </a>
+</div>
 
-<div align="right">배포 링크 :<a target="_blank" href="https://moolbangwool.duckdns.org/home"><img align="right" width="30px" height="30px" src="https://github.com/user-attachments/assets/851d6c4e-b85b-47cd-88b0-c76cfdf60234" alt="mbwt-logo" /></a></div>
-
-<br clear="left" />
-
-<div align="right">노션 링크 :<a target="_blank" href="https://rapid-bubble-113.notion.site/TEAM-2Ryuk-2c3207f2334180df9885fc1c9faaffd6?pvs=74"><img align="right" width="30px" height="30px" src="https://github.com/user-attachments/assets/f63634c7-3e11-4d86-9d8b-aad34d3eee17" alt="notion-icon" /></a></div>
-
+<br clear="both" />
+<br clear="both" />
+<br clear="both" />
+<br clear="both" />
 <br clear="both" />
 <br clear="both" />
 

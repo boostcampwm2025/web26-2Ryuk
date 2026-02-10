@@ -6,67 +6,46 @@ import { useFloatingWidget } from './useFloatingWidget';
 import CSSUtil from '@/utils/css';
 import styles from './floatingWidget.module.css';
 
-const FloatingWidget = forwardRef<FloatingWidgetHandle, FloatingWidgetProps>(
-  (
-    {
-      children,
-      initialPosition,
-      dragHandleId,
-      onActivate,
-      elevated,
-      onUserDragEnd,
-      onSystemAdjust,
-      onViewportAdjust,
-    },
+const FloatingWidget = forwardRef<FloatingWidgetHandle, FloatingWidgetProps>((props, ref) => {
+  const floating = useFloatingWidget({ ...props });
+
+  const className = CSSUtil.buildCls(
+    styles.floatingWidget,
+    floating.isDragging && styles.dragging,
+    floating.isTransitioning && styles.transitioning,
+    props.elevated && styles.elevated,
+  );
+
+  const style = {
+    '--widget-x': `${floating.position.x}px`,
+    '--widget-y': `${floating.position.y}px`,
+  } as CSSProperties;
+
+  const handleMouseDownWithActivate = (e: React.MouseEvent) => {
+    props.onActivate?.();
+    floating.handleMouseDown(e);
+  };
+
+  useImperativeHandle(
     ref,
-  ) => {
-    const {
-      widgetRef,
-      handleMouseDown,
-      position,
-      isDragging,
-      isTransitioning,
-      ensureInBounds,
-      moveTo,
-    } = useFloatingWidget({
-      initialPosition,
-      dragHandleId,
-      onUserDragEnd,
-      onSystemAdjust,
-      onViewportAdjust,
-    });
+    () => ({
+      ensureInBounds: floating.ensureInBounds,
+      moveTo: floating.moveTo,
+    }),
+    [floating.ensureInBounds, floating.moveTo],
+  );
 
-    const className = CSSUtil.buildCls(
-      styles.floatingWidget,
-      isDragging && styles.dragging,
-      isTransitioning && styles.transitioning,
-      elevated && styles.elevated,
-    );
-
-    const style = {
-      '--widget-x': `${position.x}px`,
-      '--widget-y': `${position.y}px`,
-    } as CSSProperties;
-
-    const handleMouseDownWithActivate = (e: React.MouseEvent) => {
-      onActivate?.();
-      handleMouseDown(e);
-    };
-
-    useImperativeHandle(ref, () => ({ ensureInBounds, moveTo }), [ensureInBounds, moveTo]);
-
-    return (
-      <div
-        ref={widgetRef}
-        className={className}
-        style={style}
-        onMouseDown={handleMouseDownWithActivate}
-      >
-        {children}
-      </div>
-    );
-  },
-);
+  return (
+    <div
+      ref={floating.widgetRef}
+      className={className}
+      style={style}
+      onMouseDown={handleMouseDownWithActivate}
+    >
+      {props.children}
+    </div>
+  );
+});
 
 FloatingWidget.displayName = 'FloatingWidget';
 
