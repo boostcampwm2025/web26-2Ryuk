@@ -5,6 +5,11 @@ import { AuthService } from '@/app/features/user/services/AuthService';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+export type HttpRequestOptions = {
+  /** true 이면 서버 컴포넌트용 경량 요청 (인증·토스트·리프레시 없음) */
+  server?: boolean;
+};
+
 export function isApiResponse(value: unknown): value is ApiResponse {
   return (
     typeof value === 'object' &&
@@ -35,9 +40,7 @@ export class HttpService {
       credentials: 'include',
     };
 
-    if (!IS.nil(body)) {
-      requestInit.body = JSON.stringify(body);
-    }
+    if (!IS.nil(body)) requestInit.body = JSON.stringify(body);
 
     const response = await fetch(url, requestInit);
     const isRefreshRequest = url.includes('/auth/refresh');
@@ -101,23 +104,57 @@ export class HttpService {
     return parsed;
   }
 
-  static async get<T>(url: string): Promise<T> {
+  private static async serverRequest<T>(
+    url: string,
+    method: HttpMethod,
+    body?: unknown,
+  ): Promise<T> {
+    const baseUrl = process.env.NEXT_PUBLIC_API_SERVER_URL;
+    const absoluteUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+
+    const requestInit: RequestInit = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    };
+
+    if (!IS.nil(body)) requestInit.body = JSON.stringify(body);
+
+    const response = await fetch(absoluteUrl, requestInit);
+
+    if (!response.ok) {
+      throw new Error(`Server request failed: ${response.status}`);
+    }
+
+    if (response.status === 204) {
+      return { success: true, message: 'No Content' } as T;
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  static async get<T>(url: string, options?: HttpRequestOptions): Promise<T> {
+    if (options?.server) return this.serverRequest<T>(url, 'GET');
     return this.request<T>(url, 'GET');
   }
 
-  static async post<T>(url: string, data?: unknown): Promise<T> {
+  static async post<T>(url: string, data?: unknown, options?: HttpRequestOptions): Promise<T> {
+    if (options?.server) return this.serverRequest<T>(url, 'POST', data);
     return this.request<T>(url, 'POST', data);
   }
 
-  static async put<T>(url: string, data?: unknown): Promise<T> {
+  static async put<T>(url: string, data?: unknown, options?: HttpRequestOptions): Promise<T> {
+    if (options?.server) return this.serverRequest<T>(url, 'PUT', data);
     return this.request<T>(url, 'PUT', data);
   }
 
-  static async patch<T>(url: string, data?: unknown): Promise<T> {
+  static async patch<T>(url: string, data?: unknown, options?: HttpRequestOptions): Promise<T> {
+    if (options?.server) return this.serverRequest<T>(url, 'PATCH', data);
     return this.request<T>(url, 'PATCH', data);
   }
 
-  static async delete<T>(url: string): Promise<T> {
+  static async delete<T>(url: string, options?: HttpRequestOptions): Promise<T> {
+    if (options?.server) return this.serverRequest<T>(url, 'DELETE');
     return this.request<T>(url, 'DELETE');
   }
 }

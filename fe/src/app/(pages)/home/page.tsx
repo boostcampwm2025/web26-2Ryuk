@@ -1,30 +1,16 @@
-'use client';
+import { SEO, PAGE_META, buildMetadata } from '@/app/meta';
+import HomeContent from './HomeContent';
 
-import '@/app/page.css';
-import HeroSection from '@/app/components/layout/heroSection/HeroSection';
-import RealtimeRoomsSection from '@/app/features/room/components/RealtimeRoomsSection';
-import styles from './page.module.css';
-import useResponsive from '@/app/hooks/useResponsive';
-import GlobalChatPanel from '@/app/features/chat/components/GlobalChatPanel';
-import RankingSection from '@/app/features/gameRecords/components/RankingSection';
+const { title, description, ogDescription } = PAGE_META.home;
+
+export const metadata = buildMetadata({
+  title,
+  description,
+  ogDescription,
+  url: `${SEO.siteUrl}/home`,
+  canonical: `${SEO.siteUrl}/home`,
+});
 
 export default function HomePage() {
-  const { status } = useResponsive();
-
-  return (
-    <div className={styles[status]}>
-      <div className="content">
-        <div className={styles.contentWrapper}>
-          <div className={styles.topSection}>
-            <HeroSection />
-            <div className={styles.sideWidgets}>
-              <RankingSection />
-            </div>
-          </div>
-          <RealtimeRoomsSection />
-        </div>
-      </div>
-      <GlobalChatPanel />
-    </div>
-  );
+  return <HomeContent />;
 }

@@ -1,4 +1,4 @@
-import { HttpService } from '@/app/services/http.service';
+import { HttpService, HttpRequestOptions } from '@/app/services/http.service';
 import { API_BASE } from '@/app/services/api.constants';
 import {
   RoomDto,
@@ -62,9 +62,9 @@ export class RoomService {
    * 방 입장 정보 조회
    * GET /api/rooms/:roomId/join
    */
-  async getRoomJoinInfo(roomId: string): Promise<RoomJoinInfoDto> {
+  async getRoomJoinInfo(roomId: string, options?: HttpRequestOptions): Promise<RoomJoinInfoDto> {
     const uri = `${API_BASE}/rooms/${roomId}/join`;
-    const response = await HttpService.get<ApiResponse<RoomJoinInfoDto>>(uri);
+    const response = await HttpService.get<ApiResponse<RoomJoinInfoDto>>(uri, options);
     if (!response.success || !response.data) throw new Error(response.message);
     return response.data;
   }

@@ -1,110 +1,42 @@
-'use client';
+import type { Metadata } from 'next';
+import { SEO, PAGE_META, buildMetadata } from '@/app/meta';
+import roomService from '@/app/features/room/services/RoomService';
+import RoomContent from './RoomContent';
 
-import useResponsive from '@/app/hooks/useResponsive';
-import '@/app/page.css';
-import styles from './page.module.css';
-import RoomInfoWithModal from '@/app/features/room/components/info/RoomInfoWithModal';
-import RoomTextChat from '@/app/features/room/components/chat/RoomTextChat';
-import RoomVoiceChat from '@/app/features/room/components/chat/RoomVoiceChat';
-import PasswordAuthDialog from '@/app/features/room/components/PasswordAuthDialog';
-import LeaveRoomButtonWithModal from '@/app/features/room/components/LeaveRoomButtonWithModal';
-import DeleteRoomButtonWithModal from '@/app/features/room/components/DeleteRoomButtonWithModal';
-import GameStartButton from '@/app/features/room/components/GameStartButton';
-import { useParams } from 'next/navigation';
-import { useRoom } from '@/app/features/room/hooks/room';
-import Modal from '@/app/components/shared/modal/Modal';
-import GameReadyModalContent from '@/app/features/room/components/ready/GameReadyModalContent';
-import useNavigation from '@/app/hooks/useNavigation';
-import { authStore } from '@/app/features/user/stores/auth';
-import { roomStore } from '@/app/features/room/stores/room';
+type RoomPageProps = {
+  params: Promise<{ roomId: string }>;
+};
+
+export async function generateMetadata({ params }: RoomPageProps): Promise<Metadata> {
+  const { roomId } = await params;
+
+  let room: { title: string; tags: string[] } | null = null;
+  try {
+    room = await roomService.getRoomJoinInfo(roomId, { server: true });
+  } catch {
+    /* 조회 실패 시 fallback 메타데이터 사용 */
+  }
+
+  const { fallback } = PAGE_META.room;
+
+  if (!room) {
+    return buildMetadata({
+      title: fallback.title,
+      description: fallback.description,
+      ogTitle: fallback.ogTitle,
+      ogDescription: fallback.ogDescription,
+    });
+  }
+
+  const title = PAGE_META.room.title(room.title);
+  const ogTitle = PAGE_META.room.ogTitle(room.title);
+  const tags = room.tags.length > 0 ? room.tags.map((t) => `#${t}`).join(' ') : '';
+  const description = PAGE_META.room.description(room.title, tags);
+  const url = `${SEO.siteUrl}/room/${roomId}`;
+
+  return buildMetadata({ title, description, ogTitle, url });
+}
 
 export default function RoomPage() {
-  const params = useParams();
-  const roomId = params.roomId as string;
-
-  const myId = authStore((s) => s.id);
-  const { status } = useResponsive();
-
-  const { entry, game } = useRoom(roomId);
-  const storedHostId = roomStore((state) => state.hostId);
-  const storedTitle = roomStore((state) => state.title);
-  const storedTags = roomStore((state) => state.tags);
-  const storedIsMicAvailable = roomStore((state) => state.isMicAvailable);
-  const storedIsPrivate = roomStore((state) => state.isPrivate);
-  const storedMaxParticipants = roomStore((state) => state.maxParticipants);
-
-  const {
-    isGameRecruiting,
-    myStatus,
-    gamePlayers,
-    selectedGame,
-    handleGameRecruit,
-    handleGameJoin,
-    handleReadyChange,
-    handleLeaveGame,
-    handleCloseGame,
-    handleGameStartButtonClick,
-  } = game;
-
-  const { gotoRoomGameList } = useNavigation();
-
-  const isHost = storedHostId === myId;
-  const isGameButtonEnabled = isHost || isGameRecruiting;
-
-  return (
-    <>
-      {isHost ? <DeleteRoomButtonWithModal /> : <LeaveRoomButtonWithModal />}
-
-      <div className={styles[status]}>
-        <div className="content">
-          <div className={styles.content}>
-            <div className={styles.left}>
-              <RoomInfoWithModal
-                roomId={roomId}
-                title={storedTitle ?? entry.joinInfo?.title}
-                tags={storedTags ?? entry.joinInfo?.tags}
-                isHost={isHost}
-                isMicAvailable={storedIsMicAvailable ?? entry.joinInfo?.isMicAvailable}
-                isPrivate={storedIsPrivate ?? entry.joinInfo?.isPrivate}
-                maxParticipants={storedMaxParticipants}
-              />
-              <RoomTextChat />
-            </div>
-
-            <div className={styles.right}>
-              <RoomVoiceChat />
-              <GameStartButton
-                disabled={!isGameButtonEnabled}
-                onClick={isHost ? handleGameRecruit : handleGameJoin}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <PasswordAuthDialog
-        isOpen={entry.isPasswordModalOpen}
-        onConfirm={entry.confirmEntryWithPassword}
-        onCancel={entry.cancelPasswordEntry}
-      />
-
-      <Modal
-        id="game-ready"
-        key={roomId}
-        closeOnBackdropClick={false}
-        showCloseButton
-        onClose={isHost ? handleCloseGame : handleLeaveGame}
-      >
-        <GameReadyModalContent
-          myStatus={myStatus}
-          players={gamePlayers}
-          maxPlayers={storedMaxParticipants}
-          selectedGame={selectedGame}
-          onChangeGame={() => roomId && gotoRoomGameList(roomId)}
-          onReadyChange={handleReadyChange}
-          onStart={handleGameStartButtonClick}
-        />
-      </Modal>
-    </>
-  );
+  return <RoomContent />;
 }
