@@ -1,22 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  Position,
-  UseFloatingWidgetProps,
-  UseFloatingWidgetReturn,
-  type EnsureInBoundsOptions,
-  type MoveToOptions,
-} from './type';
-import {
-  calculateBoundedPosition,
-  calculateUnboundedPosition,
-  getInitialPosition,
-  isDragHandleElement,
-} from './util';
+import * as type from './type';
+import * as util from './util';
 import IS from '@/utils/is';
 
-const DEFAULT_POSITION = { x: 2000, y: 2000 };
+const OFFSCREEN_POSITION: type.Position = { x: 2000, y: 2000 };
 
 export function useFloatingWidget({
   initialPosition,
@@ -24,72 +13,72 @@ export function useFloatingWidget({
   onUserDragEnd,
   onSystemAdjust,
   onViewportAdjust,
-}: UseFloatingWidgetProps): UseFloatingWidgetReturn {
-  const [position, setPosition] = useState<Position>(initialPosition ?? DEFAULT_POSITION);
-  const positionRef = useRef<Position>(position);
-  positionRef.current = position;
-  const onUserDragEndRef = useRef(onUserDragEnd);
-  const onSystemAdjustRef = useRef(onSystemAdjust);
-  const onViewportAdjustRef = useRef(onViewportAdjust);
-  onUserDragEndRef.current = onUserDragEnd;
-  onSystemAdjustRef.current = onSystemAdjust;
-  onViewportAdjustRef.current = onViewportAdjust;
-  const [isDragging, setIsDragging] = useState(false);
-  const hasDraggedRef = useRef(false);
-  const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
-  const [isTransitioning, setIsTransitioning] = useState(false);
+}: type.UseFloatingWidgetProps): type.UseFloatingWidgetReturn {
   const widgetRef = useRef<HTMLDivElement>(null);
 
-  const moveTo = useCallback((pos: Position, options?: MoveToOptions) => {
-    setPosition({ ...pos });
-    if (options?.animate) setIsTransitioning(true);
-  }, []);
+  const [position, setPosition] = useState<type.Position>(initialPosition ?? OFFSCREEN_POSITION);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState<type.Position>({ x: 0, y: 0 });
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const ensureInBounds = useCallback(
-    (options?: EnsureInBoundsOptions) => {
-      if (!widgetRef.current || isDragging || isTransitioning) return;
+  const positionRef = useRef(position);
+  positionRef.current = position;
 
-      const widgetRect = widgetRef.current.getBoundingClientRect();
-      const currentPosition = { x: widgetRect.left, y: widgetRect.top };
-      const boundedPosition = calculateBoundedPosition(
-        currentPosition,
-        widgetRect.width,
-        widgetRect.height,
-      );
-      const needsCorrection =
-        currentPosition.x !== boundedPosition.x || currentPosition.y !== boundedPosition.y;
+  // 클릭과 드래그를 구분
+  const hasDraggedRef = useRef(false);
 
-      if (!needsCorrection) return;
-      setIsTransitioning(true);
-      setPosition(boundedPosition);
-      if (options?.persistCorrected) {
-        onViewportAdjustRef.current?.(boundedPosition);
-      } else {
-        onSystemAdjustRef.current?.(boundedPosition);
-      }
-    },
-    [isDragging, isTransitioning],
-  );
+  // 외부 콜백의 stale closure 방지
+  const callbacksRef = useRef({ onUserDragEnd, onSystemAdjust, onViewportAdjust });
+  callbacksRef.current = { onUserDragEnd, onSystemAdjust, onViewportAdjust };
 
   useEffect(() => {
-    if (!IS.nil(initialPosition)) return setPosition(initialPosition!);
+    if (!IS.nil(initialPosition)) return setPosition(initialPosition);
     if (!widgetRef.current) return;
 
     requestAnimationFrame(() => {
       if (!widgetRef.current) return;
-      const pos = getInitialPosition(widgetRef.current);
+      const pos = util.getInitialPosition(widgetRef.current);
       setPosition(pos);
-      onViewportAdjustRef.current?.(pos);
+      callbacksRef.current.onViewportAdjust?.(pos);
     });
   }, [initialPosition]);
 
+  // 외부에서 위치를 직접 이동
+  const moveTo = useCallback((pos: type.Position, options?: type.MoveToOptions) => {
+    setPosition({ ...pos });
+    if (options?.animate) setIsTransitioning(true);
+  }, []);
+
+  // 화면 밖으로 나간 경우 위치 보정
+  const ensureInBounds = useCallback(
+    (options?: type.EnsureInBoundsOptions) => {
+      if (!widgetRef.current) return;
+      if (isDragging || isTransitioning) return;
+
+      const rect = widgetRef.current.getBoundingClientRect();
+      const current = { x: rect.left, y: rect.top };
+      const bounded = util.calculateBoundedPosition(current, rect.width, rect.height);
+
+      // 위치 보정 필요 여부
+      if (current.x === bounded.x && current.y === bounded.y) return;
+
+      setIsTransitioning(true);
+      setPosition(bounded);
+
+      // 위치 보정 외부 콜백 호출
+      if (options?.persistCorrected) callbacksRef.current.onViewportAdjust?.(bounded);
+      else callbacksRef.current.onSystemAdjust?.(bounded);
+    },
+    [isDragging, isTransitioning],
+  );
+
+  // 드래그 시작 했을 때
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (dragHandleId) {
         const target = e.target as HTMLElement;
-        if (!isDragHandleElement(target, widgetRef, dragHandleId)) return;
+        if (!util.isDragHandleElement(target, widgetRef, dragHandleId)) return;
       }
-
       if (!widgetRef.current) return;
 
       const rect = widgetRef.current.getBoundingClientRect();
@@ -101,47 +90,50 @@ export function useFloatingWidget({
     [dragHandleId],
   );
 
+  // 드래그 중일 때
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!widgetRef.current) return;
       hasDraggedRef.current = true;
-      const next = calculateUnboundedPosition(e.clientX, e.clientY, dragOffset);
+
+      const next = util.calculateUnboundedPosition(e.clientX, e.clientY, dragOffset);
       positionRef.current = next;
       setPosition(next);
     },
     [dragOffset],
   );
 
+  // 드래그 종료 했을 때
   const handleMouseUp = useCallback(() => {
-    const dropPosition = { ...positionRef.current };
+    const finalPosition = { ...positionRef.current };
     const didMove = hasDraggedRef.current;
+
     setIsDragging(false);
     if (!didMove) return;
+
     if (!widgetRef.current) {
-      onUserDragEndRef.current?.(dropPosition);
+      callbacksRef.current.onUserDragEnd?.(finalPosition);
       return;
     }
 
-    const widgetRect = widgetRef.current.getBoundingClientRect();
-    const boundedPosition = calculateBoundedPosition(
-      dropPosition,
-      widgetRect.width,
-      widgetRect.height,
-    );
-    const needsCorrection =
-      dropPosition.x !== boundedPosition.x || dropPosition.y !== boundedPosition.y;
+    const rect = widgetRef.current.getBoundingClientRect();
+    const bounded = util.calculateBoundedPosition(finalPosition, rect.width, rect.height);
 
-    if (needsCorrection) {
-      setIsTransitioning(true);
-      setPosition(boundedPosition);
-      onUserDragEndRef.current?.(boundedPosition);
-    } else {
-      onUserDragEndRef.current?.(dropPosition);
+    // 위치 보정 필요 여부
+    if (finalPosition.x === bounded.x && finalPosition.y === bounded.y) {
+      callbacksRef.current.onUserDragEnd?.(finalPosition);
+      return;
     }
+
+    setIsTransitioning(true);
+    setPosition(bounded);
+    callbacksRef.current.onUserDragEnd?.(bounded);
   }, []);
 
+  // 드래그 중일 때 이벤트 리스너
   useEffect(() => {
     if (!isDragging) return;
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
 
@@ -151,16 +143,14 @@ export function useFloatingWidget({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // 애니메이션 종료 감지
   useEffect(() => {
     if (!isTransitioning || !widgetRef.current) return;
 
-    const handleTransitionEnd = () => setIsTransitioning(false);
-    widgetRef.current.addEventListener('transitionend', handleTransitionEnd);
+    const handleEnd = () => setIsTransitioning(false);
+    widgetRef.current.addEventListener('transitionend', handleEnd);
 
-    return () => {
-      if (!widgetRef.current) return;
-      widgetRef.current.removeEventListener('transitionend', handleTransitionEnd);
-    };
+    return () => widgetRef.current?.removeEventListener('transitionend', handleEnd);
   }, [isTransitioning]);
 
   return {

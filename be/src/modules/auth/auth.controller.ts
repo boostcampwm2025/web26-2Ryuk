@@ -8,6 +8,7 @@ import { BypassTransform } from '@src/common/decorators/bypass-transform.decorat
 import { ConfigService } from '@nestjs/config';
 import { JwtRefreshGuard } from './jwt-refresh.guard';
 import { buildRefreshCookieOptions } from '@src/common/utils/refresh.utils';
+import { GithubOAuthGuard, GoogleOAuthGuard } from './oauth-redirect.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -18,22 +19,23 @@ export class AuthController {
 
   // GitHub OAuth 로그인 라우트
   @Get('github')
-  @UseGuards(AuthGuard('github'))
+  @UseGuards(GithubOAuthGuard)
   async githubAuth() {
     // Guard redirects
   }
 
-  // GithHub OAuth 콜백 라우트
+  // GitHub OAuth 콜백 라우트
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
   @BypassTransform()
   async githubAuthCallback(@Req() req, @Res({ passthrough: true }) res: Response) {
-    await this.authService.handleOAuthLogin(req.user, res);
+    const redirect = typeof req.query?.state === 'string' ? req.query.state : undefined;
+    await this.authService.handleOAuthLogin(req.user, res, redirect);
   }
 
   // Google OAuth 로그인 라우트
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthGuard)
   async googleAuth() {
     // Guard redirects
   }
@@ -43,7 +45,8 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   @BypassTransform()
   async googleAuthCallback(@Req() req, @Res({ passthrough: true }) res: Response) {
-    await this.authService.handleOAuthLogin(req.user, res);
+    const redirect = typeof req.query?.state === 'string' ? req.query.state : undefined;
+    await this.authService.handleOAuthLogin(req.user, res, redirect);
   }
 
   /**

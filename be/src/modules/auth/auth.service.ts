@@ -14,6 +14,7 @@ import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { parseExpiresIn } from '@src/common/utils/time.utils';
 import { buildRefreshCookieOptions } from '@src/common/utils/refresh.utils';
+import { isSafeRedirect } from '@src/common/utils/redirect.utils';
 import { Response } from 'express';
 
 interface OAuthUser {
@@ -232,9 +233,13 @@ export class AuthService {
   }
 
   /**
-   * OAuth 로그인 후 JWT를 발급하고 쿠키를 설정한 뒤 프론트엔드로 리다이렉션
+   * OAuth 로그인 후 JWT를 발급하고 쿠키를 설정한 뒤 프론트엔드로 리다이렉션.
+   *
+   * @param redirect OAuth 시작 시 전달된 복귀 경로.
+   *   - 유효한 내부 경로면 /auth/callback?redirect=... 으로 전달
+   *   - 없거나 유효하지 않으면 기본 /auth/callback 으로 이동 (기존 동작 유지)
    */
-  public async handleOAuthLogin(user: User, res: Response): Promise<void> {
+  public async handleOAuthLogin(user: User, res: Response, redirect?: string): Promise<void> {
     if (!user?.email) throw new UnauthorizedException();
 
     const { refreshToken } = await this.login({
@@ -243,6 +248,13 @@ export class AuthService {
     });
     res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService));
 
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+    const frontendUrl = process.env.FRONTEND_URL;
+    const callbackPath = '/auth/callback';
+
+    if (redirect && isSafeRedirect(redirect)) {
+      res.redirect(`${frontendUrl}${callbackPath}?redirect=${encodeURIComponent(redirect)}`);
+    } else {
+      res.redirect(`${frontendUrl}${callbackPath}`);
+    }
   }
 }
