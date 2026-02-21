@@ -21,17 +21,26 @@ env:
   JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
   FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
   BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL }}
+  MEDIASOUP_ANNOUNCED_IP: ${{ secrets.NCP_HOST }}
+  MEDIASOUP_RTC_MIN_PORT: ${{ secrets.MEDIASOUP_RTC_MIN_PORT }}
+  MEDIASOUP_RTC_MAX_PORT: ${{ secrets.MEDIASOUP_RTC_MAX_PORT }}
+  GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+  GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  DB_USERNAME: ${{ secrets.DB_USERNAME }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_NAME: ${{ secrets.DB_NAME }}
+  DB_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 레포지토리 체크아웃 (infra 파일 최신화 목적)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 이미지 태그 결정
       - name: Resolve image tag
         id: tag
         run: |
@@ -42,7 +51,6 @@ jobs:
           echo "IMAGE_TAG=$TAG" >> "$GITHUB_OUTPUT"
           echo "Using image tag: $TAG"
 
-      # 3️⃣ 서버로 docker-compose / infra / nginx 전송
       - name: Copy infra files to NCP
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -52,11 +60,10 @@ jobs:
           port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
           command_timeout: 300s
-          source: docker-compose.yml,infra/,nginx/
+          source: infra/
           target: ${{ env.DEPLOY_PATH }}
           overwrite: true
 
-      # 4️⃣ SSH 접속 후 deploy.sh 실행
       - name: SSH into NCP and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -66,10 +73,8 @@ jobs:
           port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
           command_timeout: 300s
-          # 셸 환경변수로 필요한 데이터 전달
           script_stop: true
 
-          # deploy.sh 에 전달될 환경변수
           envs: >
             DOCKER_USERNAME,
             DOCKER_PASSWORD,
@@ -78,8 +83,6 @@ jobs:
             DOCKER_IMAGE_TAG,
             DEPLOY_PATH,
             API_PORT,
-            REDIS_HOST,
-            REDIS_PORT,
             MEDIASOUP_ANNOUNCED_IP,
             MEDIASOUP_RTC_MIN_PORT,
             MEDIASOUP_RTC_MAX_PORT,
@@ -93,7 +96,11 @@ jobs:
             FRONTEND_URL,
             BACKEND_BASE_URL,
             GOOGLE_CLIENT_ID,
-            GOOGLE_CLIENT_SECRET
+            GOOGLE_CLIENT_SECRET,
+            DB_USERNAME,
+            DB_PASSWORD,
+            DB_NAME,
+            DB_ROOT_PASSWORD
 
           script: |
             set -e
@@ -117,38 +124,33 @@ jobs:
           DOCKER_IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
           DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
           API_PORT: ${{ env.API_PORT }}
-          REDIS_HOST: ${{ secrets.REDIS_HOST }} 
-          REDIS_PORT: ${{ secrets.REDIS_PORT }} 
-          MEDIASOUP_ANNOUNCED_IP: ${{ secrets.NCP_HOST }}
-          MEDIASOUP_RTC_MIN_PORT: ${{ secrets.MEDIASOUP_RTC_MIN_PORT }}
-          MEDIASOUP_RTC_MAX_PORT: ${{ secrets.MEDIASOUP_RTC_MAX_PORT }}
+          MEDIASOUP_ANNOUNCED_IP: ${{ env.MEDIASOUP_ANNOUNCED_IP }}
+          MEDIASOUP_RTC_MIN_PORT: ${{ env.MEDIASOUP_RTC_MIN_PORT }}
+          MEDIASOUP_RTC_MAX_PORT: ${{ env.MEDIASOUP_RTC_MAX_PORT }}
           MEDIASOUP_LISTEN_IP: '0.0.0.0'
-          GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID}}
-          GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
-          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
-          JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-          BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL}}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ env.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ env.GITHUB_CLIENT_SECRET }}
+          JWT_ACCESS_SECRET: ${{ env.JWT_ACCESS_SECRET }}
+          JWT_ACCESS_EXPIRES_IN: ${{ env.JWT_ACCESS_EXPIRES_IN }}
+          JWT_REFRESH_SECRET: ${{ env.JWT_REFRESH_SECRET }}
+          JWT_REFRESH_EXPIRES_IN: ${{ env.JWT_REFRESH_EXPIRES_IN }}
+          FRONTEND_URL: ${{ env.FRONTEND_URL }}
+          BACKEND_BASE_URL: ${{ env.BACKEND_BASE_URL }}
+          GOOGLE_CLIENT_ID: ${{ env.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ env.GOOGLE_CLIENT_SECRET }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_ROOT_PASSWORD: ${{ env.DB_ROOT_PASSWORD }}
 
-
-      # 5️⃣ 성공 로그
       - name: Notify Success
         if: success()
         run: |
-          echo "✅ Deploy succeeded"
+          echo "Deploy succeeded"
           echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
-          echo "Repo: ${{ github.repository }}"
-          echo "Commit: ${{ github.sha }}"
 
-      # 6️⃣ 실패 로그
       - name: Notify Failure
         if: failure()
         run: |
-          echo "❌ Deploy failed"
+          echo "Deploy failed"
           echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
-          echo "Repo: ${{ github.repository }}"
-          echo "Commit: ${{ github.sha }}"
