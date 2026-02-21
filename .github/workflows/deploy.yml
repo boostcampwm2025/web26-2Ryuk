@@ -85,9 +85,17 @@ jobs:
             export DOCKER_IMAGE_TAG="${{ steps.tag.outputs.IMAGE_TAG }}"
             echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
 
-            # 최소 배포 디렉토리 (설정 파일만)
             DEPLOY=/opt/mbwt
             mkdir -p $DEPLOY/nginx/certs
+
+            dedent() {
+              local indent
+              indent="$(grep -m1 '[^ ]' "$1" | sed -n 's/^\( *\)[^ ].*/\1/p')"
+              if [ -n "$indent" ]; then
+                sed -i "s/^${indent}//" "$1"
+              fi
+              sed -i 's/\r$//' "$1"
+            }
 
             # --- docker-compose.yml ---
             cat > $DEPLOY/docker-compose.yml <<'COMPOSE'
@@ -159,7 +167,7 @@ jobs:
                   - MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
                   - MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
                   - MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
-                  - MEDIASOUP_LISTEN_IP=${MEDIASOUP_LISTEN_IP}
+                  - MEDIASOUP_LISTEN_IP=0.0.0.0
                 ports:
                   - "${API_PORT}:${API_PORT}"
                   - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/udp"
@@ -230,6 +238,7 @@ jobs:
               eryuk_net:
                 driver: bridge
             COMPOSE
+            dedent $DEPLOY/docker-compose.yml
 
             # --- nginx.conf ---
             cat > $DEPLOY/nginx/nginx.conf <<'NGINXCONF'
@@ -289,6 +298,7 @@ jobs:
                 include /etc/nginx/conf.d/*.conf;
             }
             NGINXCONF
+            dedent $DEPLOY/nginx/nginx.conf
 
             # --- nginx-ssl.conf ---
             cat > $DEPLOY/nginx/nginx-ssl.conf <<'SSLCONF'
@@ -339,6 +349,7 @@ jobs:
                 }
             }
             SSLCONF
+            dedent $DEPLOY/nginx/nginx-ssl.conf
 
             # --- mysql init ---
             cat > $DEPLOY/mysql-init.sql <<'SQLEOF'
@@ -346,6 +357,12 @@ jobs:
               CHARACTER SET utf8mb4
               COLLATE utf8mb4_unicode_ci;
             SQLEOF
+            dedent $DEPLOY/mysql-init.sql
+
+            # --- debug: verify generated files ---
+            echo "[DEBUG] docker-compose.yml first 3 lines:"
+            head -3 $DEPLOY/docker-compose.yml
+            echo "[DEBUG] ---"
 
             # --- deploy ---
             cd $DEPLOY
