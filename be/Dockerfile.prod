@@ -39,10 +39,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/be/node_modules ./be/node_modules
 COPY --from=builder /app/be/dist ./be/dist
 
-# 설정 및 환경 파일 복사
+# 설정 파일 복사 (.env.production은 런타임 환경변수로 대체)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY be/package.json ./be/
-COPY be/.env.production ./be/.env.production
 
 # Set environment variables
 ARG NODE_ENV=production
