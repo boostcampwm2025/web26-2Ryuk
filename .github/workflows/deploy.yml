@@ -53,7 +53,6 @@ jobs:
           port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
           command_timeout: 600s
-          script_stop: true
 
           envs: >
             DOCKER_USERNAME,
@@ -87,15 +86,6 @@ jobs:
 
             DEPLOY=/opt/mbwt
             mkdir -p $DEPLOY/nginx/certs
-
-            dedent() {
-              local indent
-              indent="$(grep -m1 '[^ ]' "$1" | sed -n 's/^\( *\)[^ ].*/\1/p')"
-              if [ -n "$indent" ]; then
-                sed -i "s/^${indent}//" "$1"
-              fi
-              sed -i 's/\r$//' "$1"
-            }
 
             # --- docker-compose.yml ---
             cat > $DEPLOY/docker-compose.yml <<'COMPOSE'
@@ -238,7 +228,6 @@ jobs:
               eryuk_net:
                 driver: bridge
             COMPOSE
-            dedent $DEPLOY/docker-compose.yml
 
             # --- nginx.conf ---
             cat > $DEPLOY/nginx/nginx.conf <<'NGINXCONF'
@@ -298,7 +287,6 @@ jobs:
                 include /etc/nginx/conf.d/*.conf;
             }
             NGINXCONF
-            dedent $DEPLOY/nginx/nginx.conf
 
             # --- nginx-ssl.conf ---
             cat > $DEPLOY/nginx/nginx-ssl.conf <<'SSLCONF'
@@ -349,7 +337,6 @@ jobs:
                 }
             }
             SSLCONF
-            dedent $DEPLOY/nginx/nginx-ssl.conf
 
             # --- mysql init ---
             cat > $DEPLOY/mysql-init.sql <<'SQLEOF'
@@ -357,7 +344,6 @@ jobs:
               CHARACTER SET utf8mb4
               COLLATE utf8mb4_unicode_ci;
             SQLEOF
-            dedent $DEPLOY/mysql-init.sql
 
             # --- debug: verify generated files ---
             echo "[DEBUG] docker-compose.yml first 3 lines:"
