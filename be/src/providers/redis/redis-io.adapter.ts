@@ -33,13 +33,14 @@ export class RedisIoAdapter extends IoAdapter {
   }
 
   createIOServer(port: number, options?: ServerOptions): any {
-    const frontendUrl = process.env.FRONTEND_URL;
-    if (!frontendUrl) throw new Error('FRONTEND_URL 환경 변수가 설정되지 않았습니다.');
+    const corsOrigins = [process.env.FRONTEND_URL_HTTP, process.env.FRONTEND_URL_HTTPS].filter(Boolean) as string[];
+    if (corsOrigins.length === 0)
+      throw new Error('FRONTEND_URL_HTTP 또는 FRONTEND_URL_HTTPS 환경 변수가 설정되지 않았습니다.');
 
     const server = super.createIOServer(port, {
       ...options,
       cors: {
-        origin: frontendUrl,
+        origin: corsOrigins,
         credentials: true,
       },
       pingTimeout: 5000,
