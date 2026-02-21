@@ -13,7 +13,6 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
   DOCKER_IMAGE_BACKEND: ${{ secrets.DOCKER_IMAGE_NAME }}-backend
   DOCKER_IMAGE_FRONTEND: ${{ secrets.DOCKER_IMAGE_NAME }}-frontend
-  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '~/project' }}
   API_PORT: ${{ secrets.API_PORT }}
   JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
   JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
@@ -38,33 +37,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Resolve image tag
         id: tag
         run: |
           TAG="${{ inputs.image_tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="latest"
-          fi
+          if [ -z "$TAG" ]; then TAG="latest"; fi
           echo "IMAGE_TAG=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Using image tag: $TAG"
 
-      - name: Copy infra files to NCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.NCP_HOST }}
-          username: ${{ secrets.NCP_USERNAME }}
-          key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.NCP_SSH_PORT }}
-          timeout: 60s
-          command_timeout: 300s
-          source: infra/
-          target: ${{ env.DEPLOY_PATH }}
-          overwrite: true
-
-      - name: SSH into NCP and deploy
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.NCP_HOST }}
@@ -72,7 +52,7 @@ jobs:
           key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
           port: ${{ secrets.NCP_SSH_PORT }}
           timeout: 60s
-          command_timeout: 300s
+          command_timeout: 600s
           script_stop: true
 
           envs: >
@@ -81,12 +61,10 @@ jobs:
             DOCKER_IMAGE_BACKEND,
             DOCKER_IMAGE_FRONTEND,
             DOCKER_IMAGE_TAG,
-            DEPLOY_PATH,
             API_PORT,
             MEDIASOUP_ANNOUNCED_IP,
             MEDIASOUP_RTC_MIN_PORT,
             MEDIASOUP_RTC_MAX_PORT,
-            MEDIASOUP_LISTEN_IP,
             GITHUB_CLIENT_ID,
             GITHUB_CLIENT_SECRET,
             JWT_ACCESS_SECRET,
@@ -104,17 +82,289 @@ jobs:
 
           script: |
             set -e
-            echo "[INFO] Connected to server"
-
-            cd "${DEPLOY_PATH:-~/project}"
-
             export DOCKER_IMAGE_TAG="${{ steps.tag.outputs.IMAGE_TAG }}"
-
-            echo "[INFO] Deploy path: $(pwd)"
             echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
 
-            chmod +x infra/deploy.sh
-            infra/deploy.sh
+            # 최소 배포 디렉토리 (설정 파일만)
+            DEPLOY=/opt/mbwt
+            mkdir -p $DEPLOY/nginx/certs
+
+            # --- docker-compose.yml ---
+            cat > $DEPLOY/docker-compose.yml <<'COMPOSE'
+            services:
+              mysql:
+                image: mysql:8.0
+                container_name: mysql
+                environment:
+                  MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+                  MYSQL_DATABASE: ${DB_NAME}
+                  MYSQL_USER: ${DB_USERNAME}
+                  MYSQL_PASSWORD: ${DB_PASSWORD}
+                volumes:
+                  - mysql_data:/var/lib/mysql
+                  - ./mysql-init.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+                healthcheck:
+                  test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+                  interval: 5s
+                  timeout: 3s
+                  retries: 10
+                  start_period: 15s
+                ports:
+                  - "3306:3306"
+                networks:
+                  - eryuk_net
+                restart: unless-stopped
+
+              redis:
+                image: redis:7-alpine
+                container_name: redis
+                command: redis-server --appendonly yes
+                volumes:
+                  - redis_data:/data
+                healthcheck:
+                  test: ['CMD', 'redis-cli', 'ping']
+                  interval: 5s
+                  timeout: 3s
+                  retries: 5
+                ports:
+                  - "6379:6379"
+                networks:
+                  - eryuk_net
+                restart: unless-stopped
+
+              api:
+                image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG}
+                container_name: server
+                environment:
+                  - NODE_ENV=production
+                  - PORT=${API_PORT}
+                  - DB_HOST=mysql
+                  - DB_PORT=3306
+                  - DB_USERNAME=${DB_USERNAME}
+                  - DB_PASSWORD=${DB_PASSWORD}
+                  - DB_NAME=${DB_NAME}
+                  - REDIS_HOST=redis
+                  - REDIS_PORT=6379
+                  - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+                  - JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
+                  - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+                  - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+                  - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+                  - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+                  - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+                  - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+                  - BACKEND_BASE_URL=${BACKEND_BASE_URL}
+                  - FRONTEND_URL=${FRONTEND_URL}
+                  - API_PORT=${API_PORT}
+                  - MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
+                  - MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
+                  - MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
+                  - MEDIASOUP_LISTEN_IP=${MEDIASOUP_LISTEN_IP}
+                ports:
+                  - "${API_PORT}:${API_PORT}"
+                  - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/udp"
+                  - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/tcp"
+                depends_on:
+                  mysql:
+                    condition: service_healthy
+                  redis:
+                    condition: service_healthy
+                networks:
+                  - eryuk_net
+                restart: unless-stopped
+
+              client:
+                image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_FRONTEND}:${DOCKER_IMAGE_TAG}
+                container_name: client
+                environment:
+                  - NODE_ENV=production
+                expose:
+                  - '3000'
+                depends_on:
+                  api:
+                    condition: service_started
+                networks:
+                  - eryuk_net
+                restart: unless-stopped
+
+              nginx:
+                image: nginx:alpine
+                container_name: nginx
+                depends_on:
+                  - api
+                  - client
+                ports:
+                  - '80:80'
+                  - '443:443'
+                volumes:
+                  - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+                  - ./nginx/nginx-ssl.conf:/etc/nginx/templates/nginx-ssl.conf.template:ro
+                  - ./nginx/certs:/etc/nginx/ssl:ro
+                environment:
+                  API_HOST: api
+                  API_PORT: ${API_PORT}
+                  CLIENT_HOST: client
+                  CLIENT_PORT: 3000
+                command: >
+                  /bin/sh -c "
+                    VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT';
+                    envsubst \"$$VARS\" < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf;
+                    if [ -f /etc/nginx/ssl/fullchain.crt ] && [ -f /etc/nginx/ssl/private.key ]; then
+                      echo '[nginx] SSL certs found';
+                      envsubst \"$$VARS\" < /etc/nginx/templates/nginx-ssl.conf.template > /etc/nginx/conf.d/ssl.conf;
+                    else
+                      echo '[nginx] No SSL certs - HTTP only';
+                      rm -f /etc/nginx/conf.d/ssl.conf;
+                    fi;
+                    nginx -g 'daemon off;'
+                  "
+                networks:
+                  - eryuk_net
+                restart: unless-stopped
+
+            volumes:
+              redis_data:
+              mysql_data:
+
+            networks:
+              eryuk_net:
+                driver: bridge
+            COMPOSE
+
+            # --- nginx.conf ---
+            cat > $DEPLOY/nginx/nginx.conf <<'NGINXCONF'
+            events {
+                worker_connections 1024;
+            }
+            http {
+                include /etc/nginx/mime.types;
+                default_type application/octet-stream;
+                sendfile on;
+                keepalive_timeout 65;
+                map $http_upgrade $connection_upgrade {
+                    default upgrade;
+                    '' close;
+                }
+                server {
+                    listen 80 default_server;
+                    server_name _;
+                    location /health {
+                        default_type text/plain;
+                        return 200 'OK';
+                    }
+                    location /socket.io/ {
+                        proxy_pass http://${API_HOST}:${API_PORT};
+                        proxy_http_version 1.1;
+                        proxy_set_header Upgrade $http_upgrade;
+                        proxy_set_header Connection $connection_upgrade;
+                        proxy_set_header Host $host;
+                        proxy_set_header X-Real-IP $remote_addr;
+                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                        proxy_set_header X-Forwarded-Proto $scheme;
+                        proxy_set_header Cookie $http_cookie;
+                        proxy_cache_bypass $http_upgrade;
+                        proxy_read_timeout 86400;
+                    }
+                    location /api/ {
+                        proxy_pass http://${API_HOST}:${API_PORT};
+                        proxy_http_version 1.1;
+                        proxy_set_header Host $host;
+                        proxy_set_header X-Real-IP $remote_addr;
+                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                        proxy_set_header X-Forwarded-Proto $scheme;
+                        proxy_set_header Cookie $http_cookie;
+                    }
+                    location / {
+                        proxy_pass http://${CLIENT_HOST}:${CLIENT_PORT};
+                        proxy_http_version 1.1;
+                        proxy_set_header Upgrade $http_upgrade;
+                        proxy_set_header Connection $connection_upgrade;
+                        proxy_set_header Host $host;
+                        proxy_set_header X-Real-IP $remote_addr;
+                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                        proxy_set_header X-Forwarded-Proto $scheme;
+                        proxy_cache_bypass $http_upgrade;
+                    }
+                }
+                include /etc/nginx/conf.d/*.conf;
+            }
+            NGINXCONF
+
+            # --- nginx-ssl.conf ---
+            cat > $DEPLOY/nginx/nginx-ssl.conf <<'SSLCONF'
+            server {
+                listen 443 ssl;
+                http2 on;
+                server_name moolbangwool.duckdns.org;
+                ssl_certificate /etc/nginx/ssl/fullchain.crt;
+                ssl_certificate_key /etc/nginx/ssl/private.key;
+                ssl_protocols TLSv1.2 TLSv1.3;
+                ssl_prefer_server_ciphers on;
+                location /health {
+                    default_type text/plain;
+                    return 200 'OK';
+                }
+                location /socket.io/ {
+                    proxy_pass http://${API_HOST}:${API_PORT};
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection $connection_upgrade;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header Cookie $http_cookie;
+                    proxy_cache_bypass $http_upgrade;
+                    proxy_read_timeout 86400;
+                }
+                location /api/ {
+                    proxy_pass http://${API_HOST}:${API_PORT};
+                    proxy_http_version 1.1;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header Cookie $http_cookie;
+                }
+                location / {
+                    proxy_pass http://${CLIENT_HOST}:${CLIENT_PORT};
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection $connection_upgrade;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_cache_bypass $http_upgrade;
+                }
+            }
+            SSLCONF
+
+            # --- mysql init ---
+            cat > $DEPLOY/mysql-init.sql <<'SQLEOF'
+            CREATE DATABASE IF NOT EXISTS mbwt
+              CHARACTER SET utf8mb4
+              COLLATE utf8mb4_unicode_ci;
+            SQLEOF
+
+            # --- deploy ---
+            cd $DEPLOY
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            docker compose pull
+            docker compose down || true
+            docker compose up -d --force-recreate
+
+            echo "[INFO] Waiting for health check..."
+            for i in $(seq 1 30); do
+              if docker compose exec -T api wget --quiet --tries=1 --spider "http://localhost:${API_PORT}/health" 2>/dev/null; then
+                echo "[INFO] Health check passed"
+                docker compose ps
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "[WARN] Health check timeout - containers may still be starting"
+            docker compose ps
 
         env:
           DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
@@ -122,12 +372,10 @@ jobs:
           DOCKER_IMAGE_BACKEND: ${{ env.DOCKER_IMAGE_BACKEND }}
           DOCKER_IMAGE_FRONTEND: ${{ env.DOCKER_IMAGE_FRONTEND }}
           DOCKER_IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
-          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
           API_PORT: ${{ env.API_PORT }}
           MEDIASOUP_ANNOUNCED_IP: ${{ env.MEDIASOUP_ANNOUNCED_IP }}
           MEDIASOUP_RTC_MIN_PORT: ${{ env.MEDIASOUP_RTC_MIN_PORT }}
           MEDIASOUP_RTC_MAX_PORT: ${{ env.MEDIASOUP_RTC_MAX_PORT }}
-          MEDIASOUP_LISTEN_IP: '0.0.0.0'
           GITHUB_CLIENT_ID: ${{ env.GITHUB_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ env.GITHUB_CLIENT_SECRET }}
           JWT_ACCESS_SECRET: ${{ env.JWT_ACCESS_SECRET }}
@@ -145,12 +393,8 @@ jobs:
 
       - name: Notify Success
         if: success()
-        run: |
-          echo "Deploy succeeded"
-          echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
+        run: echo "Deploy succeeded (tag ${{ steps.tag.outputs.IMAGE_TAG }})"
 
       - name: Notify Failure
         if: failure()
-        run: |
-          echo "Deploy failed"
-          echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
+        run: echo "Deploy failed (tag ${{ steps.tag.outputs.IMAGE_TAG }})"
