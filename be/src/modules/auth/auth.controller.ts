@@ -2,7 +2,7 @@ import { Controller, Post, Get, UseGuards, Req, Res, UnauthorizedException, Body
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { GetMeResponseDto, RefreshTokenResponseDto, MockLoginResponseDto } from './dto/auth-response.dto';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { BypassTransform } from '@src/common/decorators/bypass-transform.decorator';
 import { ConfigService } from '@nestjs/config';
@@ -28,9 +28,9 @@ export class AuthController {
   @Get('github/callback')
   @UseGuards(AuthGuard('github'))
   @BypassTransform()
-  async githubAuthCallback(@Req() req, @Res({ passthrough: true }) res: Response) {
-    const redirect = typeof req.query?.state === 'string' ? req.query.state : undefined;
-    await this.authService.handleOAuthLogin(req.user, res, redirect);
+  async githubAuthCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const redirect = typeof (req as any).query?.state === 'string' ? (req as any).query.state : undefined;
+    await this.authService.handleOAuthLogin((req as any).user, req, res, redirect);
   }
 
   // Google OAuth 로그인 라우트
@@ -44,9 +44,9 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   @BypassTransform()
-  async googleAuthCallback(@Req() req, @Res({ passthrough: true }) res: Response) {
-    const redirect = typeof req.query?.state === 'string' ? req.query.state : undefined;
-    await this.authService.handleOAuthLogin(req.user, res, redirect);
+  async googleAuthCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const redirect = typeof (req as any).query?.state === 'string' ? (req as any).query.state : undefined;
+    await this.authService.handleOAuthLogin((req as any).user, req, res, redirect);
   }
 
   /**
@@ -83,9 +83,10 @@ export class AuthController {
    */
   @Post('logout')
   @BypassTransform()
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const isSecure = req.protocol === 'https';
     res.clearCookie('refreshToken', {
-      ...buildRefreshCookieOptions(this.configService),
+      ...buildRefreshCookieOptions(this.configService, isSecure),
       maxAge: 0,
       expires: new Date(0),
     });
@@ -99,7 +100,7 @@ export class AuthController {
    */
   @Post('mock/login')
   @BypassTransform()
-  async mockLogin(@Body() body: { userId?: string }, @Res({ passthrough: true }) res: Response) {
+  async mockLogin(@Body() body: { userId?: string }, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const { userId } = body;
 
     // userId가 제공된 경우 해당 사용자 조회, 없으면 첫 번째 사용자 사용
@@ -126,7 +127,8 @@ export class AuthController {
     const refreshToken = this.authService.issueRefreshToken(user.id);
 
     // Refresh Token을 쿠키로 설정 (실제 OAuth 플로우와 동일)
-    res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService));
+    const isSecure = req.protocol === 'https';
+    res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService, isSecure));
 
     const userInfo = await this.authService.getUserById(user.id);
 
