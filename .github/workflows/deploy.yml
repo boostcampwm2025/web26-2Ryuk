@@ -354,7 +354,8 @@ jobs:
             cd $DEPLOY
             echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
             docker compose pull
-            docker compose down || true
+            docker compose down --remove-orphans || true
+            docker rm -f mysql redis server client nginx 2>/dev/null || true
             docker compose up -d --force-recreate
 
             echo "[INFO] Waiting for health check..."
