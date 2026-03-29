@@ -39,6 +39,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Resolve image tag
         id: tag
         run: |
@@ -93,324 +96,84 @@ jobs:
           DB_ROOT_PASSWORD: ${{ env.DB_ROOT_PASSWORD }}
         run: |
           set -eu
-          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" \
-            "DOCKER_USERNAME='$DOCKER_USERNAME' \
-            DOCKER_PASSWORD='$DOCKER_PASSWORD' \
-            DOCKER_IMAGE_BACKEND='$DOCKER_IMAGE_BACKEND' \
-            DOCKER_IMAGE_FRONTEND='$DOCKER_IMAGE_FRONTEND' \
-            DOCKER_IMAGE_TAG='$DOCKER_IMAGE_TAG' \
-            API_PORT='$API_PORT' \
-            MEDIASOUP_ANNOUNCED_IP='$MEDIASOUP_ANNOUNCED_IP' \
-            MEDIASOUP_RTC_MIN_PORT='$MEDIASOUP_RTC_MIN_PORT' \
-            MEDIASOUP_RTC_MAX_PORT='$MEDIASOUP_RTC_MAX_PORT' \
-            GITHUB_CLIENT_ID='$GITHUB_CLIENT_ID' \
-            GITHUB_CLIENT_SECRET='$GITHUB_CLIENT_SECRET' \
-            JWT_ACCESS_SECRET='$JWT_ACCESS_SECRET' \
-            JWT_ACCESS_EXPIRES_IN='$JWT_ACCESS_EXPIRES_IN' \
-            JWT_REFRESH_SECRET='$JWT_REFRESH_SECRET' \
-            JWT_REFRESH_EXPIRES_IN='$JWT_REFRESH_EXPIRES_IN' \
-            FRONTEND_URL_HTTP='$FRONTEND_URL_HTTP' \
-            FRONTEND_URL_HTTPS='$FRONTEND_URL_HTTPS' \
-            BACKEND_BASE_URL='$BACKEND_BASE_URL' \
-            SERVER_NAME='$SERVER_NAME' \
-            GOOGLE_CLIENT_ID='$GOOGLE_CLIENT_ID' \
-            GOOGLE_CLIENT_SECRET='$GOOGLE_CLIENT_SECRET' \
-            DB_USERNAME='$DB_USERNAME' \
-            DB_PASSWORD='$DB_PASSWORD' \
-            DB_NAME='$DB_NAME' \
-            DB_ROOT_PASSWORD='$DB_ROOT_PASSWORD' \
-            bash -s" <<'REMOTE'
-            set -e
-            echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
+          DEPLOY=/opt/mbwt
+          mkdir -p .deploy/nginx
 
-            DEPLOY=/opt/mbwt
-            mkdir -p $DEPLOY/nginx/certs
+          cp infra/docker-compose.yml .deploy/docker-compose.yml
+          cp infra/nginx/nginx.conf .deploy/nginx/nginx.conf
+          cp infra/nginx/nginx-ssl.conf .deploy/nginx/nginx-ssl.conf
 
-            # --- docker-compose.yml ---
-            cat > $DEPLOY/docker-compose.yml <<'COMPOSE'
-            services:
-              mysql:
-                image: mysql:8.0
-                container_name: mysql
-                environment:
-                  MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-                  MYSQL_DATABASE: ${DB_NAME}
-                  MYSQL_USER: ${DB_USERNAME}
-                  MYSQL_PASSWORD: ${DB_PASSWORD}
-                volumes:
-                  - mysql_data:/var/lib/mysql
-                  - ./mysql-init.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-                healthcheck:
-                  test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-                  interval: 5s
-                  timeout: 3s
-                  retries: 10
-                  start_period: 15s
-                ports:
-                  - "3306:3306"
-                networks:
-                  - eryuk_net
-                restart: unless-stopped
+          cat > .deploy/mysql-init.sql <<EOF
+          CREATE DATABASE IF NOT EXISTS ${DB_NAME}
+            CHARACTER SET utf8mb4
+            COLLATE utf8mb4_unicode_ci;
+          EOF
 
-              redis:
-                image: redis:7-alpine
-                container_name: redis
-                command: redis-server --appendonly yes
-                volumes:
-                  - redis_data:/data
-                healthcheck:
-                  test: ['CMD', 'redis-cli', 'ping']
-                  interval: 5s
-                  timeout: 3s
-                  retries: 5
-                ports:
-                  - "6379:6379"
-                networks:
-                  - eryuk_net
-                restart: unless-stopped
+          cat > .deploy/.env <<EOF
+          DOCKER_USERNAME=${DOCKER_USERNAME}
+          DOCKER_PASSWORD=${DOCKER_PASSWORD}
+          DOCKER_IMAGE_BACKEND=${DOCKER_IMAGE_BACKEND}
+          DOCKER_IMAGE_FRONTEND=${DOCKER_IMAGE_FRONTEND}
+          DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}
+          API_PORT=${API_PORT}
+          CLIENT_PORT=3000
+          NGINX_HTTP_PORT=80
+          NGINX_HTTPS_PORT=443
+          MEDIASOUP_LISTEN_IP=0.0.0.0
+          MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
+          MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
+          MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
+          GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+          GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+          JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+          JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
+          JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+          JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+          FRONTEND_URL_HTTP=${FRONTEND_URL_HTTP}
+          FRONTEND_URL_HTTPS=${FRONTEND_URL_HTTPS}
+          BACKEND_BASE_URL=${BACKEND_BASE_URL}
+          SERVER_NAME=${SERVER_NAME}
+          DB_USERNAME=${DB_USERNAME}
+          DB_PASSWORD=${DB_PASSWORD}
+          DB_NAME=${DB_NAME}
+          DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+          EOF
 
-              api:
-                image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG}
-                container_name: server
-                environment:
-                  - NODE_ENV=production
-                  - PORT=${API_PORT}
-                  - DB_HOST=mysql
-                  - DB_PORT=3306
-                  - DB_USERNAME=${DB_USERNAME}
-                  - DB_PASSWORD=${DB_PASSWORD}
-                  - DB_NAME=${DB_NAME}
-                  - REDIS_HOST=redis
-                  - REDIS_PORT=6379
-                  - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-                  - JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
-                  - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-                  - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
-                  - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-                  - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-                  - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-                  - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-                  - BACKEND_BASE_URL=${BACKEND_BASE_URL}
-                  - FRONTEND_URL_HTTP=${FRONTEND_URL_HTTP}
-                  - FRONTEND_URL_HTTPS=${FRONTEND_URL_HTTPS}
-                  - API_PORT=${API_PORT}
-                  - MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
-                  - MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
-                  - MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
-                  - MEDIASOUP_LISTEN_IP=0.0.0.0
-                ports:
-                  - "${API_PORT}:${API_PORT}"
-                  - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/udp"
-                  - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/tcp"
-                depends_on:
-                  mysql:
-                    condition: service_healthy
-                  redis:
-                    condition: service_healthy
-                networks:
-                  - eryuk_net
-                restart: unless-stopped
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "mkdir -p $DEPLOY/nginx/certs $DEPLOY/nginx"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/docker-compose.yml "$NCP_USERNAME@$NCP_HOST:$DEPLOY/docker-compose.yml"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/mysql-init.sql "$NCP_USERNAME@$NCP_HOST:$DEPLOY/mysql-init.sql"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/.env "$NCP_USERNAME@$NCP_HOST:$DEPLOY/.env"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/nginx/nginx.conf "$NCP_USERNAME@$NCP_HOST:$DEPLOY/nginx/nginx.conf"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/nginx/nginx-ssl.conf "$NCP_USERNAME@$NCP_HOST:$DEPLOY/nginx/nginx-ssl.conf"
 
-              client:
-                image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_FRONTEND}:${DOCKER_IMAGE_TAG}
-                container_name: client
-                environment:
-                  - NODE_ENV=production
-                expose:
-                  - '3000'
-                depends_on:
-                  api:
-                    condition: service_started
-                networks:
-                  - eryuk_net
-                restart: unless-stopped
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "bash -s" <<'REMOTE'
+          set -e
+          DEPLOY=/opt/mbwt
+          cd "$DEPLOY"
+          set -a
+          . ./.env
+          set +a
+          echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          docker compose --env-file .env pull
+          docker compose --env-file .env down --remove-orphans || true
+          docker rm -f mysql redis server client nginx 2>/dev/null || true
+          docker compose --env-file .env up -d --force-recreate
 
-              nginx:
-                image: nginx:alpine
-                container_name: nginx
-                depends_on:
-                  - api
-                  - client
-                ports:
-                  - '80:80'
-                  - '443:443'
-                volumes:
-                  - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
-                  - ./nginx/nginx-ssl.conf:/etc/nginx/templates/nginx-ssl.conf.template:ro
-                  - ./nginx/certs:/etc/nginx/ssl:ro
-                environment:
-                  API_HOST: api
-                  API_PORT: ${API_PORT}
-                  CLIENT_HOST: client
-                  CLIENT_PORT: 3000
-                  SERVER_NAME: ${SERVER_NAME}
-                command: >
-                  /bin/sh -c "
-                    VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT $$SERVER_NAME';
-                    envsubst \"$$VARS\" < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf;
-                    if [ -f /etc/nginx/ssl/fullchain.crt ] && [ -f /etc/nginx/ssl/private.key ]; then
-                      echo '[nginx] SSL certs found';
-                      envsubst \"$$VARS\" < /etc/nginx/templates/nginx-ssl.conf.template > /etc/nginx/conf.d/ssl.conf;
-                    else
-                      echo '[nginx] No SSL certs - HTTP only';
-                      rm -f /etc/nginx/conf.d/ssl.conf;
-                    fi;
-                    nginx -g 'daemon off;'
-                  "
-                networks:
-                  - eryuk_net
-                restart: unless-stopped
-
-            volumes:
-              redis_data:
-              mysql_data:
-
-            networks:
-              eryuk_net:
-                driver: bridge
-            COMPOSE
-
-            # --- nginx.conf ---
-            cat > $DEPLOY/nginx/nginx.conf <<'NGINXCONF'
-            events {
-                worker_connections 1024;
-            }
-            http {
-                include /etc/nginx/mime.types;
-                default_type application/octet-stream;
-                sendfile on;
-                keepalive_timeout 65;
-                map $http_upgrade $connection_upgrade {
-                    default upgrade;
-                    '' close;
-                }
-                server {
-                    listen 80 default_server;
-                    server_name _;
-                    location /health {
-                        default_type text/plain;
-                        return 200 'OK';
-                    }
-                    location /socket.io/ {
-                        proxy_pass http://${API_HOST}:${API_PORT};
-                        proxy_http_version 1.1;
-                        proxy_set_header Upgrade $http_upgrade;
-                        proxy_set_header Connection $connection_upgrade;
-                        proxy_set_header Host $host;
-                        proxy_set_header X-Real-IP $remote_addr;
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header X-Forwarded-Proto $scheme;
-                        proxy_set_header Cookie $http_cookie;
-                        proxy_cache_bypass $http_upgrade;
-                        proxy_read_timeout 86400;
-                    }
-                    location /api/ {
-                        proxy_pass http://${API_HOST}:${API_PORT};
-                        proxy_http_version 1.1;
-                        proxy_set_header Host $host;
-                        proxy_set_header X-Real-IP $remote_addr;
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header X-Forwarded-Proto $scheme;
-                        proxy_set_header Cookie $http_cookie;
-                    }
-                    location / {
-                        proxy_pass http://${CLIENT_HOST}:${CLIENT_PORT};
-                        proxy_http_version 1.1;
-                        proxy_set_header Upgrade $http_upgrade;
-                        proxy_set_header Connection $connection_upgrade;
-                        proxy_set_header Host $host;
-                        proxy_set_header X-Real-IP $remote_addr;
-                        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                        proxy_set_header X-Forwarded-Proto $scheme;
-                        proxy_cache_bypass $http_upgrade;
-                    }
-                }
-                include /etc/nginx/conf.d/*.conf;
-            }
-            NGINXCONF
-
-            # --- nginx-ssl.conf ---
-            cat > $DEPLOY/nginx/nginx-ssl.conf <<'SSLCONF'
-            server {
-                listen 443 ssl;
-                http2 on;
-                server_name ${SERVER_NAME};
-                ssl_certificate /etc/nginx/ssl/fullchain.crt;
-                ssl_certificate_key /etc/nginx/ssl/private.key;
-                ssl_protocols TLSv1.2 TLSv1.3;
-                ssl_prefer_server_ciphers on;
-                location /health {
-                    default_type text/plain;
-                    return 200 'OK';
-                }
-                location /socket.io/ {
-                    proxy_pass http://${API_HOST}:${API_PORT};
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection $connection_upgrade;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_set_header Cookie $http_cookie;
-                    proxy_cache_bypass $http_upgrade;
-                    proxy_read_timeout 86400;
-                }
-                location /api/ {
-                    proxy_pass http://${API_HOST}:${API_PORT};
-                    proxy_http_version 1.1;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_set_header Cookie $http_cookie;
-                }
-                location / {
-                    proxy_pass http://${CLIENT_HOST}:${CLIENT_PORT};
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection $connection_upgrade;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_cache_bypass $http_upgrade;
-                }
-            }
-            SSLCONF
-
-            # --- mysql init ---
-            cat > $DEPLOY/mysql-init.sql <<'SQLEOF'
-            CREATE DATABASE IF NOT EXISTS mbwt
-              CHARACTER SET utf8mb4
-              COLLATE utf8mb4_unicode_ci;
-            SQLEOF
-
-            # --- debug: verify generated files ---
-            echo "[DEBUG] docker-compose.yml first 3 lines:"
-            head -3 $DEPLOY/docker-compose.yml
-            echo "[DEBUG] ---"
-
-            # --- deploy ---
-            cd $DEPLOY
-            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-            docker compose pull
-            docker compose down --remove-orphans || true
-            docker rm -f mysql redis server client nginx 2>/dev/null || true
-            docker compose up -d --force-recreate
-
-            echo "[INFO] Waiting for health check..."
-            for i in $(seq 1 30); do
-              if docker compose exec -T api wget --quiet --tries=1 --spider "http://localhost:${API_PORT}/health" 2>/dev/null; then
-                echo "[INFO] Health check passed"
-                docker compose ps
-                exit 0
-              fi
-              sleep 2
-            done
-            echo "[WARN] Health check timeout - containers may still be starting"
-            docker compose ps
-            REMOTE
+          echo "[INFO] Waiting for health check..."
+          for i in $(seq 1 30); do
+            if docker compose --env-file .env exec -T api wget --quiet --tries=1 --spider "http://localhost:${API_PORT}/health" 2>/dev/null; then
+              echo "[INFO] Health check passed"
+              docker compose --env-file .env ps
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "[WARN] Health check timeout - containers may still be starting"
+          docker compose --env-file .env ps
+          REMOTE
 
       - name: Notify Success
         if: success()
