@@ -21,6 +21,7 @@ env:
   FRONTEND_URL_HTTP: ${{ secrets.FRONTEND_URL_HTTP }}
   FRONTEND_URL_HTTPS: ${{ secrets.FRONTEND_URL_HTTPS }}
   BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL }}
+  SERVER_NAME: ${{ secrets.SERVER_NAME }}
   MEDIASOUP_ANNOUNCED_IP: ${{ secrets.NCP_HOST }}
   MEDIASOUP_RTC_MIN_PORT: ${{ secrets.MEDIASOUP_RTC_MIN_PORT }}
   MEDIASOUP_RTC_MAX_PORT: ${{ secrets.MEDIASOUP_RTC_MAX_PORT }}
@@ -45,45 +46,81 @@ jobs:
           if [ -z "$TAG" ]; then TAG="latest"; fi
           echo "IMAGE_TAG=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.NCP_HOST }}
-          username: ${{ secrets.NCP_USERNAME }}
-          key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.NCP_SSH_PORT }}
-          timeout: 60s
-          command_timeout: 600s
+      - name: Prepare SSH
+        env:
+          NCP_HOST: ${{ secrets.NCP_HOST }}
+          NCP_USERNAME: ${{ secrets.NCP_USERNAME }}
+          NCP_SSH_PORT: ${{ secrets.NCP_SSH_PORT }}
+          NCP_SSH_PRIVATE_KEY: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
+        run: |
+          set -eu
+          mkdir -p ~/.ssh
+          printf '%s\n' "$NCP_SSH_PRIVATE_KEY" > ~/.ssh/ncp_key
+          chmod 600 ~/.ssh/ncp_key
+          ssh-keyscan -p "$NCP_SSH_PORT" -H "$NCP_HOST" >> ~/.ssh/known_hosts
+          ssh-keygen -lf ~/.ssh/ncp_key
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "echo [INFO] raw ssh connected"
 
-          envs: >
-            DOCKER_USERNAME,
-            DOCKER_PASSWORD,
-            DOCKER_IMAGE_BACKEND,
-            DOCKER_IMAGE_FRONTEND,
-            DOCKER_IMAGE_TAG,
-            API_PORT,
-            MEDIASOUP_ANNOUNCED_IP,
-            MEDIASOUP_RTC_MIN_PORT,
-            MEDIASOUP_RTC_MAX_PORT,
-            GITHUB_CLIENT_ID,
-            GITHUB_CLIENT_SECRET,
-            JWT_ACCESS_SECRET,
-            JWT_ACCESS_EXPIRES_IN,
-            JWT_REFRESH_SECRET,
-            JWT_REFRESH_EXPIRES_IN,
-            FRONTEND_URL_HTTP,
-            FRONTEND_URL_HTTPS,
-            BACKEND_BASE_URL,
-            GOOGLE_CLIENT_ID,
-            GOOGLE_CLIENT_SECRET,
-            DB_USERNAME,
-            DB_PASSWORD,
-            DB_NAME,
-            DB_ROOT_PASSWORD
-
-          script: |
+      - name: Deploy via Raw SSH
+        env:
+          NCP_HOST: ${{ secrets.NCP_HOST }}
+          NCP_USERNAME: ${{ secrets.NCP_USERNAME }}
+          NCP_SSH_PORT: ${{ secrets.NCP_SSH_PORT }}
+          DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ env.DOCKER_PASSWORD }}
+          DOCKER_IMAGE_BACKEND: ${{ env.DOCKER_IMAGE_BACKEND }}
+          DOCKER_IMAGE_FRONTEND: ${{ env.DOCKER_IMAGE_FRONTEND }}
+          DOCKER_IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
+          API_PORT: ${{ env.API_PORT }}
+          MEDIASOUP_ANNOUNCED_IP: ${{ env.MEDIASOUP_ANNOUNCED_IP }}
+          MEDIASOUP_RTC_MIN_PORT: ${{ env.MEDIASOUP_RTC_MIN_PORT }}
+          MEDIASOUP_RTC_MAX_PORT: ${{ env.MEDIASOUP_RTC_MAX_PORT }}
+          GITHUB_CLIENT_ID: ${{ env.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ env.GITHUB_CLIENT_SECRET }}
+          JWT_ACCESS_SECRET: ${{ env.JWT_ACCESS_SECRET }}
+          JWT_ACCESS_EXPIRES_IN: ${{ env.JWT_ACCESS_EXPIRES_IN }}
+          JWT_REFRESH_SECRET: ${{ env.JWT_REFRESH_SECRET }}
+          JWT_REFRESH_EXPIRES_IN: ${{ env.JWT_REFRESH_EXPIRES_IN }}
+          FRONTEND_URL_HTTP: ${{ env.FRONTEND_URL_HTTP }}
+          FRONTEND_URL_HTTPS: ${{ env.FRONTEND_URL_HTTPS }}
+          BACKEND_BASE_URL: ${{ env.BACKEND_BASE_URL }}
+          SERVER_NAME: ${{ env.SERVER_NAME }}
+          GOOGLE_CLIENT_ID: ${{ env.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ env.GOOGLE_CLIENT_SECRET }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_ROOT_PASSWORD: ${{ env.DB_ROOT_PASSWORD }}
+        run: |
+          set -eu
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" \
+            "DOCKER_USERNAME='$DOCKER_USERNAME' \
+            DOCKER_PASSWORD='$DOCKER_PASSWORD' \
+            DOCKER_IMAGE_BACKEND='$DOCKER_IMAGE_BACKEND' \
+            DOCKER_IMAGE_FRONTEND='$DOCKER_IMAGE_FRONTEND' \
+            DOCKER_IMAGE_TAG='$DOCKER_IMAGE_TAG' \
+            API_PORT='$API_PORT' \
+            MEDIASOUP_ANNOUNCED_IP='$MEDIASOUP_ANNOUNCED_IP' \
+            MEDIASOUP_RTC_MIN_PORT='$MEDIASOUP_RTC_MIN_PORT' \
+            MEDIASOUP_RTC_MAX_PORT='$MEDIASOUP_RTC_MAX_PORT' \
+            GITHUB_CLIENT_ID='$GITHUB_CLIENT_ID' \
+            GITHUB_CLIENT_SECRET='$GITHUB_CLIENT_SECRET' \
+            JWT_ACCESS_SECRET='$JWT_ACCESS_SECRET' \
+            JWT_ACCESS_EXPIRES_IN='$JWT_ACCESS_EXPIRES_IN' \
+            JWT_REFRESH_SECRET='$JWT_REFRESH_SECRET' \
+            JWT_REFRESH_EXPIRES_IN='$JWT_REFRESH_EXPIRES_IN' \
+            FRONTEND_URL_HTTP='$FRONTEND_URL_HTTP' \
+            FRONTEND_URL_HTTPS='$FRONTEND_URL_HTTPS' \
+            BACKEND_BASE_URL='$BACKEND_BASE_URL' \
+            SERVER_NAME='$SERVER_NAME' \
+            GOOGLE_CLIENT_ID='$GOOGLE_CLIENT_ID' \
+            GOOGLE_CLIENT_SECRET='$GOOGLE_CLIENT_SECRET' \
+            DB_USERNAME='$DB_USERNAME' \
+            DB_PASSWORD='$DB_PASSWORD' \
+            DB_NAME='$DB_NAME' \
+            DB_ROOT_PASSWORD='$DB_ROOT_PASSWORD' \
+            bash -s" <<'REMOTE'
             set -e
-            export DOCKER_IMAGE_TAG="${{ steps.tag.outputs.IMAGE_TAG }}"
             echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
 
             DEPLOY=/opt/mbwt
@@ -206,9 +243,10 @@ jobs:
                   API_PORT: ${API_PORT}
                   CLIENT_HOST: client
                   CLIENT_PORT: 3000
+                  SERVER_NAME: ${SERVER_NAME}
                 command: >
                   /bin/sh -c "
-                    VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT';
+                    VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT $$SERVER_NAME';
                     envsubst \"$$VARS\" < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf;
                     if [ -f /etc/nginx/ssl/fullchain.crt ] && [ -f /etc/nginx/ssl/private.key ]; then
                       echo '[nginx] SSL certs found';
@@ -296,7 +334,7 @@ jobs:
             server {
                 listen 443 ssl;
                 http2 on;
-                server_name moolbangwool.duckdns.org;
+                server_name ${SERVER_NAME};
                 ssl_certificate /etc/nginx/ssl/fullchain.crt;
                 ssl_certificate_key /etc/nginx/ssl/private.key;
                 ssl_protocols TLSv1.2 TLSv1.3;
@@ -372,32 +410,7 @@ jobs:
             done
             echo "[WARN] Health check timeout - containers may still be starting"
             docker compose ps
-
-        env:
-          DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ env.DOCKER_PASSWORD }}
-          DOCKER_IMAGE_BACKEND: ${{ env.DOCKER_IMAGE_BACKEND }}
-          DOCKER_IMAGE_FRONTEND: ${{ env.DOCKER_IMAGE_FRONTEND }}
-          DOCKER_IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
-          API_PORT: ${{ env.API_PORT }}
-          MEDIASOUP_ANNOUNCED_IP: ${{ env.MEDIASOUP_ANNOUNCED_IP }}
-          MEDIASOUP_RTC_MIN_PORT: ${{ env.MEDIASOUP_RTC_MIN_PORT }}
-          MEDIASOUP_RTC_MAX_PORT: ${{ env.MEDIASOUP_RTC_MAX_PORT }}
-          GITHUB_CLIENT_ID: ${{ env.GITHUB_CLIENT_ID }}
-          GITHUB_CLIENT_SECRET: ${{ env.GITHUB_CLIENT_SECRET }}
-          JWT_ACCESS_SECRET: ${{ env.JWT_ACCESS_SECRET }}
-          JWT_ACCESS_EXPIRES_IN: ${{ env.JWT_ACCESS_EXPIRES_IN }}
-          JWT_REFRESH_SECRET: ${{ env.JWT_REFRESH_SECRET }}
-          JWT_REFRESH_EXPIRES_IN: ${{ env.JWT_REFRESH_EXPIRES_IN }}
-          FRONTEND_URL_HTTP: ${{ env.FRONTEND_URL_HTTP }}
-          FRONTEND_URL_HTTPS: ${{ env.FRONTEND_URL_HTTPS }}
-          BACKEND_BASE_URL: ${{ env.BACKEND_BASE_URL }}
-          GOOGLE_CLIENT_ID: ${{ env.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ env.GOOGLE_CLIENT_SECRET }}
-          DB_USERNAME: ${{ env.DB_USERNAME }}
-          DB_PASSWORD: ${{ env.DB_PASSWORD }}
-          DB_NAME: ${{ env.DB_NAME }}
-          DB_ROOT_PASSWORD: ${{ env.DB_ROOT_PASSWORD }}
+            REMOTE
 
       - name: Notify Success
         if: success()

@@ -113,9 +113,10 @@ services:
       API_PORT: ${API_PORT}
       CLIENT_HOST: client
       CLIENT_PORT: ${CLIENT_PORT}
+      SERVER_NAME: ${SERVER_NAME}
     command: >
       /bin/sh -c "
-        VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT';
+        VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT $$SERVER_NAME';
         envsubst \"$$VARS\" < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf;
         if [ -f /etc/nginx/ssl/fullchain.crt ] && [ -f /etc/nginx/ssl/private.key ]; then
           echo '[nginx] SSL certs found → HTTPS enabled';
