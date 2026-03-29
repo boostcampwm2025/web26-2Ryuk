@@ -278,3 +278,4 @@ sonar-project.properties
 /test-results/
 /playwright-report/
 /playwright/.cache/
+**/metrics-output
