@@ -549,39 +549,32 @@ export class RoomService implements OnModuleInit {
       const roomKeys = await this.roomRepository.getAllRoomKeys();
 
       // room:{roomId} 형식의 방 키만 필터링
-      const mainRoomKeys = roomKeys.filter((key) => {
-        const parts = key.split(':');
-        return parts.length === 2;
-      });
+      const roomIds = roomKeys.filter((key) => key.split(':').length === 2).map((key) => key.split(':')[1]);
 
-      const localRooms: RoomReadResponseDto[] = [];
+      const snapshots = await this.roomRepository.getRoomsListFields(roomIds);
+      const localSnapshots = snapshots.filter(
+        (snap) => snap.type === ROOM_TYPE.LOCAL && snap.data && Object.keys(snap.data).length > 0,
+      );
 
-      for (const roomKey of mainRoomKeys) {
-        const roomId = roomKey.split(':')[1];
-
-        const roomType = await this.getRoomType(roomId);
-        if (roomType !== ROOM_TYPE.LOCAL) continue;
-
-        const roomData = await this.roomRepository.getRoomData(roomId);
-        if (!roomData || Object.keys(roomData).length === 0) continue;
-
-        const tags = await this.roomRepository.getTags(roomId);
-        const participants = await this.getRoomMembers(roomId, 5);
-
-        localRooms.push({
-          id: roomId,
-          title: roomData.title ?? '',
-          host_id: roomData.host_id ?? '',
-          tags: tags ?? [],
-          current_participants: Number.parseInt(roomData.current_participants ?? '0', 10),
-          max_participants: Number.parseInt(roomData.max_participants ?? '0', 10),
-          is_mic_available: roomData.is_mic_available === '1',
-          is_private: roomData.is_private === '1',
-          is_game_recruiting: roomData.isGameRecruiting === '1',
-          participants,
-          create_date: new Date(roomData.create_date ?? new Date().toISOString()),
-        });
-      }
+      const localRooms: RoomReadResponseDto[] = await Promise.all(
+        localSnapshots.map(async (snap) => {
+          const { roomId, data, tags } = snap;
+          const participants = await this.getRoomMembers(roomId, 5);
+          return {
+            id: roomId,
+            title: data.title ?? '',
+            host_id: data.host_id ?? '',
+            tags: tags ?? [],
+            current_participants: Number.parseInt(data.current_participants ?? '0', 10),
+            max_participants: Number.parseInt(data.max_participants ?? '0', 10),
+            is_mic_available: data.is_mic_available === '1',
+            is_private: data.is_private === '1',
+            is_game_recruiting: data.isGameRecruiting === '1',
+            participants,
+            create_date: new Date(data.create_date ?? new Date().toISOString()),
+          };
+        }),
+      );
 
       // 최신순 정렬
       localRooms.sort((a, b) => {

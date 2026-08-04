@@ -15,7 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { parseExpiresIn } from '@src/common/utils/time.utils';
 import { buildRefreshCookieOptions } from '@src/common/utils/refresh.utils';
 import { isSafeRedirect } from '@src/common/utils/redirect.utils';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 interface OAuthUser {
   githubId?: string;
@@ -239,16 +239,17 @@ export class AuthService {
    *   - 유효한 내부 경로면 /auth/callback?redirect=... 으로 전달
    *   - 없거나 유효하지 않으면 기본 /auth/callback 으로 이동 (기존 동작 유지)
    */
-  public async handleOAuthLogin(user: User, res: Response, redirect?: string): Promise<void> {
+  public async handleOAuthLogin(user: User, req: Request, res: Response, redirect?: string): Promise<void> {
     if (!user?.email) throw new UnauthorizedException();
 
     const { refreshToken } = await this.login({
       id: user.id,
       email: user.email,
     });
-    res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService));
+    const isSecure = req.protocol === 'https';
+    res.cookie('refreshToken', refreshToken, buildRefreshCookieOptions(this.configService, isSecure));
 
-    const frontendUrl = process.env.FRONTEND_URL;
+    const frontendUrl = `${req.protocol}://${req.get('host')}`;
     const callbackPath = '/auth/callback';
 
     if (redirect && isSafeRedirect(redirect)) {

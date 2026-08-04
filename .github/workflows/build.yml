@@ -1,13 +1,7 @@
 name: CI - Build & Push Docker Images
 
 on:
-  push:
-    branches:
-      - release
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -20,76 +14,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # 2) Git config
-      - name: Configure Git
+      - name: Set image tag
+        id: tag
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@github.com"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "VERSION=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "Image tag: $SHORT_SHA"
 
-      # 3) Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4) Login Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      # 5) Version bump (external script)
-      - name: Run version bump scripts
-        id: bump
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          chmod +x .github/script/fetch-tag.sh
-          ./.github/script/fetch-tag.sh
-
-      - name: Version bump result
-        run: |
-          echo "New Tag: ${{ steps.bump.outputs.tag }}"
-          echo "Description: ${{ steps.bump.outputs.description }}"
-
-      # 6) Build & Push Backend Image
       - name: Build & Push Backend Image
-        if: steps.bump.outputs.tag != ''      # ← merge commit일 때만 실행
-        env:
-          # GitHub Secrets에서 프로덕션 환경변수 주입
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          REDIS_HOST: ${{ secrets.REDIS_HOST }}
-          REDIS_PORT: ${{ secrets.REDIS_PORT }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
         run: |
-          VERSION=${{ steps.bump.outputs.tag }}
-          echo "🚀 Building Backend Image: $VERSION"
-
-          # .env.production 파일 생성 (GitHub Secrets에서)
-          mkdir -p be
-          cat > be/.env.production << EOF
-          DB_HOST=${DB_HOST}
-          DB_PORT=${DB_PORT}
-          DB_USERNAME=${DB_USERNAME}
-          DB_PASSWORD=${DB_PASSWORD}
-          DB_NAME=${DB_NAME}
-          REDIS_HOST=${REDIS_HOST}
-          REDIS_PORT=${REDIS_PORT}
-          NODE_ENV=production
-          PORT=4000
-          FRONTEND_URL=${FRONTEND_URL}
-          GEMINI_KEY=${GEMINI_KEY}
-          EOF
+          VERSION=${{ steps.tag.outputs.VERSION }}
 
           docker build \
             --build-arg NODE_ENV=production \
@@ -104,20 +50,14 @@ jobs:
           docker push $DOCKER_USERNAME/$IMAGE_NAME_BACKEND:$VERSION
           docker push $DOCKER_USERNAME/$IMAGE_NAME_BACKEND:latest
 
-      # 7) Build & Push Frontend Image
       - name: Build & Push Frontend Image
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
           NEXT_PUBLIC_API_SERVER_URL: ${{ secrets.NEXT_PUBLIC_API_SERVER_URL }}
         run: |
-          VERSION=${{ steps.bump.outputs.tag }}
-          if [ -z "$VERSION" ]; then
-            VERSION=latest
-          fi
-      
-          echo "🌐 Building Frontend Image: $VERSION"
-      
+          VERSION=${{ steps.tag.outputs.VERSION }}
+
           docker build \
             --no-cache \
             --build-arg BUILD_TIME=$(date +%s) \
@@ -130,14 +70,14 @@ jobs:
             -t $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:latest \
             -f fe/Dockerfile.prod \
             .
-      
+
           docker push $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:$VERSION
           docker push $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND:latest
 
-      # 8) Build Result
-      - name: Notify build success
+      - name: Build result
         if: success()
         run: |
-          echo "✅ Build & Push Success"
+          echo "Build & Push Success"
+          echo "Tag: ${{ steps.tag.outputs.VERSION }}"
           echo "Backend: $DOCKER_USERNAME/$IMAGE_NAME_BACKEND"
           echo "Frontend: $DOCKER_USERNAME/$IMAGE_NAME_FRONTEND"
