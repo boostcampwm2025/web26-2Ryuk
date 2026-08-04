@@ -1,5 +1,6 @@
 import localFont from 'next/font/local';
 
+/** preload 끄기: 첫 페인트를 ~1.5MB 폰트가 막지 않게 함 (display: swap으로 지연 로드) */
 export const pretendard = localFont({
   src: [
     {
@@ -14,4 +15,5 @@ export const pretendard = localFont({
     },
   ],
   display: 'swap',
+  preload: false,
 });

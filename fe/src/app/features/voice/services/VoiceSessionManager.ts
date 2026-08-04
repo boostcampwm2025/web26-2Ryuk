@@ -1,6 +1,5 @@
 'use client';
 
-import { VoiceService } from '@/app/features/voice/services/VoiceService';
 import { voiceStore } from '@/app/features/voice/stores/voice';
 
 export type VoiceSessionStatus = 'idle' | 'connecting' | 'connected' | 'failed';
@@ -12,6 +11,7 @@ export interface VoiceSessionState {
 }
 
 type Subscriber = (state: VoiceSessionState) => void;
+type VoiceServiceModule = typeof import('@/app/features/voice/services/VoiceService');
 
 class VoiceSessionManager {
   private state: VoiceSessionState = { status: 'idle' };
@@ -19,9 +19,20 @@ class VoiceSessionManager {
   private joinPromise?: Promise<void>;
   private leavePromise?: Promise<void>;
   private voiceEventUnsub?: () => void;
+  private voiceServicePromise?: Promise<VoiceServiceModule['VoiceService']>;
 
-  private ensureServiceSubscription() {
+  private loadVoiceService() {
+    if (!this.voiceServicePromise) {
+      this.voiceServicePromise = import('@/app/features/voice/services/VoiceService').then(
+        (m) => m.VoiceService,
+      );
+    }
+    return this.voiceServicePromise;
+  }
+
+  private async ensureServiceSubscription() {
     if (this.voiceEventUnsub) return;
+    const VoiceService = await this.loadVoiceService();
     this.voiceEventUnsub = VoiceService.onEvent((event) => {
       const { addUser, removeUser, setUserMic } = voiceStore.getState();
       switch (event.type) {
@@ -53,14 +64,14 @@ class VoiceSessionManager {
   start(roomId: string) {
     if (!roomId) return;
     if (this.state.activeRoomId === roomId && this.state.status === 'connected') return;
-    // 같은 방에 대한 조인 진행 중이면 중복 호출 방지
     if (this.joinPromise && this.state.activeRoomId === roomId) return;
 
     this.updateState({ status: 'connecting', activeRoomId: roomId, error: undefined });
-    this.ensureServiceSubscription();
 
     const run = async () => {
       try {
+        await this.ensureServiceSubscription();
+        const VoiceService = await this.loadVoiceService();
         await VoiceService.joinVoiceChannel(roomId);
         if (this.state.activeRoomId !== roomId) return;
         this.updateState({ status: 'connected', activeRoomId: roomId });
@@ -83,6 +94,7 @@ class VoiceSessionManager {
 
     const run = async () => {
       try {
+        const VoiceService = await this.loadVoiceService();
         await VoiceService.leaveChannel();
       } finally {
         if (this.state.activeRoomId === targetRoomId) {

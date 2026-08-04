@@ -112,8 +112,6 @@ export class VoiceService {
       // (4) 수신용(Recv) Transport 생성
       await this.setupTransport(roomId, false);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       // (5) 내 마이크(Producer) 생성 및 전송 — 먼저 수행해 브라우저 마이크 권한/활성화 보장
       await this.startMic();
 

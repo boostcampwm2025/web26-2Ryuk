@@ -7,18 +7,22 @@ import { authStore } from '@/app/features/user/stores/auth';
 import { chatPanelStore } from '@/app/features/chat/stores/chatPanel';
 import ChatPanel from './ChatPanel';
 
+/**
+ * 전체 채팅: 비로그인도 열람(수신) 가능, 전송만 로그인 필요.
+ * 소켓 구독은 auth 완료를 기다리지 않고 마운트 즉시 시작.
+ */
 export default function GlobalChatPanel() {
   const [chats, setChats] = useState<ChatReceiveData[]>([]);
   const [currentParticipants, setCurrentParticipants] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionFailed, setConnectionFailed] = useState(false);
   const [isUnread, setIsUnread] = useState(false);
   const showPanel = chatPanelStore((state) => state.show);
   const isExpanded = chatPanelStore((state) => state.global.isExpanded);
   const prevExpandedRef = useRef(isExpanded);
-  const sessionRestored = authStore((state) => state.sessionRestored);
-  const authInitDone = authStore((state) => state.authInitDone);
+  const isAuthenticated = Boolean(authStore((state) => state.id));
 
-  useEffect(() => showPanel('global'), []);
+  useEffect(() => showPanel('global'), [showPanel]);
   useEffect(() => globalChatService.onUnreadChange(setIsUnread), []);
 
   useEffect(() => {
@@ -26,16 +30,12 @@ export default function GlobalChatPanel() {
     prevExpandedRef.current = isExpanded;
   }, [isExpanded]);
 
-  // WebSocket 연결 및 구독
+  // auth와 무관하게 즉시 구독 (열람). 전송은 disabled로 차단.
   useEffect(() => {
-    if (!sessionRestored && !authInitDone) {
-      setIsConnected(false);
-      return;
-    }
-
-    const unsubscribeConnection = globalChatService.onConnectionChange((connected) =>
-      setIsConnected(connected),
-    );
+    const unsubscribeConnection = globalChatService.onConnectionChange((connected) => {
+      setIsConnected(connected);
+      if (connected) setConnectionFailed(false);
+    });
     setIsConnected(globalChatService.isConnected());
 
     const unsubscribeRecents = globalChatService.onInit((count, messages) => {
@@ -53,7 +53,9 @@ export default function GlobalChatPanel() {
 
     (async () => {
       await globalChatService.subscribe();
-      setIsConnected(globalChatService.isConnected());
+      const ok = globalChatService.isConnected();
+      setIsConnected(ok);
+      setConnectionFailed(!ok);
     })();
 
     return () => {
@@ -61,16 +63,14 @@ export default function GlobalChatPanel() {
       unsubscribeMessage();
       unsubscribeConnection();
       unsubscribeParticipants();
+      // 패널이 언마운트될 때만 구독 해제. auth 변경으로 끊지 않음.
       globalChatService.unsubscribe().catch(console.error);
     };
-  }, [sessionRestored, authInitDone]);
+  }, []);
 
-  // 메시지 전송 핸들러
   const handleMessageSubmit = useCallback(async (message: string) => {
     await globalChatService.sendMessage(message);
   }, []);
-
-  const isAuthenticated = Boolean(authStore((state) => state.id));
 
   return (
     <ChatPanel
@@ -81,6 +81,7 @@ export default function GlobalChatPanel() {
       isUnread={isUnread}
       onMessageSubmit={handleMessageSubmit}
       isConnected={isConnected}
+      connectionFailed={connectionFailed}
       disabled={!isConnected || !isAuthenticated}
     />
   );

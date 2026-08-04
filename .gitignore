@@ -279,3 +279,6 @@ sonar-project.properties
 /playwright-report/
 /playwright/.cache/
 **/metrics-output
+
+# Performance measurements
+.perf/

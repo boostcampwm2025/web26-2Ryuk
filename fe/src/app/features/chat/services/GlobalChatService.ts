@@ -21,6 +21,8 @@ export class GlobalChatService implements callback.ChatChannel {
   private currentParticipants = 0;
   private isUnread = false;
   private isInitialized = false;
+  /** 게스트→토큰 업그레이드 등 의도된 reconnect 동안 disconnect로 UI를 '연결 중...'으로 되돌리지 않음 */
+  private silentReconnect = false;
 
   /** 등록한 핸들러 참조 — 소켓이 바뀌어도 동일 참조로 off 가능, 재등록 시 유실 방지 */
   private readonly connectionHandlers: Array<{ event: string; handler: (...args: any[]) => void }> =
@@ -41,21 +43,32 @@ export class GlobalChatService implements callback.ChatChannel {
    * 구독 시도. 연결 실패/타임아웃 시에도 auth에는 영향 없이 notifyConnection(false)만 하고 반환.
    */
   async subscribe(): Promise<void> {
-    if (this.isSubscribed) return;
-
     try {
       await this.ensureConnected();
     } catch {
       return this.notifyConnection(false);
     }
 
-    // React StrictMode 등으로 동일 effect가 두 번 실행될 수 있으므로 비동기 처리 이후에도 다시 한 번 구독 여부 확인
-    if (this.isSubscribed) return;
+    // 이미 구독 중이면 핸들러 재부착 + init 재요청 (게스트→로그인 reconnect 대비)
+    if (this.isSubscribed) {
+      this.attachHandlersToCurrentSocket();
+      this.notifyConnection(true);
+      try {
+        const initDto = (await WebSocketService.request(
+          wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT,
+          {},
+        )) as chatDto.GlobalChatInitDto;
+        this.handleGlobalChatInit(initDto);
+      } catch (error) {
+        console.error('[GlobalChatService] 재구독 초기 데이터 요청 실패:', error);
+      }
+      return;
+    }
 
     this.isSubscribed = true;
     this.attachHandlersToCurrentSocket();
+    this.notifyConnection(true);
 
-    // 웹소켓 연결 후 초기 데이터 요청
     try {
       const initDto = (await WebSocketService.request(
         wsEvents.WS_EVENTS.CHAT_GLOBAL_INIT,
@@ -65,6 +78,21 @@ export class GlobalChatService implements callback.ChatChannel {
       this.handleGlobalChatInit(initDto);
     } catch (error) {
       console.error('[GlobalChatService] 초기 데이터 요청 실패:', error);
+      this.notifyConnection(false);
+    }
+  }
+
+  /**
+   * 로그인/세션 복구용: 소켓을 토큰으로 다시 붙이되, 이미 열람 중이면 UI 연결 상태를 유지.
+   */
+  async reconnectForAuth(): Promise<void> {
+    this.silentReconnect = true;
+    try {
+      WebSocketService.reconnect();
+      await this.subscribe();
+    } finally {
+      this.silentReconnect = false;
+      this.notifyConnection(WebSocketService.isConnected());
     }
   }
 
@@ -221,6 +249,7 @@ export class GlobalChatService implements callback.ChatChannel {
   }
 
   private notifyConnection(isConnected: boolean): void {
+    if (!isConnected && this.silentReconnect) return;
     this.connectionCallbacks.forEach((cb) => cb(isConnected));
   }
 

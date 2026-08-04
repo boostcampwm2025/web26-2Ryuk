@@ -22,6 +22,7 @@ export class AuthService {
   private static storageListener?: (event: StorageEvent) => void;
   private static currentAccessToken: string | null = null;
   private static refreshPromise: Promise<string | null> | null = null;
+  private static restorePromise: Promise<void> | null = null;
   private static sessionState: SessionState = 'active';
   /** 세션 복구 직후(WebSocket 연결 후) 호출. 방 복원 등에서 사용. */
   private static onSessionRestored: (() => void) | null = null;
@@ -76,8 +77,10 @@ export class AuthService {
   /**
    * WebSocket disconnect 시 호출.
    * refresh 후 재연결은 fire-and-forget. 로그인/세션 상태에는 영향 주지 않음.
+   * 클라이언트가 의도적으로 끊은 경우(io client disconnect)는 무시 — auth 업그레이드 reconnect와 충돌 방지.
    */
-  private static handleWebSocketDisconnect(_reason: string): void {
+  private static handleWebSocketDisconnect(reason: string): void {
+    if (reason === 'io client disconnect') return;
     if (this.sessionState === 'expired') return;
 
     if (!this.canAttemptRefresh()) return;
@@ -85,8 +88,7 @@ export class AuthService {
 
     this.runRefresh().then((token) => {
       if (!token) return;
-      WebSocketService.reconnect();
-      void globalChatService.subscribe();
+      void globalChatService.reconnectForAuth();
     });
   }
 
@@ -126,12 +128,30 @@ export class AuthService {
 
   private static async restoreSession(options?: RestoreSessionOptions) {
     if (this.sessionState === 'expired') return;
+
+    // AuthProvider.initialize + loginWithCallback 동시 호출 시 한 번만 복구
+    if (this.restorePromise) {
+      await this.restorePromise;
+      if (options?.includeOptimisticIncrement && authStore.getState().id) {
+        globalChatService.incrementParticipantsOptimistic();
+      }
+      return;
+    }
+
+    this.restorePromise = (async () => {
+      try {
+        const token = await this.requestNewAccessToken();
+        this.setAccessToken(token);
+        await this.loadCurrentUser(options);
+      } catch {
+        this.expireSession();
+      }
+    })();
+
     try {
-      const token = await this.requestNewAccessToken();
-      this.setAccessToken(token);
-      await this.loadCurrentUser(options);
-    } catch {
-      this.expireSession();
+      await this.restorePromise;
+    } finally {
+      this.restorePromise = null;
     }
   }
 
@@ -197,14 +217,13 @@ export class AuthService {
   }
 
   /**
-   * 로그인 완료 후 WebSocket 연결 시도. 성공 시 onSessionRestored 호출(방 복원 등).
-   * 실패 시 로그만, 예외/상태 변경 없음.
+   * 로그인/세션 복구 후 WebSocket을 토큰으로 다시 붙임.
+   * 게스트 열람이 이미 된 경우 UI는 '연결 중...'으로 되돌리지 않음.
    */
   private static connectWebSocketFireAndForget(): void {
     void (async () => {
       try {
-        WebSocketService.reconnect();
-        await globalChatService.subscribe();
+        await globalChatService.reconnectForAuth();
         this.onSessionRestored?.();
       } catch {}
     })();

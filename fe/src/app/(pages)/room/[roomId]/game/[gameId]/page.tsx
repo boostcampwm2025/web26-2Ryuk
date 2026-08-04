@@ -1,12 +1,23 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import styles from './page.module.css';
 import GAMES from '@/app/shared/constant';
-import BeakerGameScreen from '@/app/features/game/components/beaker/BeakerGameScreen';
-import ReflexGameScreen from '@/app/features/game/components/reflex/ReflexGameScreen';
-import BubbleGameScreen from '@/app/features/game/components/bubble/BubbleGameScreen';
+
+const BeakerGameScreen = dynamic(
+  () => import('@/app/features/game/components/beaker/BeakerGameScreen'),
+  { ssr: false },
+);
+const ReflexGameScreen = dynamic(
+  () => import('@/app/features/game/components/reflex/ReflexGameScreen'),
+  { ssr: false },
+);
+const BubbleGameScreen = dynamic(
+  () => import('@/app/features/game/components/bubble/BubbleGameScreen'),
+  { ssr: false },
+);
 
 export default function GamePage() {
   const params = useParams();

@@ -132,6 +132,7 @@ export class WebSocketService {
     }
     this.connectResolvers.forEach((r) => r());
     this.connectResolvers.clear();
+    this.connect();
   }
 
   static onReconnect(cb: () => void): void {

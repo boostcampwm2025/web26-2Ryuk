@@ -335,6 +335,42 @@ export class RoomRepository {
   }
 
   /**
+   * 여러 방의 type / hash / tags 를 한 번의 pipeline 으로 조회
+   */
+  async getRoomsListFields(
+    roomIds: string[],
+  ): Promise<Array<{ roomId: string; type: string | null; data: Record<string, string>; tags: string[] }>> {
+    if (roomIds.length === 0) return [];
+
+    const pipeline = this.redisClient.multi();
+    for (const roomId of roomIds) {
+      pipeline.hGet(`room:${roomId}`, 'type');
+      pipeline.hGetAll(`room:${roomId}`);
+      pipeline.sMembers(`room:${roomId}:tags`);
+    }
+
+    const results = await pipeline.exec();
+    if (!results) return [];
+
+    const rooms: Array<{
+      roomId: string;
+      type: string | null;
+      data: Record<string, string>;
+      tags: string[];
+    }> = [];
+
+    for (let i = 0; i < roomIds.length; i += 1) {
+      const base = i * 3;
+      const type = (results[base] as unknown as string | null) ?? null;
+      const data = (results[base + 1] as unknown as Record<string, string>) ?? {};
+      const tags = (results[base + 2] as unknown as string[]) ?? [];
+      rooms.push({ roomId: roomIds[i], type, data, tags });
+    }
+
+    return rooms;
+  }
+
+  /**
    * 방 관련 모든 키 삭제
    */
   async deleteAllRoomKeys(roomId: string): Promise<void> {
