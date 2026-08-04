@@ -43,6 +43,7 @@ export interface ChatPanelHeaderProps {
   onToggle: () => void;
   headerChildren?: ReactNode;
   isConnected?: boolean;
+  connectionFailed?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   onMouseDown?: () => void;
@@ -59,6 +60,7 @@ export interface ChatPanelProps {
   headerChildren?: ReactNode;
   children?: ReactNode;
   isConnected?: boolean;
+  connectionFailed?: boolean;
   disabled?: boolean;
   initialPosition?: Position;
   isUnread?: boolean;

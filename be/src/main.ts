@@ -8,8 +8,11 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
+
+  const corsOrigins = [process.env.FRONTEND_URL_HTTP, process.env.FRONTEND_URL_HTTPS].filter(Boolean) as string[];
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: corsOrigins,
     credentials: true,
   });
 

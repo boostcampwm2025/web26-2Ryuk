@@ -17,6 +17,7 @@ export default function RoomProvider({ children }: RoomProviderProps) {
   const hasRestored = useRef(false);
   const voiceDeferredByRestoreRef = useRef(false);
   const roomId = roomStore((state) => state.id);
+  const isMicAvailable = roomStore((state) => state.isMicAvailable);
 
   useEffect(() => {
     const restoreRoomConnection = async () => {
@@ -69,7 +70,9 @@ export default function RoomProvider({ children }: RoomProviderProps) {
       }
 
       await roomChatService.subscribe(beRoomId);
-      voiceSessionManager.start(beRoomId);
+      if (roomStore.getState().isMicAvailable) {
+        voiceSessionManager.start(beRoomId);
+      }
       voiceDeferredByRestoreRef.current = false;
     };
 
@@ -111,14 +114,14 @@ export default function RoomProvider({ children }: RoomProviderProps) {
     return () => AuthService.setOnSessionRestored(null);
   }, []);
 
-  // 음성 세션
+  // 음성 세션 — 마이크 허용 방에서만 시작
   useEffect(() => {
-    if (roomId && !voiceDeferredByRestoreRef.current) {
+    if (roomId && isMicAvailable && !voiceDeferredByRestoreRef.current) {
       const t = setTimeout(() => voiceSessionManager.start(roomId), 100);
       return () => clearTimeout(t);
     }
     if (!roomId) voiceSessionManager.stop();
-  }, [roomId]);
+  }, [roomId, isMicAvailable]);
 
   return <>{children}</>;
 }

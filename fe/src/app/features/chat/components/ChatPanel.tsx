@@ -28,6 +28,7 @@ function ChatPanelHeader({
   onToggle,
   headerChildren,
   isConnected = true,
+  connectionFailed = false,
   onMouseEnter,
   onMouseLeave,
   onMouseDown,
@@ -82,7 +83,9 @@ function ChatPanelHeader({
             {isConnected ? (
               <span>{counts}</span>
             ) : (
-              <span className={styles.connectionStatus}>연결 중...</span>
+              <span className={styles.connectionStatus}>
+                {connectionFailed ? '연결 실패' : '연결 중...'}
+              </span>
             )}
           </div>
         </div>
@@ -102,6 +105,7 @@ export default function ChatPanel({
   headerChildren,
   children,
   isConnected = true,
+  connectionFailed = false,
   disabled = true,
   isUnread = false,
 }: ChatPanelProps) {
@@ -237,6 +241,7 @@ export default function ChatPanel({
           onToggle={handleToggle}
           headerChildren={headerChildren}
           isConnected={isConnected}
+          connectionFailed={connectionFailed}
           isUnread={isUnread}
           onMouseEnter={() => setIsHeaderHover(true)}
           onMouseLeave={() => {

@@ -1,32 +1,25 @@
 services:
-  api:
-    image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG:-latest}
-    container_name: server
-    network_mode: "host" # 대량의 udp 포트 연결을 위해 host 네트워크 모드 사용
-    env_file:
-      - .env
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
     environment:
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - BACKEND_BASE_URL=${BACKEND_BASE_URL}
-      - API_PORT=${API_PORT}
-      - MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
-      - MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
-      - MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
-      - MEDIASOUP_LISTEN_IP=${MEDIASOUP_LISTEN_IP}
-      - MEDIASOUP_WORKER_NUM=${MEDIASOUP_WORKER_NUM:-auto}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-
-    depends_on:
-      redis:
-        condition: service_started
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    ports:
+      - "3306:3306"
+    networks:
+      - eryuk_net
     restart: unless-stopped
 
   redis:
@@ -46,13 +39,55 @@ services:
       - eryuk_net
     restart: unless-stopped
 
+  api:
+    image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_BACKEND}:${DOCKER_IMAGE_TAG}
+    container_name: server
+    environment:
+      - NODE_ENV=production
+      - PORT=${API_PORT}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - BACKEND_BASE_URL=${BACKEND_BASE_URL}
+      - FRONTEND_URL_HTTP=${FRONTEND_URL_HTTP}
+      - FRONTEND_URL_HTTPS=${FRONTEND_URL_HTTPS}
+      - API_PORT=${API_PORT}
+      - MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
+      - MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
+      - MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
+      - MEDIASOUP_LISTEN_IP=${MEDIASOUP_LISTEN_IP}
+    ports:
+      - "${API_PORT}:${API_PORT}"
+      - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/udp"
+      - "${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}:${MEDIASOUP_RTC_MIN_PORT}-${MEDIASOUP_RTC_MAX_PORT}/tcp"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - eryuk_net
+    restart: unless-stopped
+
   client:
-    image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_FRONTEND}:${DOCKER_IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME}/${DOCKER_IMAGE_FRONTEND}:${DOCKER_IMAGE_TAG}
     container_name: client
-    env_file:
-      - .env
+    environment:
+      - NODE_ENV=production
     expose:
-      - '${CLIENT_PORT:-3000}'
+      - '3000'
     depends_on:
       api:
         condition: service_started
@@ -63,10 +98,6 @@ services:
   nginx:
     image: nginx:alpine
     container_name: nginx
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    env_file:
-      - .env
     depends_on:
       - api
       - client
@@ -74,21 +105,36 @@ services:
       - '${NGINX_HTTP_PORT}:${NGINX_HTTP_PORT}'
       - '${NGINX_HTTPS_PORT}:${NGINX_HTTPS_PORT}'
     volumes:
-      - ./nginx/certs/fullchain.crt:/etc/nginx/ssl/fullchain.crt:ro
-      - ./nginx/certs/private.key:/etc/nginx/ssl/private.key:ro
-      - ./nginx/certs/dhparam.pem:/etc/nginx/ssl/dhparam.pem:ro
       - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/nginx-ssl.conf:/etc/nginx/templates/nginx-ssl.conf.template:ro
+      - ./nginx/certs:/etc/nginx/ssl:ro
     environment:
-      API_HOST: ${API_HOST}
-      API_PORT: ${API_PORT:-4000}
+      API_HOST: api
+      API_PORT: ${API_PORT}
       CLIENT_HOST: client
-      CLIENT_PORT: ${CLIENT_PORT:-3000}
-    command: /bin/sh -c "envsubst '$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+      CLIENT_PORT: ${CLIENT_PORT}
+      SERVER_NAME: ${SERVER_NAME}
+    command: >
+      /bin/sh -c "
+        VARS='$$API_HOST $$API_PORT $$CLIENT_HOST $$CLIENT_PORT $$SERVER_NAME';
+        envsubst \"$$VARS\" < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf;
+        if [ -f /etc/nginx/ssl/fullchain.crt ] && [ -f /etc/nginx/ssl/private.key ]; then
+          echo '[nginx] SSL certs found → HTTPS enabled';
+          envsubst \"$$VARS\" < /etc/nginx/templates/nginx-ssl.conf.template > /etc/nginx/conf.d/ssl.conf;
+        else
+          echo '[nginx] No SSL certs → HTTP only';
+          rm -f /etc/nginx/conf.d/ssl.conf;
+        fi;
+        nginx -g 'daemon off;'
+      "
     networks:
       - eryuk_net
     restart: unless-stopped
+
 volumes:
   redis_data:
+  mysql_data:
+
 networks:
   eryuk_net:
     driver: bridge

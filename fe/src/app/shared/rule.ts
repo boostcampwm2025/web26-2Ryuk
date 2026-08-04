@@ -10,6 +10,7 @@ const Rules = {
   GAME: {
     BEAKER: {
       MAX_LEVEL: 500,
+      THROTTLE_INTERVAL_MS: 100,
     },
     REFLEX: {
       TOTAL_TRIGGERS: 5,

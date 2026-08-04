@@ -45,8 +45,7 @@ export class WebSocketService {
     onMessage?: (data: unknown) => void,
     onError?: (error: Error) => void,
   ): void {
-    const targetUrl = url ?? process.env.NEXT_PUBLIC_API_URL;
-    if (!targetUrl) return console.error('[WebSocket] 연결할 URL이 없습니다.');
+    const targetUrl = url ?? process.env.NEXT_PUBLIC_API_URL ?? '/';
 
     if (this.socket) {
       if (this.socket.connected) return;
@@ -133,6 +132,7 @@ export class WebSocketService {
     }
     this.connectResolvers.forEach((r) => r());
     this.connectResolvers.clear();
+    this.connect();
   }
 
   static onReconnect(cb: () => void): void {

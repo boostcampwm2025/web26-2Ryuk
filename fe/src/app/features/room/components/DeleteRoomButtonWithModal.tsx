@@ -4,13 +4,26 @@ import Modal from '@/app/components/shared/modal/Modal';
 import Dialog from '@/app/components/shared/dialog/Dialog';
 import Paths from '@/app/shared/path';
 import LeaveRoomButton from './LeaveRoomButton';
-import { useRoom } from '@/app/features/room/hooks/room';
+import { useRoomExit } from '@/app/features/room/hooks/roomExit';
 import { roomStore } from '@/app/features/room/stores/room';
+import useNavigation from '@/app/hooks/useNavigation';
+import { useToast } from '@/app/components/shared/toast/useToast';
 
 export default function DeleteRoomButtonWithModal() {
   const roomId = roomStore((state) => state.id);
+  const { showSuccessToast } = useToast();
+  const { goHome } = useNavigation();
 
-  const { exit } = useRoom(roomId);
+  const exit = useRoomExit(roomId, {
+    onLeaveSuccess: () => {
+      showSuccessToast('퇴장했습니다!');
+      goHome();
+    },
+    onDeleteSuccess: () => {
+      showSuccessToast('방을 삭제했습니다!');
+      goHome();
+    },
+  });
   const { deleteModalId, openDeleteModal, handleDeleteModalCancel, handleDeleteModalConfirm } =
     exit;
 

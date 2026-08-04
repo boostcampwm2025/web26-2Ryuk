@@ -13,142 +13,172 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
   DOCKER_IMAGE_BACKEND: ${{ secrets.DOCKER_IMAGE_NAME }}-backend
   DOCKER_IMAGE_FRONTEND: ${{ secrets.DOCKER_IMAGE_NAME }}-frontend
-  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '~/project' }}
   API_PORT: ${{ secrets.API_PORT }}
   JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
   JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
   JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
   JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
-  FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+  FRONTEND_URL_HTTP: ${{ secrets.FRONTEND_URL_HTTP }}
+  FRONTEND_URL_HTTPS: ${{ secrets.FRONTEND_URL_HTTPS }}
   BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL }}
+  SERVER_NAME: ${{ secrets.SERVER_NAME }}
+  MEDIASOUP_ANNOUNCED_IP: ${{ secrets.NCP_HOST }}
+  MEDIASOUP_RTC_MIN_PORT: ${{ secrets.MEDIASOUP_RTC_MIN_PORT }}
+  MEDIASOUP_RTC_MAX_PORT: ${{ secrets.MEDIASOUP_RTC_MAX_PORT }}
+  GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID }}
+  GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
+  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  DB_USERNAME: ${{ secrets.DB_USERNAME }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_NAME: ${{ secrets.DB_NAME }}
+  DB_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 레포지토리 체크아웃 (infra 파일 최신화 목적)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 이미지 태그 결정
       - name: Resolve image tag
         id: tag
         run: |
           TAG="${{ inputs.image_tag }}"
-          if [ -z "$TAG" ]; then
-            TAG="latest"
-          fi
+          if [ -z "$TAG" ]; then TAG="latest"; fi
           echo "IMAGE_TAG=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Using image tag: $TAG"
 
-      # 3️⃣ 서버로 docker-compose / infra / nginx 전송
-      - name: Copy infra files to NCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.NCP_HOST }}
-          username: ${{ secrets.NCP_USERNAME }}
-          key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.NCP_SSH_PORT }}
-          timeout: 60s
-          command_timeout: 300s
-          source: docker-compose.yml,infra/,nginx/
-          target: ${{ env.DEPLOY_PATH }}
-          overwrite: true
-
-      # 4️⃣ SSH 접속 후 deploy.sh 실행
-      - name: SSH into NCP and deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.NCP_HOST }}
-          username: ${{ secrets.NCP_USERNAME }}
-          key: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
-          port: ${{ secrets.NCP_SSH_PORT }}
-          timeout: 60s
-          command_timeout: 300s
-          # 셸 환경변수로 필요한 데이터 전달
-          script_stop: true
-
-          # deploy.sh 에 전달될 환경변수
-          envs: >
-            DOCKER_USERNAME,
-            DOCKER_PASSWORD,
-            DOCKER_IMAGE_BACKEND,
-            DOCKER_IMAGE_FRONTEND,
-            DOCKER_IMAGE_TAG,
-            DEPLOY_PATH,
-            API_PORT,
-            REDIS_HOST,
-            REDIS_PORT,
-            MEDIASOUP_ANNOUNCED_IP,
-            MEDIASOUP_RTC_MIN_PORT,
-            MEDIASOUP_RTC_MAX_PORT,
-            MEDIASOUP_LISTEN_IP,
-            GITHUB_CLIENT_ID,
-            GITHUB_CLIENT_SECRET,
-            JWT_ACCESS_SECRET,
-            JWT_ACCESS_EXPIRES_IN,
-            JWT_REFRESH_SECRET,
-            JWT_REFRESH_EXPIRES_IN,
-            FRONTEND_URL,
-            BACKEND_BASE_URL,
-            GOOGLE_CLIENT_ID,
-            GOOGLE_CLIENT_SECRET
-
-          script: |
-            set -e
-            echo "[INFO] Connected to server"
-
-            cd "${DEPLOY_PATH:-~/project}"
-
-            export DOCKER_IMAGE_TAG="${{ steps.tag.outputs.IMAGE_TAG }}"
-
-            echo "[INFO] Deploy path: $(pwd)"
-            echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
-
-            chmod +x infra/deploy.sh
-            infra/deploy.sh
-
+      - name: Prepare SSH
         env:
+          NCP_HOST: ${{ secrets.NCP_HOST }}
+          NCP_USERNAME: ${{ secrets.NCP_USERNAME }}
+          NCP_SSH_PORT: ${{ secrets.NCP_SSH_PORT }}
+          NCP_SSH_PRIVATE_KEY: ${{ secrets.NCP_SSH_PRIVATE_KEY }}
+        run: |
+          set -eu
+          mkdir -p ~/.ssh
+          printf '%s\n' "$NCP_SSH_PRIVATE_KEY" > ~/.ssh/ncp_key
+          chmod 600 ~/.ssh/ncp_key
+          ssh-keyscan -p "$NCP_SSH_PORT" -H "$NCP_HOST" >> ~/.ssh/known_hosts
+          ssh-keygen -lf ~/.ssh/ncp_key
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "echo [INFO] raw ssh connected"
+
+      - name: Deploy via Raw SSH
+        env:
+          NCP_HOST: ${{ secrets.NCP_HOST }}
+          NCP_USERNAME: ${{ secrets.NCP_USERNAME }}
+          NCP_SSH_PORT: ${{ secrets.NCP_SSH_PORT }}
           DOCKER_USERNAME: ${{ env.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ env.DOCKER_PASSWORD }}
           DOCKER_IMAGE_BACKEND: ${{ env.DOCKER_IMAGE_BACKEND }}
           DOCKER_IMAGE_FRONTEND: ${{ env.DOCKER_IMAGE_FRONTEND }}
           DOCKER_IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
-          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
           API_PORT: ${{ env.API_PORT }}
-          REDIS_HOST: ${{ secrets.REDIS_HOST }} 
-          REDIS_PORT: ${{ secrets.REDIS_PORT }} 
-          MEDIASOUP_ANNOUNCED_IP: ${{ secrets.NCP_HOST }}
-          MEDIASOUP_RTC_MIN_PORT: ${{ secrets.MEDIASOUP_RTC_MIN_PORT }}
-          MEDIASOUP_RTC_MAX_PORT: ${{ secrets.MEDIASOUP_RTC_MAX_PORT }}
-          MEDIASOUP_LISTEN_IP: '0.0.0.0'
-          GITHUB_CLIENT_ID: ${{ secrets.OAUTH_GITHUB_CLIENT_ID}}
-          GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_GITHUB_CLIENT_SECRET }}
-          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
-          JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
-          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-          BACKEND_BASE_URL: ${{ secrets.BACKEND_BASE_URL}}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MEDIASOUP_ANNOUNCED_IP: ${{ env.MEDIASOUP_ANNOUNCED_IP }}
+          MEDIASOUP_RTC_MIN_PORT: ${{ env.MEDIASOUP_RTC_MIN_PORT }}
+          MEDIASOUP_RTC_MAX_PORT: ${{ env.MEDIASOUP_RTC_MAX_PORT }}
+          GITHUB_CLIENT_ID: ${{ env.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ env.GITHUB_CLIENT_SECRET }}
+          JWT_ACCESS_SECRET: ${{ env.JWT_ACCESS_SECRET }}
+          JWT_ACCESS_EXPIRES_IN: ${{ env.JWT_ACCESS_EXPIRES_IN }}
+          JWT_REFRESH_SECRET: ${{ env.JWT_REFRESH_SECRET }}
+          JWT_REFRESH_EXPIRES_IN: ${{ env.JWT_REFRESH_EXPIRES_IN }}
+          FRONTEND_URL_HTTP: ${{ env.FRONTEND_URL_HTTP }}
+          FRONTEND_URL_HTTPS: ${{ env.FRONTEND_URL_HTTPS }}
+          BACKEND_BASE_URL: ${{ env.BACKEND_BASE_URL }}
+          SERVER_NAME: ${{ env.SERVER_NAME }}
+          GOOGLE_CLIENT_ID: ${{ env.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ env.GOOGLE_CLIENT_SECRET }}
+          DB_USERNAME: ${{ env.DB_USERNAME }}
+          DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          DB_NAME: ${{ env.DB_NAME }}
+          DB_ROOT_PASSWORD: ${{ env.DB_ROOT_PASSWORD }}
+        run: |
+          set -eu
+          DEPLOY=/opt/mbwt
+          mkdir -p .deploy/nginx
 
+          cp infra/docker-compose.yml .deploy/docker-compose.yml
+          cp infra/nginx/nginx.conf .deploy/nginx/nginx.conf
+          cp infra/nginx/nginx-ssl.conf .deploy/nginx/nginx-ssl.conf
 
-      # 5️⃣ 성공 로그
+          cat > .deploy/mysql-init.sql <<EOF
+          CREATE DATABASE IF NOT EXISTS ${DB_NAME}
+            CHARACTER SET utf8mb4
+            COLLATE utf8mb4_unicode_ci;
+          EOF
+
+          cat > .deploy/.env <<EOF
+          DOCKER_USERNAME=${DOCKER_USERNAME}
+          DOCKER_PASSWORD=${DOCKER_PASSWORD}
+          DOCKER_IMAGE_BACKEND=${DOCKER_IMAGE_BACKEND}
+          DOCKER_IMAGE_FRONTEND=${DOCKER_IMAGE_FRONTEND}
+          DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG}
+          API_PORT=${API_PORT}
+          CLIENT_PORT=3000
+          NGINX_HTTP_PORT=80
+          NGINX_HTTPS_PORT=443
+          MEDIASOUP_LISTEN_IP=0.0.0.0
+          MEDIASOUP_ANNOUNCED_IP=${MEDIASOUP_ANNOUNCED_IP}
+          MEDIASOUP_RTC_MIN_PORT=${MEDIASOUP_RTC_MIN_PORT}
+          MEDIASOUP_RTC_MAX_PORT=${MEDIASOUP_RTC_MAX_PORT}
+          GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+          GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+          GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+          GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+          JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+          JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
+          JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+          JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+          FRONTEND_URL_HTTP=${FRONTEND_URL_HTTP}
+          FRONTEND_URL_HTTPS=${FRONTEND_URL_HTTPS}
+          BACKEND_BASE_URL=${BACKEND_BASE_URL}
+          SERVER_NAME=${SERVER_NAME}
+          DB_USERNAME=${DB_USERNAME}
+          DB_PASSWORD=${DB_PASSWORD}
+          DB_NAME=${DB_NAME}
+          DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+          EOF
+
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "mkdir -p $DEPLOY/nginx/certs $DEPLOY/nginx"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/docker-compose.yml "$NCP_USERNAME@$NCP_HOST:$DEPLOY/docker-compose.yml"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/mysql-init.sql "$NCP_USERNAME@$NCP_HOST:$DEPLOY/mysql-init.sql"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/.env "$NCP_USERNAME@$NCP_HOST:$DEPLOY/.env"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/nginx/nginx.conf "$NCP_USERNAME@$NCP_HOST:$DEPLOY/nginx/nginx.conf"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/nginx/nginx-ssl.conf "$NCP_USERNAME@$NCP_HOST:$DEPLOY/nginx/nginx-ssl.conf"
+
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "bash -s" <<'REMOTE'
+          set -e
+          DEPLOY=/opt/mbwt
+          cd "$DEPLOY"
+          set -a
+          . ./.env
+          set +a
+          echo "[INFO] Image tag: $DOCKER_IMAGE_TAG"
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+          docker compose --env-file .env pull
+          docker compose --env-file .env down --remove-orphans || true
+          docker rm -f mysql redis server client nginx 2>/dev/null || true
+          docker compose --env-file .env up -d --force-recreate
+
+          echo "[INFO] Waiting for health check..."
+          for i in $(seq 1 30); do
+            if docker compose --env-file .env exec -T api wget --quiet --tries=1 --spider "http://localhost:${API_PORT}/health" 2>/dev/null; then
+              echo "[INFO] Health check passed"
+              docker compose --env-file .env ps
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "[WARN] Health check timeout - containers may still be starting"
+          docker compose --env-file .env ps
+          REMOTE
+
       - name: Notify Success
         if: success()
-        run: |
-          echo "✅ Deploy succeeded"
-          echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
-          echo "Repo: ${{ github.repository }}"
-          echo "Commit: ${{ github.sha }}"
+        run: echo "Deploy succeeded (tag ${{ steps.tag.outputs.IMAGE_TAG }})"
 
-      # 6️⃣ 실패 로그
       - name: Notify Failure
         if: failure()
-        run: |
-          echo "❌ Deploy failed"
-          echo "Tag: ${{ steps.tag.outputs.IMAGE_TAG }}"
-          echo "Repo: ${{ github.repository }}"
-          echo "Commit: ${{ github.sha }}"
+        run: echo "Deploy failed (tag ${{ steps.tag.outputs.IMAGE_TAG }})"
