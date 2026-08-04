@@ -97,13 +97,14 @@ jobs:
         run: |
           set -eu
           DEPLOY=/opt/mbwt
-          mkdir -p .deploy/nginx
+          mkdir -p .deploy/nginx .deploy/mysql
 
           cp infra/docker-compose.yml .deploy/docker-compose.yml
           cp infra/nginx/nginx.conf .deploy/nginx/nginx.conf
           cp infra/nginx/nginx-ssl.conf .deploy/nginx/nginx-ssl.conf
 
-          cat > .deploy/mysql-init.sql <<EOF
+          # compose mounts ./mysql/init-db.sql — must be a file, not a directory
+          cat > .deploy/mysql/init-db.sql <<EOF
           CREATE DATABASE IF NOT EXISTS ${DB_NAME}
             CHARACTER SET utf8mb4
             COLLATE utf8mb4_unicode_ci;
@@ -141,9 +142,16 @@ jobs:
           DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
           EOF
 
-          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "mkdir -p $DEPLOY/nginx/certs $DEPLOY/nginx"
+          ssh -i ~/.ssh/ncp_key -p "$NCP_SSH_PORT" "$NCP_USERNAME@$NCP_HOST" "bash -s" <<REMOTE
+          set -eu
+          mkdir -p "$DEPLOY/nginx/certs" "$DEPLOY/nginx" "$DEPLOY/mysql"
+          # Docker creates a directory when the bind-mount source is missing
+          if [ -d "$DEPLOY/mysql/init-db.sql" ]; then
+            rm -rf "$DEPLOY/mysql/init-db.sql"
+          fi
+          REMOTE
           scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/docker-compose.yml "$NCP_USERNAME@$NCP_HOST:$DEPLOY/docker-compose.yml"
-          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/mysql-init.sql "$NCP_USERNAME@$NCP_HOST:$DEPLOY/mysql-init.sql"
+          scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/mysql/init-db.sql "$NCP_USERNAME@$NCP_HOST:$DEPLOY/mysql/init-db.sql"
           scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/.env "$NCP_USERNAME@$NCP_HOST:$DEPLOY/.env"
           scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/nginx/nginx.conf "$NCP_USERNAME@$NCP_HOST:$DEPLOY/nginx/nginx.conf"
           scp -i ~/.ssh/ncp_key -P "$NCP_SSH_PORT" .deploy/nginx/nginx-ssl.conf "$NCP_USERNAME@$NCP_HOST:$DEPLOY/nginx/nginx-ssl.conf"
@@ -163,7 +171,7 @@ jobs:
           docker compose --env-file .env up -d --force-recreate
 
           echo "[INFO] Waiting for health check..."
-          for i in $(seq 1 30); do
+          for i in $(seq 1 120); do
             if docker compose --env-file .env exec -T api wget --quiet --tries=1 --spider "http://localhost:${API_PORT}/health" 2>/dev/null; then
               echo "[INFO] Health check passed"
               docker compose --env-file .env ps

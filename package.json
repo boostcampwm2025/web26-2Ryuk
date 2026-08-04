@@ -64,7 +64,31 @@
   "pnpm": {
     "overrides": {
       "react": "^18.3.1",
-      "react-dom": "^18.3.1"
+      "react-dom": "^18.3.1",
+      "axios": ">=1.19.0",
+      "protobufjs": ">=7.5.5",
+      "tar": ">=7.5.19",
+      "multer": ">=2.2.0",
+      "minimatch@9": ">=9.0.6",
+      "brace-expansion@2": ">=2.0.2",
+      "brace-expansion@5": ">=5.0.9",
+      "body-parser": ">=1.20.6",
+      "ws": ">=8.21.2",
+      "flatted": ">=3.3.2",
+      "lodash": ">=4.17.23",
+      "qs": ">=6.15.0",
+      "picomatch@4": ">=4.0.3",
+      "serialize-javascript": ">=6.0.2",
+      "tmp": ">=0.2.4",
+      "postcss": ">=8.5.25",
+      "@babel/core": ">=7.29.6",
+      "js-yaml": ">=4.1.1",
+      "engine.io": ">=6.6.9",
+      "socket.io-parser": ">=4.2.7",
+      "file-type": ">=21.3.1",
+      "uuid": ">=13.0.1",
+      "sharp": ">=0.35.0",
+      "diff": ">=4.0.4"
     },
     "onlyBuiltDependencies": [
       "@nestjs/core",
